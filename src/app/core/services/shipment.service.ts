@@ -14,7 +14,8 @@ import {
   ExtractArrivalNoticeResponse,
   DashboardSummaryResponse
   ,
-  ShipmentReportExportResponse
+  ShipmentReportExportResponse,
+  BlRowDefinitionItem
 } from '../models/shipment.model';
 
 // Payload interfaces for container operations
@@ -207,6 +208,10 @@ export class ShipmentService {
 
   getShipmentById(id: string): Observable<ShipmentDetailsResponse> {
     return this.http.get<ShipmentDetailsResponse>(`${this.apiUrl}/${id}`);
+  }
+
+  getBlRowDefinitions(): Observable<{ rows: BlRowDefinitionItem[] }> {
+    return this.http.get<{ rows: BlRowDefinitionItem[] }>(`${this.apiUrl}/bl-row-definitions`);
   }
 
   getDashboardSummary(): Observable<DashboardSummaryResponse> {

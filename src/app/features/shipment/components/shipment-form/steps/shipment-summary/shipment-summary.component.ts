@@ -28,6 +28,9 @@ export class ShipmentSummaryComponent {
   readonly shipmentData = toSignal(this.store.select(selectShipmentData));
   readonly isPlannedLocked = toSignal(this.store.select(selectIsPlannedLocked), { initialValue: false });
   readonly canEditSupplierEmail = computed(() => this.rbacService.hasPermission('shipment.field.shipment_entry.supplierEmail.edit'));
+  readonly canViewQuantityFinancialSummary = computed(() =>
+    this.rbacService.hasPermission('shipment.field.shipment_entry.quantityFinancialSummary.view')
+  );
 
   // ── Document preview ──────────────────────────────────────────────────────
   readonly showPreviewModal = signal(false);

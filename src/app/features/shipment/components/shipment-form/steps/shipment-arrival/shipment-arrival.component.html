@@ -312,15 +312,495 @@
 	                      <input pInputText [formControlName]="doc.remarksControl" class="table-input-text w-full" placeholder="Add remarks" />
 	                    </div>
 	                  }
-	                  @if (doc.kind === 'customsClearance') {
+	                  <!-- @if (doc.kind === 'boePassingDate') {
 	                    <div class="flex flex-col gap-1.5">
-	                      <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Token Received Date</label>
-	                      <p-datepicker formControlName="tokenReceivedDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [readonlyInput]="true" [showIcon]="true" />
+	                      <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">DM Barcode</label>
+	                      <input pInputText formControlName="dmBarcode" class="table-input-text w-full" placeholder="Enter DM Barcode" />
 	                    </div>
+	                  } -->
+	                  @if (doc.kind === 'customsClearance') {
+                      <div class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                        <div class="flex flex-col gap-1">
+                          <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Document Submission</span>
+                          <p class="text-[11px] text-slate-500">Upload the required customs-supporting documents.</p>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                          @for (customsDoc of customsSubmissionDocs; track customsDoc.type) {
+                            <div class="rounded-xl border border-slate-200 bg-white p-3 flex flex-col gap-2">
+                              <span class="text-[10px] font-bold text-slate-600 uppercase tracking-wider">{{ customsDoc.label }}</span>
+                              <div class="flex items-center gap-2">
+                                @if (canEditLogisticsSection('customsClearance')) {
+                                <button
+                                  type="button"
+                                  (click)="clickCustomsDocFileInput(i, customsDoc.type)"
+                                  [disabled]="isSectionEditLocked(i, 'customsClearance') || isLogisticsSectionLocked(i, 'customsClearance')"
+                                  class="inline-flex h-10 items-center gap-2 px-3 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-blue-600 text-[10px] font-semibold disabled:opacity-50"
+                                >
+                                  <i class="pi pi-upload"></i>
+                                  Upload
+                                </button>
+                                }
+                                @if (getCustomsDocFile(i, customsDoc.type)) {
+                                  <button
+                                    type="button"
+                                    (click)="openDocumentPreview(getCustomsDocFile(i, customsDoc.type)!, customsDoc.label)"
+                                    class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                  >
+                                    <i class="pi pi-eye"></i>
+                                  </button>
+                                  @if (canEditLogisticsSection('customsClearance')) {
+                                  <button
+                                    type="button"
+                                    (click)="clearCustomsDocFile(i, customsDoc.type)"
+                                    [disabled]="isSectionEditLocked(i, 'customsClearance') || isLogisticsSectionLocked(i, 'customsClearance')"
+                                    class="w-10 h-10 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 disabled:opacity-50"
+                                  >
+                                    <i class="pi pi-trash"></i>
+                                  </button>
+                                  }
+                                } @else if (getSavedCustomsDocUrl(group, customsDoc.type)) {
+                                  <button
+                                    type="button"
+                                    (click)="openRemoteDocumentPreview(getSavedCustomsDocUrl(group, customsDoc.type), getSavedCustomsDocName(group, customsDoc.type) || customsDoc.label)"
+                                    class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                  >
+                                    <i class="pi pi-eye"></i>
+                                  </button>
+                                }
+                              </div>
+                              @if (getCustomsDocFile(i, customsDoc.type)) {
+                                <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getCustomsDocFile(i, customsDoc.type)?.name }}</p>
+                              } @else if (getSavedCustomsDocName(group, customsDoc.type)) {
+                                <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getSavedCustomsDocName(group, customsDoc.type) }}</p>
+                              } @else {
+                                <p class="text-[11px] text-slate-300">No document uploaded</p>
+                              }
+                            </div>
+                          }
+                        </div>
+                      </div>
+	                  }
+                    @if (doc.kind === 'municipality') {
+                      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div class="flex flex-col gap-1.5">
+                          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Status</label>
+                          <p-select
+                            formControlName="municipalityStatus"
+                            [options]="municipalityStatusOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            placeholder="Select status"
+                            styleClass="w-full"
+                            appendTo="body">
+                          </p-select>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Comment</label>
+                          <input pInputText formControlName="municipalityStatusComment" class="table-input-text w-full" placeholder="Add comment" />
+                        </div>
+                      </div>
 	                  }
 	                </div>
 	              </div>
 	            }
+
+              <!-- Customs Original Document Submission Section -->
+              @if (false) {
+                <div class="relative group">
+                  <div class="absolute left-[-29px] top-4 w-2 h-2 rounded-full border-2 border-purple-300 bg-white group-hover:border-purple-500 transition-colors z-10"></div>
+
+                  <div class="rounded-2xl border border-purple-100 bg-gradient-to-br from-purple-50/50 to-white p-5 hover:border-purple-200 transition-all shadow-sm">
+                    <div class="mb-4 flex items-center justify-between gap-3">
+                      <div class="flex flex-col min-w-0">
+                        <span class="text-[9px] font-black text-purple-400 uppercase tracking-widest">Document Submission</span>
+                        <h3 class="text-xs font-bold text-slate-700">Customs Original Document Submission</h3>
+                        <p class="text-[10px] text-slate-500 mt-1">Submit original documents to third party for customs clearance</p>
+                      </div>
+                    </div>
+
+                    <div class="flex flex-col gap-3">
+                      <!-- BOE Copy -->
+                      <div class="flex flex-col gap-2 p-3 rounded-lg bg-white border border-slate-100">
+                        <label class="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
+                          <i class="pi pi-file text-purple-500"></i>
+                          BOE - Copy
+                        </label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[9px] text-slate-500">Submission Date</label>
+                            <p-datepicker 
+                              formControlName="customsDocBoeSubmissionDate"
+                              appendTo="body" 
+                              inputStyleClass="table-input" 
+                              placeholder="Select date" 
+                              styleClass="w-full" 
+                              dateFormat="dd/mm/yy" />
+                          </div>
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[9px] text-slate-500">Document</label>
+                            <div class="flex items-center gap-2">
+                              <button
+                                type="button"
+                                (click)="clickCustomsDocFileInput(i, 'boe')"
+                                class="inline-flex h-10 items-center gap-2 px-3 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-purple-600 text-[10px] font-semibold"
+                              >
+                                <i class="pi pi-upload"></i>
+                                Upload
+                              </button>
+                              @if (getCustomsDocFile(i, 'boe')) {
+                                <button
+                                  type="button"
+                                  (click)="openDocumentPreview(getCustomsDocFile(i, 'boe')!, 'BOE Copy')"
+                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                >
+                                  <i class="pi pi-eye"></i>
+                                </button>
+                                <button
+                                  type="button"
+                                  (click)="clearCustomsDocFile(i, 'boe')"
+                                  class="w-10 h-10 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"
+                                >
+                                  <i class="pi pi-trash"></i>
+                                </button>
+                              } @else if (getSavedCustomsDocUrl(group, 'boe')) {
+                                <button
+                                  type="button"
+                                  (click)="openRemoteDocumentPreview(getSavedCustomsDocUrl(group, 'boe'), getSavedCustomsDocName(group, 'boe') || 'BOE Copy')"
+                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                >
+                                  <i class="pi pi-eye"></i>
+                                </button>
+                              }
+                            </div>
+                            @if (getCustomsDocFile(i, 'boe')) {
+                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getCustomsDocFile(i, 'boe')?.name }}</p>
+                            } @else if (getSavedCustomsDocName(group, 'boe')) {
+                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getSavedCustomsDocName(group, 'boe') }}</p>
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- DO Copy -->
+                      <div class="flex flex-col gap-2 p-3 rounded-lg bg-white border border-slate-100">
+                        <label class="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
+                          <i class="pi pi-file text-purple-500"></i>
+                          DO Copy
+                        </label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[9px] text-slate-500">Submission Date</label>
+                            <p-datepicker 
+                              formControlName="customsDocDoSubmissionDate"
+                              appendTo="body" 
+                              inputStyleClass="table-input" 
+                              placeholder="Select date" 
+                              styleClass="w-full" 
+                              dateFormat="dd/mm/yy" />
+                          </div>
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[9px] text-slate-500">Document</label>
+                            <div class="flex items-center gap-2">
+                              <button
+                                type="button"
+                                (click)="clickCustomsDocFileInput(i, 'do')"
+                                class="inline-flex h-10 items-center gap-2 px-3 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-purple-600 text-[10px] font-semibold"
+                              >
+                                <i class="pi pi-upload"></i>
+                                Upload
+                              </button>
+                              @if (getCustomsDocFile(i, 'do')) {
+                                <button
+                                  type="button"
+                                  (click)="openDocumentPreview(getCustomsDocFile(i, 'do')!, 'DO Copy')"
+                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                >
+                                  <i class="pi pi-eye"></i>
+                                </button>
+                                <button
+                                  type="button"
+                                  (click)="clearCustomsDocFile(i, 'do')"
+                                  class="w-10 h-10 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"
+                                >
+                                  <i class="pi pi-trash"></i>
+                                </button>
+                              } @else if (getSavedCustomsDocUrl(group, 'do')) {
+                                <button
+                                  type="button"
+                                  (click)="openRemoteDocumentPreview(getSavedCustomsDocUrl(group, 'do'), getSavedCustomsDocName(group, 'do') || 'DO Copy')"
+                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                >
+                                  <i class="pi pi-eye"></i>
+                                </button>
+                              }
+                            </div>
+                            @if (getCustomsDocFile(i, 'do')) {
+                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getCustomsDocFile(i, 'do')?.name }}</p>
+                            } @else if (getSavedCustomsDocName(group, 'do')) {
+                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getSavedCustomsDocName(group, 'do') }}</p>
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- BL Original -->
+                      <div class="flex flex-col gap-2 p-3 rounded-lg bg-white border border-slate-100">
+                        <label class="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
+                          <i class="pi pi-file text-purple-500"></i>
+                          BL Original
+                        </label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[9px] text-slate-500">Submission Date</label>
+                            <p-datepicker 
+                              formControlName="customsDocBlOriginalSubmissionDate"
+                              appendTo="body" 
+                              inputStyleClass="table-input" 
+                              placeholder="Select date" 
+                              styleClass="w-full" 
+                              dateFormat="dd/mm/yy" />
+                          </div>
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[9px] text-slate-500">Document</label>
+                            <div class="flex items-center gap-2">
+                              <button
+                                type="button"
+                                (click)="clickCustomsDocFileInput(i, 'blOriginal')"
+                                class="inline-flex h-10 items-center gap-2 px-3 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-purple-600 text-[10px] font-semibold"
+                              >
+                                <i class="pi pi-upload"></i>
+                                Upload
+                              </button>
+                              @if (getCustomsDocFile(i, 'blOriginal')) {
+                                <button
+                                  type="button"
+                                  (click)="openDocumentPreview(getCustomsDocFile(i, 'blOriginal')!, 'BL Original')"
+                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                >
+                                  <i class="pi pi-eye"></i>
+                                </button>
+                                <button
+                                  type="button"
+                                  (click)="clearCustomsDocFile(i, 'blOriginal')"
+                                  class="w-10 h-10 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"
+                                >
+                                  <i class="pi pi-trash"></i>
+                                </button>
+                              } @else if (getSavedCustomsDocUrl(group, 'blOriginal')) {
+                                <button
+                                  type="button"
+                                  (click)="openRemoteDocumentPreview(getSavedCustomsDocUrl(group, 'blOriginal'), getSavedCustomsDocName(group, 'blOriginal') || 'BL Original')"
+                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                >
+                                  <i class="pi pi-eye"></i>
+                                </button>
+                              }
+                            </div>
+                            @if (getCustomsDocFile(i, 'blOriginal')) {
+                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getCustomsDocFile(i, 'blOriginal')?.name }}</p>
+                            } @else if (getSavedCustomsDocName(group, 'blOriginal')) {
+                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getSavedCustomsDocName(group, 'blOriginal') }}</p>
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Invoice -->
+                      <div class="flex flex-col gap-2 p-3 rounded-lg bg-white border border-slate-100">
+                        <label class="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
+                          <i class="pi pi-file text-purple-500"></i>
+                          Invoice
+                        </label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[9px] text-slate-500">Submission Date</label>
+                            <p-datepicker 
+                              formControlName="customsDocInvoiceSubmissionDate"
+                              appendTo="body" 
+                              inputStyleClass="table-input" 
+                              placeholder="Select date" 
+                              styleClass="w-full" 
+                              dateFormat="dd/mm/yy" />
+                          </div>
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[9px] text-slate-500">Document</label>
+                            <div class="flex items-center gap-2">
+                              <button
+                                type="button"
+                                (click)="clickCustomsDocFileInput(i, 'invoice')"
+                                class="inline-flex h-10 items-center gap-2 px-3 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-purple-600 text-[10px] font-semibold"
+                              >
+                                <i class="pi pi-upload"></i>
+                                Upload
+                              </button>
+                              @if (getCustomsDocFile(i, 'invoice')) {
+                                <button
+                                  type="button"
+                                  (click)="openDocumentPreview(getCustomsDocFile(i, 'invoice')!, 'Invoice')"
+                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                >
+                                  <i class="pi pi-eye"></i>
+                                </button>
+                                <button
+                                  type="button"
+                                  (click)="clearCustomsDocFile(i, 'invoice')"
+                                  class="w-10 h-10 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"
+                                >
+                                  <i class="pi pi-trash"></i>
+                                </button>
+                              } @else if (getSavedCustomsDocUrl(group, 'invoice')) {
+                                <button
+                                  type="button"
+                                  (click)="openRemoteDocumentPreview(getSavedCustomsDocUrl(group, 'invoice'), getSavedCustomsDocName(group, 'invoice') || 'Invoice')"
+                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                >
+                                  <i class="pi pi-eye"></i>
+                                </button>
+                              }
+                            </div>
+                            @if (getCustomsDocFile(i, 'invoice')) {
+                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getCustomsDocFile(i, 'invoice')?.name }}</p>
+                            } @else if (getSavedCustomsDocName(group, 'invoice')) {
+                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getSavedCustomsDocName(group, 'invoice') }}</p>
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Packing List -->
+                      <div class="flex flex-col gap-2 p-3 rounded-lg bg-white border border-slate-100">
+                        <label class="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
+                          <i class="pi pi-file text-purple-500"></i>
+                          Packing List
+                        </label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[9px] text-slate-500">Submission Date</label>
+                            <p-datepicker 
+                              formControlName="customsDocPackingListSubmissionDate"
+                              appendTo="body" 
+                              inputStyleClass="table-input" 
+                              placeholder="Select date" 
+                              styleClass="w-full" 
+                              dateFormat="dd/mm/yy" />
+                          </div>
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[9px] text-slate-500">Document</label>
+                            <div class="flex items-center gap-2">
+                              <button
+                                type="button"
+                                (click)="clickCustomsDocFileInput(i, 'packingList')"
+                                class="inline-flex h-10 items-center gap-2 px-3 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-purple-600 text-[10px] font-semibold"
+                              >
+                                <i class="pi pi-upload"></i>
+                                Upload
+                              </button>
+                              @if (getCustomsDocFile(i, 'packingList')) {
+                                <button
+                                  type="button"
+                                  (click)="openDocumentPreview(getCustomsDocFile(i, 'packingList')!, 'Packing List')"
+                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                >
+                                  <i class="pi pi-eye"></i>
+                                </button>
+                                <button
+                                  type="button"
+                                  (click)="clearCustomsDocFile(i, 'packingList')"
+                                  class="w-10 h-10 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"
+                                >
+                                  <i class="pi pi-trash"></i>
+                                </button>
+                              } @else if (getSavedCustomsDocUrl(group, 'packingList')) {
+                                <button
+                                  type="button"
+                                  (click)="openRemoteDocumentPreview(getSavedCustomsDocUrl(group, 'packingList'), getSavedCustomsDocName(group, 'packingList') || 'Packing List')"
+                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                >
+                                  <i class="pi pi-eye"></i>
+                                </button>
+                              }
+                            </div>
+                            @if (getCustomsDocFile(i, 'packingList')) {
+                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getCustomsDocFile(i, 'packingList')?.name }}</p>
+                            } @else if (getSavedCustomsDocName(group, 'packingList')) {
+                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getSavedCustomsDocName(group, 'packingList') }}</p>
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- COO (Certificate of Origin) -->
+                      <div class="flex flex-col gap-2 p-3 rounded-lg bg-white border border-slate-100">
+                        <label class="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
+                          <i class="pi pi-file text-purple-500"></i>
+                          COO (Certificate of Origin)
+                        </label>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[9px] text-slate-500">Submission Date</label>
+                            <p-datepicker 
+                              formControlName="customsDocCooSubmissionDate"
+                              appendTo="body" 
+                              inputStyleClass="table-input" 
+                              placeholder="Select date" 
+                              styleClass="w-full" 
+                              dateFormat="dd/mm/yy" />
+                          </div>
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[9px] text-slate-500">Document</label>
+                            <div class="flex items-center gap-2">
+                              <button
+                                type="button"
+                                (click)="clickCustomsDocFileInput(i, 'coo')"
+                                class="inline-flex h-10 items-center gap-2 px-3 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-purple-600 text-[10px] font-semibold"
+                              >
+                                <i class="pi pi-upload"></i>
+                                Upload
+                              </button>
+                              @if (getCustomsDocFile(i, 'coo')) {
+                                <button
+                                  type="button"
+                                  (click)="openDocumentPreview(getCustomsDocFile(i, 'coo')!, 'COO')"
+                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                >
+                                  <i class="pi pi-eye"></i>
+                                </button>
+                                <button
+                                  type="button"
+                                  (click)="clearCustomsDocFile(i, 'coo')"
+                                  class="w-10 h-10 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"
+                                >
+                                  <i class="pi pi-trash"></i>
+                                </button>
+                              } @else if (getSavedCustomsDocUrl(group, 'coo')) {
+                                <button
+                                  type="button"
+                                  (click)="openRemoteDocumentPreview(getSavedCustomsDocUrl(group, 'coo'), getSavedCustomsDocName(group, 'coo') || 'COO')"
+                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                >
+                                  <i class="pi pi-eye"></i>
+                                </button>
+                              }
+                            </div>
+                            @if (getCustomsDocFile(i, 'coo')) {
+                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getCustomsDocFile(i, 'coo')?.name }}</p>
+                            } @else if (getSavedCustomsDocName(group, 'coo')) {
+                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getSavedCustomsDocName(group, 'coo') }}</p>
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="mt-2 p-3 rounded-lg bg-blue-50 border border-blue-100">
+                        <p class="text-[10px] text-blue-700 flex items-start gap-2">
+                          <i class="pi pi-info-circle text-blue-500 mt-0.5"></i>
+                          <span>These documents are handled by a third party based on BOE clearance. Upload original documents for customs submission tracking.</span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              }
 
               @if (canViewLogisticsSection('transportation')) {
 	            <div class="relative group">
@@ -328,8 +808,12 @@
 
 	              <div class="rounded-2xl border border-slate-200 overflow-hidden shadow-sm bg-white">
 	                <div class="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-100">
-		                  <div class="flex flex-col">
+		                  <div class="flex flex-col gap-3">
 		                    <span class="text-xs font-bold text-slate-700">Transportation Arranged</span>
+                        <div class="flex flex-col gap-1.5 max-w-xs">
+                          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Token Received Date</label>
+                          <p-datepicker formControlName="tokenReceivedDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [readonlyInput]="true" [showIcon]="true" />
+                        </div>
 		                  </div>
 	                  <div class="flex items-center gap-2">
 	                    <span class="text-[9px] font-semibold text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200">
@@ -496,9 +980,17 @@
 <input #arrivalNoticeInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onFileInputChange($event, 'arrivalNotice')" />
 <input #advanceRequestInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onFileInputChange($event, 'advanceRequest')" />
 <input #doReleasedInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onFileInputChange($event, 'doReleased')" />
-<input #dpApprovalInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onFileInputChange($event, 'dpApproval')" />
+<input #boePassingDateInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onFileInputChange($event, 'boePassingDate')" />
 <input #customsClearanceInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onFileInputChange($event, 'customsClearance')" />
 <input #municipalityInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onFileInputChange($event, 'municipality')" />
+
+<!-- Customs Documents File Inputs -->
+<input #customsDocBoeInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onCustomsDocFileInputChange($event, 'boe')" />
+<input #customsDocDoInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onCustomsDocFileInputChange($event, 'do')" />
+<input #customsDocBlOriginalInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onCustomsDocFileInputChange($event, 'blOriginal')" />
+<input #customsDocInvoiceInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onCustomsDocFileInputChange($event, 'invoice')" />
+<input #customsDocPackingListInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onCustomsDocFileInputChange($event, 'packingList')" />
+<input #customsDocCooInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onCustomsDocFileInputChange($event, 'coo')" />
 
 <p-dialog
   [header]="previewTitle()"

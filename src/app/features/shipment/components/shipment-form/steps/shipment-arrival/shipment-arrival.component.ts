@@ -31,11 +31,19 @@ type Step5DocKind =
   | 'arrivalNotice'
   | 'advanceRequest'
   | 'doReleased'
-  | 'dpApproval'
+  | 'boePassingDate'
   | 'customsClearance'
   | 'municipality';
 
 type LogisticsSectionKey = Step5DocKind | 'transportation';
+type CustomsDocType = 'boe' | 'do' | 'blOriginal' | 'invoice' | 'packingList' | 'coo';
+const CUSTOMS_SUBMISSION_DOCS: Array<{ type: CustomsDocType; label: string }> = [
+  { type: 'boe', label: 'BOE Copy' },
+  { type: 'do', label: 'DO Copy' },
+  { type: 'blOriginal', label: 'BL' },
+  { type: 'invoice', label: 'Origin Invoice' },
+  { type: 'packingList', label: 'Packing List' },
+];
 
 const STEP5_DOC_CONFIG: {
   kind: Step5DocKind;
@@ -46,7 +54,7 @@ const STEP5_DOC_CONFIG: {
   { kind: 'arrivalNotice', label: 'Arrival Notice Date', dateControl: 'arrivalNoticeDate' },
   { kind: 'advanceRequest', label: 'Advance Received', dateControl: 'advanceRequestDate' },
   { kind: 'doReleased', label: 'DO Released Date', dateControl: 'doReleasedDate', remarksControl: 'doReleasedRemarks' },
-  { kind: 'dpApproval', label: 'DP Clearance Date', dateControl: 'dpApprovalDate', remarksControl: 'dpApprovalRemarks' },
+  { kind: 'boePassingDate', label: 'BOE Passing Date', dateControl: 'boePassingDate', remarksControl: 'boePassingRemarks' },
   { kind: 'customsClearance', label: 'Customs Clearance Date', dateControl: 'customsClearanceDate', remarksControl: 'customsClearanceRemarks' },
   { kind: 'municipality', label: 'Municipality Check Date', dateControl: 'municipalityDate', remarksControl: 'municipalityRemarks' },
 ];
@@ -73,6 +81,11 @@ export class ShipmentArrivalComponent {
   @Input() visibleShipmentIndices: number[] = [];
 
   readonly step5DocConfig = STEP5_DOC_CONFIG;
+  readonly customsSubmissionDocs = CUSTOMS_SUBMISSION_DOCS;
+  readonly municipalityStatusOptions = [
+    { label: 'Open', value: 'open' },
+    { label: 'Closed', value: 'closed' },
+  ];
   readonly secondaryStep5DocConfig = STEP5_DOC_CONFIG.filter((doc) => doc.kind !== 'arrivalNotice');
   readonly visibleSecondaryStep5DocConfig = computed(() =>
     this.secondaryStep5DocConfig.filter((doc) => this.canViewLogisticsSection(doc.kind))
@@ -82,7 +95,7 @@ export class ShipmentArrivalComponent {
       'arrivalNotice',
       'advanceRequest',
       'doReleased',
-      'dpApproval',
+      'boePassingDate',
       'customsClearance',
       'municipality',
       'transportation',
@@ -98,9 +111,17 @@ export class ShipmentArrivalComponent {
   @ViewChild('arrivalNoticeInput') arrivalNoticeInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('advanceRequestInput') advanceRequestInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('doReleasedInput') doReleasedInputRef?: ElementRef<HTMLInputElement>;
-  @ViewChild('dpApprovalInput') dpApprovalInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('boePassingDateInput') boePassingDateInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('customsClearanceInput') customsClearanceInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('municipalityInput') municipalityInputRef?: ElementRef<HTMLInputElement>;
+
+  // Customs Documents ViewChild references
+  @ViewChild('customsDocBoeInput') customsDocBoeInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('customsDocDoInput') customsDocDoInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('customsDocBlOriginalInput') customsDocBlOriginalInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('customsDocInvoiceInput') customsDocInvoiceInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('customsDocPackingListInput') customsDocPackingListInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('customsDocCooInput') customsDocCooInputRef?: ElementRef<HTMLInputElement>;
 
   private pendingFileRow: number | null = null;
   private pendingDocKind: Step5DocKind | null = null;
@@ -111,9 +132,17 @@ export class ShipmentArrivalComponent {
   readonly arrivalNoticeFile = signal<Record<number, File | null>>({});
   readonly advanceRequestFile = signal<Record<number, File | null>>({});
   readonly doReleasedFile = signal<Record<number, File | null>>({});
-  readonly dpApprovalFile = signal<Record<number, File | null>>({});
+  readonly boePassingDateFile = signal<Record<number, File | null>>({});
   readonly customsClearanceFile = signal<Record<number, File | null>>({});
   readonly municipalityFile = signal<Record<number, File | null>>({});
+
+  // Customs Documents file signals
+  readonly customsDocBoeFile = signal<Record<number, File | null>>({});
+  readonly customsDocDoFile = signal<Record<number, File | null>>({});
+  readonly customsDocBlOriginalFile = signal<Record<number, File | null>>({});
+  readonly customsDocInvoiceFile = signal<Record<number, File | null>>({});
+  readonly customsDocPackingListFile = signal<Record<number, File | null>>({});
+  readonly customsDocCooFile = signal<Record<number, File | null>>({});
 
   readonly expandedTransportation = signal<Record<number, boolean>>({});
   readonly extractingArrivalNoticeRowIndex = signal<number | null>(null);
@@ -224,6 +253,16 @@ export class ShipmentArrivalComponent {
     this.ensureAccordionOpen(index);
 
     if (pendingSections.includes('transportation')) {
+      const missingFields = this.validateTransportationSection(group);
+      if (missingFields.length) {
+        this.bulkSaving.set(false);
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Required Fields Missing',
+          detail: `Please complete: ${missingFields.join(', ')}`,
+        });
+        return;
+      }
       const transportationRows = this.getTransportationRows(group);
       transportationRows.markAllAsTouched();
       if (transportationRows.invalid) {
@@ -232,6 +271,45 @@ export class ShipmentArrivalComponent {
           severity: 'warn',
           summary: 'Invalid transportation timing',
           detail: 'Transportation date and time must be the same as or later than the arranged date and booking time.',
+        });
+        return;
+      }
+      
+      // Validate that all transport companies are selected
+      const transportationData = transportationRows.getRawValue();
+      const missingCompany = transportationData.some((tb: any) => !tb.transportCompanyName || tb.transportCompanyName.trim() === '');
+      if (missingCompany) {
+        this.bulkSaving.set(false);
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Transport Company Required',
+          detail: 'Please select a transport company for all containers before saving.',
+        });
+        return;
+      }
+    }
+
+    if (pendingSections.includes('customsClearance')) {
+      const missingFields = this.validateCustomsClearanceSection(index, group);
+      if (missingFields.length) {
+        this.bulkSaving.set(false);
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Required Fields Missing',
+          detail: `Please complete: ${missingFields.join(', ')}`,
+        });
+        return;
+      }
+    }
+
+    if (pendingSections.includes('municipality')) {
+      const missingFields = this.validateMunicipalitySection(group);
+      if (missingFields.length) {
+        this.bulkSaving.set(false);
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Required Fields Missing',
+          detail: `Please complete: ${missingFields.join(', ')}`,
         });
         return;
       }
@@ -292,20 +370,27 @@ export class ShipmentArrivalComponent {
     const sectionMap = {
       advanceRequest: { date: 'advanceRequestDate', remarks: null as string | null, file: 'advanceRequestDocument' },
       doReleased: { date: 'doReleasedDate', remarks: 'doReleasedRemarks', file: 'doReleasedDocument' },
-      dpApproval: { date: 'dpApprovalDate', remarks: 'dpApprovalRemarks', file: 'dpApprovalDocument' },
+      boePassingDate: { date: 'boePassingDate', remarks: 'boePassingRemarks', file: 'boePassingDocument' },
       customsClearance: { date: 'customsClearanceDate', remarks: 'customsClearanceRemarks', file: 'customsClearanceDocument' },
       municipality: { date: 'municipalityDate', remarks: 'municipalityRemarks', file: 'municipalityDocument' },
     } as const;
 
-    (['advanceRequest', 'doReleased', 'dpApproval', 'customsClearance', 'municipality'] as const).forEach((section) => {
+    (['advanceRequest', 'doReleased', 'boePassingDate', 'customsClearance', 'municipality'] as const).forEach((section) => {
       if (!sections.includes(section)) return;
       const config = sectionMap[section];
       payload.append(config.date, toDate(group.get(config.date)?.value));
       if (config.remarks) {
         payload.append(config.remarks, group.get(config.remarks)?.value || '');
       }
+      if (section === 'boePassingDate') {
+        payload.append('dmBarcode', group.get('dmBarcode')?.value || '');
+      }
       if (section === 'customsClearance') {
-        payload.append('tokenReceivedDate', toDate(group.get('tokenReceivedDate')?.value));
+        this.appendCustomsSubmissionDocuments(index, payload);
+      }
+      if (section === 'municipality') {
+        payload.append('municipalityStatus', group.get('municipalityStatus')?.value || 'open');
+        payload.append('municipalityStatusComment', group.get('municipalityStatusComment')?.value || '');
       }
       const file = this.getFile(index, section);
       if (file) payload.append(config.file, file, file.name);
@@ -325,6 +410,7 @@ export class ShipmentArrivalComponent {
         delayHours: tb.delayHours ?? null,
       }));
       payload.append('transportationBooked', JSON.stringify(transportationBooked));
+      payload.append('tokenReceivedDate', toDate(group.get('tokenReceivedDate')?.value));
     }
 
     return payload;
@@ -367,7 +453,7 @@ export class ShipmentArrivalComponent {
     arrivalNotice: { view: 'shipment.tab.port_customs.milestone_1.view', edit: 'shipment.tab.port_customs.milestone_1.edit' },
     advanceRequest: { view: 'shipment.tab.port_customs.milestone_2.view', edit: 'shipment.tab.port_customs.milestone_2.edit' },
     doReleased: { view: 'shipment.tab.port_customs.milestone_3.view', edit: 'shipment.tab.port_customs.milestone_3.edit' },
-    dpApproval: { view: 'shipment.tab.port_customs.milestone_4.view', edit: 'shipment.tab.port_customs.milestone_4.edit' },
+    boePassingDate: { view: 'shipment.tab.port_customs.milestone_4.view', edit: 'shipment.tab.port_customs.milestone_4.edit' },
     customsClearance: { view: 'shipment.tab.port_customs.milestone_5.view', edit: 'shipment.tab.port_customs.milestone_5.edit' },
     municipality: { view: 'shipment.tab.port_customs.milestone_6.view', edit: 'shipment.tab.port_customs.milestone_6.edit' },
     transportation: { view: 'shipment.tab.port_customs.transportation.view', edit: 'shipment.tab.port_customs.transportation.edit' },
@@ -382,6 +468,7 @@ export class ShipmentArrivalComponent {
    * Until then, Port & Customs sections remain editable.
    */
   readonly submittedIndices = toSignal(this.store.select(selectSubmittedStep5Indices), { initialValue: [] });
+  readonly submittedLogisticsIndices = toSignal(this.store.select(selectSubmittedStep4Indices), { initialValue: [] });
   readonly precedingIndices = toSignal(this.store.select(selectSubmittedStep3Indices), { initialValue: [] });
   readonly submittingRowIndex = toSignal(this.store.select(selectSubmittingRowIndex), { initialValue: null });
 
@@ -532,8 +619,8 @@ export class ShipmentArrivalComponent {
         ? 'Advance Received'
         : section === 'doReleased'
           ? 'DO Released'
-          : section === 'dpApproval'
-            ? 'DP Clearance'
+          : section === 'boePassingDate'
+            ? 'BOE Passing Date'
             : section === 'customsClearance'
               ? 'Customs Clearance'
               : section === 'municipality'
@@ -619,8 +706,8 @@ export class ShipmentArrivalComponent {
         return this.advanceRequestFile;
       case 'doReleased':
         return this.doReleasedFile;
-      case 'dpApproval':
-        return this.dpApprovalFile;
+      case 'boePassingDate':
+        return this.boePassingDateFile;
       case 'customsClearance':
         return this.customsClearanceFile;
       case 'municipality':
@@ -641,7 +728,7 @@ export class ShipmentArrivalComponent {
       arrivalNotice: this.arrivalNoticeInputRef,
       advanceRequest: this.advanceRequestInputRef,
       doReleased: this.doReleasedInputRef,
-      dpApproval: this.dpApprovalInputRef,
+      boePassingDate: this.boePassingDateInputRef,
       customsClearance: this.customsClearanceInputRef,
       municipality: this.municipalityInputRef,
     };
@@ -672,7 +759,7 @@ export class ShipmentArrivalComponent {
       arrivalNotice: 'arrivalNoticeDocumentUrl',
       advanceRequest: 'advanceRequestDocumentUrl',
       doReleased: 'doReleasedDocumentUrl',
-      dpApproval: 'dpApprovalDocumentUrl',
+      boePassingDate: 'boePassingDocumentUrl',
       customsClearance: 'customsClearanceDocumentUrl',
       municipality: 'municipalityDocumentUrl',
     } as const;
@@ -684,7 +771,7 @@ export class ShipmentArrivalComponent {
       arrivalNotice: 'arrivalNoticeDocumentName',
       advanceRequest: 'advanceRequestDocumentName',
       doReleased: 'doReleasedDocumentName',
-      dpApproval: 'dpApprovalDocumentName',
+      boePassingDate: 'boePassingDocumentName',
       customsClearance: 'customsClearanceDocumentName',
       municipality: 'municipalityDocumentName',
     } as const;
@@ -820,8 +907,9 @@ export class ShipmentArrivalComponent {
         payload.append('advanceRequestDate', toDate(formValue['advanceRequestDate']));
         payload.append('doReleasedDate', toDate(formValue['doReleasedDate']));
         payload.append('doReleasedRemarks', formValue['doReleasedRemarks'] || '');
-        payload.append('dpApprovalDate', toDate(formValue['dpApprovalDate']));
-        payload.append('dpApprovalRemarks', formValue['dpApprovalRemarks'] || '');
+        payload.append('boePassingDate', toDate(formValue['boePassingDate']));
+        payload.append('boePassingRemarks', formValue['boePassingRemarks'] || '');
+        payload.append('dmBarcode', formValue['dmBarcode'] || '');
         payload.append('customsClearanceDate', toDate(formValue['customsClearanceDate']));
         payload.append('customsClearanceRemarks', formValue['customsClearanceRemarks'] || '');
         payload.append('tokenReceivedDate', toDate(formValue['tokenReceivedDate']));
@@ -833,7 +921,7 @@ export class ShipmentArrivalComponent {
           ['arrivalNotice', 'arrivalNoticeDocument'],
           ['advanceRequest', 'advanceRequestDocument'],
           ['doReleased', 'doReleasedDocument'],
-          ['dpApproval', 'dpApprovalDocument'],
+          ['boePassingDate', 'boePassingDocument'],
           ['customsClearance', 'customsClearanceDocument'],
           ['municipality', 'municipalityDocument'],
         ];
@@ -853,15 +941,15 @@ export class ShipmentArrivalComponent {
     });
   }
 
-  isSectionSaving(index: number, section: 'arrivalNotice' | 'advanceRequest' | 'doReleased' | 'dpApproval' | 'customsClearance' | 'municipality' | 'transportation'): boolean {
+  isSectionSaving(index: number, section: 'arrivalNotice' | 'advanceRequest' | 'doReleased' | 'boePassingDate' | 'customsClearance' | 'municipality' | 'transportation'): boolean {
     return this.sectionSavingKey() === `${section}-${index}`;
   }
 
-  private sectionKey(index: number, section: 'arrivalNotice' | 'advanceRequest' | 'doReleased' | 'dpApproval' | 'customsClearance' | 'municipality' | 'transportation'): string {
+  private sectionKey(index: number, section: 'arrivalNotice' | 'advanceRequest' | 'doReleased' | 'boePassingDate' | 'customsClearance' | 'municipality' | 'transportation'): string {
     return `${index}:${section}`;
   }
 
-  isLogisticsSectionLocked(index: number, section: 'arrivalNotice' | 'advanceRequest' | 'doReleased' | 'dpApproval' | 'customsClearance' | 'municipality' | 'transportation'): boolean {
+  isLogisticsSectionLocked(index: number, section: 'arrivalNotice' | 'advanceRequest' | 'doReleased' | 'boePassingDate' | 'customsClearance' | 'municipality' | 'transportation'): boolean {
     // If the user has explicit view+edit permission for this section, the row-level
     // submitted lock does not apply — only the section's own save-lock matters.
     const rowLocked = this.hasSectionPermission(section)
@@ -878,9 +966,82 @@ export class ShipmentArrivalComponent {
     return this.isLogisticsSectionLocked(index, 'transportation');
   }
 
+  private getRequiredCustomsDocTypes(): CustomsDocType[] {
+    return ['boe', 'do', 'blOriginal', 'invoice', 'packingList'];
+  }
+
+  private hasCustomsSubmissionDocument(group: AbstractControl, index: number, docType: CustomsDocType): boolean {
+    return !!this.getCustomsDocFile(index, docType) || !!this.getSavedCustomsDocUrl(group, docType);
+  }
+
+  private validateCustomsClearanceSection(index: number, group: AbstractControl): string[] {
+    const missingFields: string[] = [];
+    if (!group.get('customsClearanceDate')?.value) {
+      missingFields.push('Customs Clearance Date');
+    }
+    const missingDocs = this.getRequiredCustomsDocTypes().filter(
+      (docType) => !this.hasCustomsSubmissionDocument(group, index, docType)
+    );
+    if (missingDocs.length) {
+      const docLabels: Record<CustomsDocType, string> = {
+        boe: 'BOE Copy',
+        do: 'DO Copy',
+        blOriginal: 'BL',
+        invoice: 'Origin Invoice',
+        packingList: 'Packing List',
+        coo: 'COO',
+      };
+      missingFields.push(
+        ...missingDocs.map((docType) => docLabels[docType])
+      );
+    }
+    return missingFields;
+  }
+
+  private validateTransportationSection(group: AbstractControl): string[] {
+    const missingFields: string[] = [];
+    if (!group.get('tokenReceivedDate')?.value) {
+      missingFields.push('Token Received Date');
+    }
+    return missingFields;
+  }
+
+  private validateMunicipalitySection(group: AbstractControl): string[] {
+    const missingFields: string[] = [];
+    if (!group.get('municipalityDate')?.value) {
+      missingFields.push('Municipality Check Date');
+    }
+    const status = String(group.get('municipalityStatus')?.value || 'open').toLowerCase();
+    if (!status) {
+      missingFields.push('Status');
+    }
+    if (status === 'closed' && !String(group.get('municipalityStatusComment')?.value || '').trim()) {
+      missingFields.push('Closed Comment');
+    }
+    return missingFields;
+  }
+
+  private appendCustomsSubmissionDocuments(index: number, payload: FormData): void {
+    const docMap: Record<CustomsDocType, string> = {
+      boe: 'customsDocBoe',
+      do: 'customsDocDo',
+      blOriginal: 'customsDocBl',
+      invoice: 'customsDocInvoice',
+      packingList: 'customsDocPackingList',
+      coo: 'customsDocCoo',
+    };
+
+    this.getRequiredCustomsDocTypes().forEach((docType) => {
+      const file = this.getCustomsDocFile(index, docType);
+      if (file) {
+        payload.append(docMap[docType], file, file.name);
+      }
+    });
+  }
+
   unlockLogisticsSection(
     index: number,
-    section: 'arrivalNotice' | 'advanceRequest' | 'doReleased' | 'dpApproval' | 'customsClearance' | 'municipality' | 'transportation'
+    section: 'arrivalNotice' | 'advanceRequest' | 'doReleased' | 'boePassingDate' | 'customsClearance' | 'municipality' | 'transportation'
   ): void {
     const rowLocked = this.hasSectionPermission(section) ? false : this.isRowEditLocked(index);
     if (rowLocked || !this.canEditLogisticsSection(section)) return;
@@ -891,12 +1052,35 @@ export class ShipmentArrivalComponent {
     this.applySectionLocks(index);
   }
 
-  async saveLogisticsSection(index: number, section: 'arrivalNotice' | 'advanceRequest' | 'doReleased' | 'dpApproval' | 'customsClearance' | 'municipality' | 'transportation'): Promise<void> {
+  async saveLogisticsSection(index: number, section: 'arrivalNotice' | 'advanceRequest' | 'doReleased' | 'boePassingDate' | 'customsClearance' | 'municipality' | 'transportation'): Promise<void> {
     const group = this.formArray.at(index);
     const containerId = group?.get('containerId')?.value;
-    const shipmentId = this.shipmentData()?.shipment?._id;
-    if (!group || !containerId || !shipmentId || !this.canEditLogisticsSection(section) || this.isLogisticsSectionLocked(index, section)) return;
+    if (!group || !containerId || !this.canEditLogisticsSection(section) || this.isLogisticsSectionLocked(index, section)) return;
     this.ensureAccordionOpen(index);
+
+    if (section === 'customsClearance') {
+      const missingFields = this.validateCustomsClearanceSection(index, group);
+      if (missingFields.length) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Required Fields Missing',
+          detail: `Please complete: ${missingFields.join(', ')}`,
+        });
+        return;
+      }
+    }
+
+    if (section === 'municipality') {
+      const missingFields = this.validateMunicipalitySection(group);
+      if (missingFields.length) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Required Fields Missing',
+          detail: `Please complete: ${missingFields.join(', ')}`,
+        });
+        return;
+      }
+    }
 
     const sectionLabel = section === 'transportation'
       ? 'Transportation Arranged'
@@ -914,6 +1098,15 @@ export class ShipmentArrivalComponent {
     payload.append('sectionKey', section);
 
     if (section === 'transportation') {
+      const missingFields = this.validateTransportationSection(group);
+      if (missingFields.length) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Required Fields Missing',
+          detail: `Please complete: ${missingFields.join(', ')}`,
+        });
+        return;
+      }
       const transportationRows = this.getTransportationRows(group);
       transportationRows.markAllAsTouched();
       if (transportationRows.invalid) {
@@ -924,6 +1117,19 @@ export class ShipmentArrivalComponent {
         });
         return;
       }
+      
+      // Validate that all transport companies are selected
+      const transportationData = transportationRows.getRawValue();
+      const missingCompany = transportationData.some((tb: any) => !tb.transportCompanyName || tb.transportCompanyName.trim() === '');
+      if (missingCompany) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Transport Company Required',
+          detail: 'Please select a transport company for all containers before saving.',
+        });
+        return;
+      }
+      
       this.updateDelayHours(index);
       const transportationBooked = this.getTransportationRows(group).getRawValue().map((tb: any) => ({
         containerSerialNo: tb.containerSerialNo || '',
@@ -935,6 +1141,7 @@ export class ShipmentArrivalComponent {
         delayHours: tb.delayHours ?? null,
       }));
       payload.append('transportationBooked', JSON.stringify(transportationBooked));
+      payload.append('tokenReceivedDate', toDate(group.get('tokenReceivedDate')?.value));
     } else if (section === 'arrivalNotice') {
       this.updateDerivedDates(index);
       payload.append('arrivalOn', toDate(group.get('arrivalOn')?.value));
@@ -949,15 +1156,22 @@ export class ShipmentArrivalComponent {
       const sectionMap = {
         advanceRequest: { date: 'advanceRequestDate', remarks: null, file: 'advanceRequestDocument' },
         doReleased: { date: 'doReleasedDate', remarks: 'doReleasedRemarks', file: 'doReleasedDocument' },
-        dpApproval: { date: 'dpApprovalDate', remarks: 'dpApprovalRemarks', file: 'dpApprovalDocument' },
+        boePassingDate: { date: 'boePassingDate', remarks: 'boePassingRemarks', file: 'boePassingDocument' },
         customsClearance: { date: 'customsClearanceDate', remarks: 'customsClearanceRemarks', file: 'customsClearanceDocument' },
         municipality: { date: 'municipalityDate', remarks: 'municipalityRemarks', file: 'municipalityDocument' },
       } as const;
       const config = sectionMap[section];
       payload.append(config.date, toDate(group.get(config.date)?.value));
       if (config.remarks) payload.append(config.remarks, group.get(config.remarks)?.value || '');
+      if (section === 'boePassingDate') {
+        payload.append('dmBarcode', group.get('dmBarcode')?.value || '');
+      }
       if (section === 'customsClearance') {
-        payload.append('tokenReceivedDate', toDate(group.get('tokenReceivedDate')?.value));
+        this.appendCustomsSubmissionDocuments(index, payload);
+      }
+      if (section === 'municipality') {
+        payload.append('municipalityStatus', group.get('municipalityStatus')?.value || 'open');
+        payload.append('municipalityStatusComment', group.get('municipalityStatusComment')?.value || '');
       }
       const file = this.getFile(index, section);
       if (file) payload.append(config.file, file, file.name);
@@ -970,11 +1184,24 @@ export class ShipmentArrivalComponent {
 
     this.sectionSavingKey.set(`${section}-${index}`);
     this.shipmentService.submitLogistics(containerId, payload).subscribe({
-      next: () => {
+      next: (response) => {
         this.sectionSavingKey.set(null);
-        this.lockedSections.update((current) => ({ ...current, [this.sectionKey(index, section)]: true }));
+        const actual = response?.container?.actual || null;
+        if (actual) {
+          this.patchSavedSection(index, section, actual);
+        }
+        this.clearTransientSectionFiles(index, section);
+        this.lockedSections.update((current) => ({
+          ...current,
+          [this.sectionKey(index, section)]: true,
+        }));
+        if (actual?.lockedLogisticsSections) {
+          this.syncRowSectionLocks(index, actual.lockedLogisticsSections);
+        }
         this.applySectionLocks(index);
-        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+        if (this.isLogisticsRowComplete(actual || group.getRawValue()) && !this.submittedLogisticsIndices().includes(index)) {
+          this.store.dispatch(ShipmentActions.submitLogisticsSuccess({ index }));
+        }
         this.messageService.add({
           severity: 'success',
           summary: 'Saved',
@@ -1158,7 +1385,7 @@ export class ShipmentArrivalComponent {
         const locked = actualRow['lockedLogisticsSections'] || [];
         const sections: (Step5DocKind | 'transportation')[] = [
           'arrivalNotice', 'advanceRequest', 'doReleased', 
-          'dpApproval', 'customsClearance', 'municipality', 'transportation'
+          'boePassingDate', 'customsClearance', 'municipality', 'transportation'
         ];
         sections.forEach((s) => {
           const key = this.sectionKey(index, s);
@@ -1169,6 +1396,144 @@ export class ShipmentArrivalComponent {
     });
   }
 
+  private syncRowSectionLocks(index: number, lockedSections: string[]): void {
+    const validSections: Array<Step5DocKind | 'transportation'> = [
+      'arrivalNotice',
+      'advanceRequest',
+      'doReleased',
+      'boePassingDate',
+      'customsClearance',
+      'municipality',
+      'transportation',
+    ];
+
+    this.lockedSections.update((current) => {
+      const next = { ...current };
+      validSections.forEach((section) => {
+        next[this.sectionKey(index, section)] = lockedSections.includes(section);
+      });
+      return next;
+    });
+  }
+
+  private clearTransientSectionFiles(index: number, section: Step5DocKind | 'transportation'): void {
+    if (section === 'transportation') return;
+    this.getFileSignal(section as Step5DocKind).update((current) => ({
+      ...current,
+      [index]: null,
+    }));
+    if (section === 'customsClearance') {
+      this.getRequiredCustomsDocTypes().forEach((docType) => {
+        this.getCustomsDocFileSignal(docType).update((current) => ({
+          ...current,
+          [index]: null,
+        }));
+      });
+    }
+  }
+
+  private patchSavedSection(index: number, section: Step5DocKind | 'transportation', actual: any): void {
+    const group = this.formArray.at(index) as AbstractControl | null;
+    if (!group) return;
+
+    if (section === 'arrivalNotice') {
+      group.patchValue({
+        arrivalOn: actual.arrivalOn ? new Date(actual.arrivalOn) : null,
+        shipmentFreeRetentionDate: actual.shipmentFreeRetentionDate ? new Date(actual.shipmentFreeRetentionDate) : null,
+        portRetentionWithPenaltyDate: actual.portRetentionWithPenaltyDate ? new Date(actual.portRetentionWithPenaltyDate) : null,
+        maximumRetentionDate: actual.maximumRetentionDate ? new Date(actual.maximumRetentionDate) : null,
+        arrivalNoticeDate: actual.arrivalNoticeDate ? new Date(actual.arrivalNoticeDate) : null,
+        arrivalNoticeFreeRetentionDays: actual.arrivalNoticeFreeRetentionDays ?? null,
+        arrivalNoticeDocumentUrl: actual.arrivalNoticeDocumentUrl || '',
+        arrivalNoticeDocumentName: actual.arrivalNoticeDocumentName || '',
+      }, { emitEvent: false });
+      return;
+    }
+
+    if (section === 'transportation') {
+      const transportation = this.getTransportationRows(group);
+      const booked = Array.isArray(actual.transportationBooked) ? actual.transportationBooked : [];
+      transportation.controls.forEach((row, rowIndex) => {
+        const saved = booked[rowIndex];
+        if (!saved) return;
+        row.patchValue({
+          transportCompanyName: saved.transportCompanyName || '',
+          bookedDate: saved.bookedDate ? new Date(saved.bookedDate) : null,
+          bookingTime: saved.bookingTime || '',
+          transportDate: saved.transportDate ? new Date(saved.transportDate) : null,
+          transportTime: saved.transportTime || '',
+          delayHours: saved.delayHours ?? 0,
+        }, { emitEvent: false });
+      });
+      group.patchValue({
+        tokenReceivedDate: actual.tokenReceivedDate ? new Date(actual.tokenReceivedDate) : null,
+      }, { emitEvent: false });
+      return;
+    }
+
+    const patchBySection: Record<Exclude<Step5DocKind, 'arrivalNotice'>, Record<string, unknown>> = {
+      advanceRequest: {
+        advanceRequestDate: actual.advanceRequestDate ? new Date(actual.advanceRequestDate) : null,
+        advanceRequestDocumentUrl: actual.advanceRequestDocumentUrl || '',
+        advanceRequestDocumentName: actual.advanceRequestDocumentName || '',
+      },
+      doReleased: {
+        doReleasedDate: actual.doReleasedDate ? new Date(actual.doReleasedDate) : null,
+        doReleasedRemarks: actual.doReleasedRemarks || '',
+        doReleasedDocumentUrl: actual.doReleasedDocumentUrl || '',
+        doReleasedDocumentName: actual.doReleasedDocumentName || '',
+      },
+      boePassingDate: {
+        boePassingDate: actual.boePassingDate ? new Date(actual.boePassingDate) : null,
+        boePassingRemarks: actual.boePassingRemarks || '',
+        boePassingDocumentUrl: actual.boePassingDocumentUrl || '',
+        boePassingDocumentName: actual.boePassingDocumentName || '',
+        dmBarcode: actual.dmBarcode || '',
+      },
+      customsClearance: {
+        customsClearanceDate: actual.customsClearanceDate ? new Date(actual.customsClearanceDate) : null,
+        customsClearanceRemarks: actual.customsClearanceRemarks || '',
+        customsClearanceDocumentUrl: actual.customsClearanceDocumentUrl || '',
+        customsClearanceDocumentName: actual.customsClearanceDocumentName || '',
+        customsDocBoeUrl: actual.customsOriginalDocuments?.boe?.documentUrl || actual.customsOriginalDocuments?.boeDocumentUrl || '',
+        customsDocBoeName: actual.customsOriginalDocuments?.boe?.documentName || actual.customsOriginalDocuments?.boeDocumentName || '',
+        customsDocDoUrl: actual.customsOriginalDocuments?.do?.documentUrl || actual.customsOriginalDocuments?.doDocumentUrl || '',
+        customsDocDoName: actual.customsOriginalDocuments?.do?.documentName || actual.customsOriginalDocuments?.doDocumentName || '',
+        customsDocBlOriginalUrl: actual.customsOriginalDocuments?.blOriginal?.documentUrl || actual.customsOriginalDocuments?.blOriginalDocumentUrl || '',
+        customsDocBlOriginalName: actual.customsOriginalDocuments?.blOriginal?.documentName || actual.customsOriginalDocuments?.blOriginalDocumentName || '',
+        customsDocInvoiceUrl: actual.customsOriginalDocuments?.invoice?.documentUrl || actual.customsOriginalDocuments?.invoiceDocumentUrl || '',
+        customsDocInvoiceName: actual.customsOriginalDocuments?.invoice?.documentName || actual.customsOriginalDocuments?.invoiceDocumentName || '',
+        customsDocPackingListUrl: actual.customsOriginalDocuments?.packingList?.documentUrl || actual.customsOriginalDocuments?.packingListDocumentUrl || '',
+        customsDocPackingListName: actual.customsOriginalDocuments?.packingList?.documentName || actual.customsOriginalDocuments?.packingListDocumentName || '',
+      },
+      municipality: {
+        municipalityDate: actual.municipalityDate ? new Date(actual.municipalityDate) : null,
+        municipalityRemarks: actual.municipalityRemarks || '',
+        municipalityDocumentUrl: actual.municipalityDocumentUrl || '',
+        municipalityDocumentName: actual.municipalityDocumentName || '',
+        municipalityStatus: actual.municipalityStatus || 'open',
+        municipalityStatusComment: actual.municipalityStatusComment || '',
+      },
+    };
+
+    if (section in patchBySection) {
+      group.patchValue(patchBySection[section as Exclude<Step5DocKind, 'arrivalNotice'>], { emitEvent: false });
+    }
+  }
+
+  private isLogisticsRowComplete(row: any): boolean {
+    const locked = new Set(row?.lockedLogisticsSections || []);
+    return [
+      'arrivalNotice',
+      'advanceRequest',
+      'doReleased',
+      'boePassingDate',
+      'customsClearance',
+      'municipality',
+      'transportation',
+    ].every((section) => locked.has(section));
+  }
+
   private applySectionLocks(index: number): void {
     const group = this.formArray.at(index);
     if (!group) return;
@@ -1177,9 +1542,10 @@ export class ShipmentArrivalComponent {
       arrivalNotice: ['arrivalNoticeDate', 'arrivalOn', 'shipmentFreeRetentionDate', 'maximumRetentionDate', 'portRetentionWithPenaltyDate', 'arrivalNoticeFreeRetentionDays'],
       advanceRequest: ['advanceRequestDate'],
       doReleased: ['doReleasedDate', 'doReleasedRemarks'],
-      dpApproval: ['dpApprovalDate', 'dpApprovalRemarks'],
-      customsClearance: ['customsClearanceDate', 'customsClearanceRemarks', 'tokenReceivedDate'],
-      municipality: ['municipalityDate', 'municipalityRemarks'],
+      boePassingDate: ['boePassingDate', 'boePassingRemarks', 'dmBarcode'],
+      customsClearance: ['customsClearanceDate', 'customsClearanceRemarks'],
+      municipality: ['municipalityDate', 'municipalityRemarks', 'municipalityStatus', 'municipalityStatusComment'],
+      transportation: ['tokenReceivedDate'],
     };
 
     Object.entries(sectionControls).forEach(([section, controls]) => {
@@ -1209,5 +1575,89 @@ export class ShipmentArrivalComponent {
         row.get('delayHours')?.disable({ emitEvent: false });
       }
     });
+  }
+
+  // ========== Customs Documents Methods ==========
+
+  private pendingCustomsDocFileRow: number | null = null;
+  private pendingCustomsDocType: CustomsDocType | null = null;
+
+  clickCustomsDocFileInput(index: number, docType: CustomsDocType): void {
+    if (this.isRowEditLocked(index) || this.isLogisticsSectionLocked(index, 'customsClearance')) return;
+    this.pendingCustomsDocFileRow = index;
+    this.pendingCustomsDocType = docType;
+
+    const refs: Record<CustomsDocType, ElementRef<HTMLInputElement> | undefined> = {
+      boe: this.customsDocBoeInputRef,
+      do: this.customsDocDoInputRef,
+      blOriginal: this.customsDocBlOriginalInputRef,
+      invoice: this.customsDocInvoiceInputRef,
+      packingList: this.customsDocPackingListInputRef,
+      coo: this.customsDocCooInputRef,
+    };
+    refs[docType]?.nativeElement?.click();
+  }
+
+  onCustomsDocFileInputChange(event: Event, docType: CustomsDocType): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    const row = this.pendingCustomsDocFileRow;
+    if (row !== null && this.pendingCustomsDocType === docType && file) {
+      this.getCustomsDocFileSignal(docType).update((cur) => ({ ...cur, [row]: file }));
+    }
+    this.pendingCustomsDocFileRow = null;
+    this.pendingCustomsDocType = null;
+    input.value = '';
+  }
+
+  private getCustomsDocFileSignal(docType: CustomsDocType) {
+    switch (docType) {
+      case 'boe':
+        return this.customsDocBoeFile;
+      case 'do':
+        return this.customsDocDoFile;
+      case 'blOriginal':
+        return this.customsDocBlOriginalFile;
+      case 'invoice':
+        return this.customsDocInvoiceFile;
+      case 'packingList':
+        return this.customsDocPackingListFile;
+      case 'coo':
+        return this.customsDocCooFile;
+      default:
+        return this.customsDocBoeFile;
+    }
+  }
+
+  getCustomsDocFile(containerIndex: number, docType: CustomsDocType): File | null {
+    return this.getCustomsDocFileSignal(docType)()?.[containerIndex] ?? null;
+  }
+
+  clearCustomsDocFile(containerIndex: number, docType: CustomsDocType): void {
+    this.getCustomsDocFileSignal(docType).update((cur) => ({ ...cur, [containerIndex]: null }));
+  }
+
+  getSavedCustomsDocUrl(group: AbstractControl, docType: CustomsDocType): string {
+    const map: Record<CustomsDocType, string> = {
+      boe: 'customsDocBoeUrl',
+      do: 'customsDocDoUrl',
+      blOriginal: 'customsDocBlOriginalUrl',
+      invoice: 'customsDocInvoiceUrl',
+      packingList: 'customsDocPackingListUrl',
+      coo: 'customsDocCooUrl',
+    };
+    return group.get(map[docType])?.value || '';
+  }
+
+  getSavedCustomsDocName(group: AbstractControl, docType: CustomsDocType): string {
+    const map: Record<CustomsDocType, string> = {
+      boe: 'customsDocBoeName',
+      do: 'customsDocDoName',
+      blOriginal: 'customsDocBlOriginalName',
+      invoice: 'customsDocInvoiceName',
+      packingList: 'customsDocPackingListName',
+      coo: 'customsDocCooName',
+    };
+    return group.get(map[docType])?.value || '';
   }
 }

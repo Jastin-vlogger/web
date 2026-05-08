@@ -121,6 +121,7 @@ export class ShipmentStorageComponent {
   readonly savingAllRows = signal(false);
   readonly saveAllProgress = signal<{ current: number; total: number } | null>(null);
   readonly storageArrivalStatusOverrides = signal<Record<number, 'draft' | 'pending_warehouse_manager' | 'approved'>>({});
+  readonly actualOverrides = signal<Record<number, any>>({});
   readonly previewUrl = signal<string | null>(null);
   readonly previewTitle = signal('');
   readonly previewIsImage = signal(false);
@@ -176,7 +177,51 @@ export class ShipmentStorageComponent {
   }
 
   private getActualRow(index: number): any {
-    return this.shipmentData()?.actual?.[index] || null;
+    return this.actualOverrides()[index] || this.shipmentData()?.actual?.[index] || null;
+  }
+
+  private applyActualOverride(index: number, actual: any): void {
+    if (!actual) return;
+    this.actualOverrides.update((current) => ({ ...current, [index]: actual }));
+  }
+
+  private patchStorageArrivalFromActual(index: number, actual: any): void {
+    const group = this.formArray.at(index) as FormGroup | null;
+    if (!group || !actual) return;
+
+    group.patchValue(
+      {
+        storageDocumentUrl: actual.storageDocumentUrl || '',
+        storageDocumentName: actual.storageDocumentName || '',
+      },
+      { emitEvent: false }
+    );
+
+    const rows = this.getContainersArray(group);
+    const actualRows = Array.isArray(actual.storageSplits) ? actual.storageSplits : [];
+    rows.forEach((control, rowIndex) => {
+      const saved = actualRows[rowIndex];
+      if (!saved) return;
+      (control as FormGroup).patchValue(
+        {
+          containerSerialNo: saved.containerSerialNo || '',
+          bags: Number(saved.bags ?? 0),
+          warehouse: saved.warehouse || '',
+          storageAvailability: Number(saved.storageAvailability ?? 0),
+          receivedOnDate: saved.receivedOnDate ? new Date(saved.receivedOnDate) : null,
+          receivedOnTime: saved.receivedOnTime || '',
+          customsInspection: saved.customsInspection || 'No',
+          grn: saved.grn || '',
+          batch: saved.batch || '',
+          productionDate: saved.productionDate ? new Date(saved.productionDate) : null,
+          expiryDate: saved.expiryDate ? new Date(saved.expiryDate) : null,
+          remarks: saved.remarks || '',
+          documentUrl: saved.documentUrl || '',
+          documentName: saved.documentName || '',
+        },
+        { emitEvent: false }
+      );
+    });
   }
 
   getStorageAllocationApproval(index: number): StorageAllocationApprovalState | null {
@@ -244,8 +289,7 @@ export class ShipmentStorageComponent {
   async approveStorageArrival(index: number): Promise<void> {
     const actualRow = this.getActualRow(index);
     const containerId = actualRow?.containerId || (this.formArray.at(index) as FormGroup | null)?.get('containerId')?.value;
-    const shipmentId = this.shipmentData()?.shipment?._id;
-    if (!containerId || !shipmentId || !this.canApproveStorageArrival(index)) return;
+    if (!containerId || !this.canApproveStorageArrival(index)) return;
 
     const confirmed = await this.confirmDialog.ask({
       message: `Approve storage arrival for Shipment ${index + 1}?`,
@@ -256,11 +300,13 @@ export class ShipmentStorageComponent {
 
     this.savingRowKey.set(`approve:${index}`);
     this.shipmentService.approveStorageArrival(containerId).subscribe({
-      next: () => {
+      next: (response) => {
+        const actual = (response as any)?.container?.actual;
+        this.applyActualOverride(index, actual);
+        this.patchStorageArrivalFromActual(index, actual);
         this.storageArrivalStatusOverrides.update((current) => ({ ...current, [index]: 'approved' }));
         this.savingRowKey.set(null);
         this.notificationService.success('Approved', 'Storage arrival approved successfully.');
-        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
       },
       error: (error) => {
         this.savingRowKey.set(null);
@@ -545,8 +591,7 @@ export class ShipmentStorageComponent {
     this.ensureAccordionOpen(index);
     this.setShipmentTab(index, 'arrival');
     const group = this.formArray.at(index) as FormGroup | null;
-    const shipmentId = this.shipmentData()?.shipment?._id;
-    if (!group || !shipmentId) return;
+    if (!group) return;
 
     const containerId = group.get('containerId')?.value;
     if (!containerId) {
@@ -607,12 +652,15 @@ export class ShipmentStorageComponent {
 
     this.savingRowKey.set(this.saveRowKey(index, containerIndex));
     this.shipmentService.submitStorageArrivalRow(containerId, containerIndex, formData).subscribe({
-      next: () => {
+      next: (response) => {
+        const actual = (response as any)?.container?.actual;
+        this.applyActualOverride(index, actual);
+        this.patchStorageArrivalFromActual(index, actual);
         this.storageArrivalStatusOverrides.update((current) => ({ ...current, [index]: 'pending_warehouse_manager' }));
         this.savingRowKey.set(null);
         if (rowFile) this.clearRowFile(index, containerIndex);
         this.notificationService.success('Saved', `Storage arrival row ${containerIndex + 1} saved successfully.`);
-        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+        this.store.dispatch(ShipmentActions.submitClearanceFinalSuccess({ index }));
       },
       error: (error) => {
         this.savingRowKey.set(null);
@@ -630,8 +678,7 @@ export class ShipmentStorageComponent {
     this.ensureAccordionOpen(shipmentIndex);
     this.setShipmentTab(shipmentIndex, 'arrival');
     const group = this.formArray.at(shipmentIndex) as FormGroup | null;
-    const shipmentId = this.shipmentData()?.shipment?._id;
-    if (!group || !shipmentId) return;
+    if (!group) return;
 
     const containerId = group.get('containerId')?.value;
     if (!containerId) {
@@ -718,7 +765,10 @@ export class ShipmentStorageComponent {
     });
 
     this.shipmentService.submitStorageDetails(containerId, payload).subscribe({
-      next: () => {
+      next: (response) => {
+        const actual = (response as any)?.container?.actual;
+        this.applyActualOverride(shipmentIndex, actual);
+        this.patchStorageArrivalFromActual(shipmentIndex, actual);
         this.storageArrivalStatusOverrides.update((current) => ({ ...current, [shipmentIndex]: 'pending_warehouse_manager' }));
         containers.forEach((_, containerIndex) => {
           if (this.getRowFile(shipmentIndex, containerIndex)) {
@@ -732,7 +782,7 @@ export class ShipmentStorageComponent {
         this.savingAllRows.set(false);
         this.saveAllProgress.set(null);
         this.notificationService.success('All Saved', `${containers.length} storage arrival row(s) saved successfully.`);
-        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+        this.store.dispatch(ShipmentActions.submitClearanceFinalSuccess({ index: shipmentIndex }));
       },
       error: (error) => {
         this.savingAllRows.set(false);

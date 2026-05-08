@@ -62,6 +62,7 @@ export class ShipmentQualityComponent {
 
   readonly uploadedFiles = signal<Record<string, File | null>>({});
   readonly savingRowIndex = signal<number | null>(null);
+  readonly actualOverrides = signal<Record<number, any>>({});
 
   hasVisibleShipments(): boolean {
     return this.visibleShipmentIndices.length > 0;
@@ -324,10 +325,89 @@ export class ShipmentQualityComponent {
     if (!visible) this.closeDocumentPreview();
   }
 
+  private applyActualOverride(index: number, actual: any): void {
+    if (!actual) return;
+    this.actualOverrides.update((current) => ({ ...current, [index]: actual }));
+  }
+
+  private clearUploadedFilesForShipment(index: number): void {
+    const prefix = `${index}:`;
+    this.uploadedFiles.update((current) =>
+      Object.fromEntries(Object.entries(current).filter(([key]) => !key.startsWith(prefix)))
+    );
+  }
+
+  private patchQualityFromActual(index: number, actual: any): void {
+    const group = this.formArray.at(index) as FormGroup | null;
+    if (!group || !actual) return;
+
+    const qualityRows = this.getQualityRows(group);
+    const actualRows = Array.isArray(actual.qualityRows) ? actual.qualityRows : [];
+    while (qualityRows.length < actualRows.length) {
+      this.addQualityRow(group);
+    }
+    while (qualityRows.length > Math.max(actualRows.length, 1)) {
+      qualityRows.removeAt(qualityRows.length - 1);
+    }
+
+    qualityRows.controls.forEach((control, rowIndex) => {
+      const saved = actualRows[rowIndex];
+      if (!saved) return;
+      (control as FormGroup).patchValue(
+        {
+          sn: Number(saved.sn) || rowIndex + 1,
+          sampleNo: saved.sampleNo || '',
+          phase: saved.phase || 'S1',
+          purpose: saved.purpose || '',
+          date: saved.date ? new Date(saved.date) : null,
+          inhouseReportNo: saved.inhouseReportNo || '',
+          inhouseReportDate: saved.inhouseReportDate ? new Date(saved.inhouseReportDate) : null,
+          inhouseReportDocumentUrl: saved.inhouseReportDocumentUrl || '',
+          inhouseReportDocumentName: saved.inhouseReportDocumentName || '',
+          strategicReportNo: saved.strategicReportNo || '',
+          strategicReportDate: saved.strategicReportDate ? new Date(saved.strategicReportDate) : null,
+          strategicReportDocumentUrl: saved.strategicReportDocumentUrl || '',
+          strategicReportDocumentName: saved.strategicReportDocumentName || '',
+          thirdPartyReportNo: saved.thirdPartyReportNo || '',
+          thirdPartyReportDate: saved.thirdPartyReportDate ? new Date(saved.thirdPartyReportDate) : null,
+          thirdPartyReportDocumentUrl: saved.thirdPartyReportDocumentUrl || '',
+          thirdPartyReportDocumentName: saved.thirdPartyReportDocumentName || '',
+          remarks: saved.remarks || '',
+          attachmentDocumentUrl: saved.attachmentDocumentUrl || '',
+          attachmentDocumentName: saved.attachmentDocumentName || '',
+        },
+        { emitEvent: false }
+      );
+    });
+
+    const qualityReports = this.getQualityReports(group);
+    const actualReports = Array.isArray(actual.qualityReports) ? actual.qualityReports : [];
+    while (qualityReports.length < actualReports.length) {
+      this.addQualityReportRow(group);
+    }
+    while (qualityReports.length > Math.max(actualReports.length, 1)) {
+      qualityReports.removeAt(qualityReports.length - 1);
+    }
+
+    qualityReports.controls.forEach((control, rowIndex) => {
+      const saved = actualReports[rowIndex];
+      if (!saved) return;
+      (control as FormGroup).patchValue(
+        {
+          phase: saved.phase || 'S1',
+          reportDate: saved.reportDate ? new Date(saved.reportDate) : null,
+          remarks: saved.remarks || '',
+          documentUrl: saved.documentUrl || '',
+          documentName: saved.documentName || '',
+        },
+        { emitEvent: false }
+      );
+    });
+  }
+
   async saveRow(index: number): Promise<void> {
     const group = this.formArray.at(index) as FormGroup | null;
-    const shipmentId = this.shipmentData()?.shipment?._id;
-    if (!group || !shipmentId) return;
+    if (!group) return;
 
     const containerId = group.get('containerId')?.value;
     if (!containerId) {
@@ -401,10 +481,13 @@ export class ShipmentQualityComponent {
 
     this.savingRowIndex.set(index);
     this.shipmentService.submitQualityDetails(containerId, formData).subscribe({
-      next: () => {
+      next: (response) => {
+        this.applyActualOverride(index, response?.container?.actual);
+        this.patchQualityFromActual(index, response?.container?.actual);
+        this.clearUploadedFilesForShipment(index);
         this.savingRowIndex.set(null);
         this.notificationService.success('Saved', 'Quality details saved successfully.');
-        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+        this.store.dispatch(ShipmentActions.submitGRNSuccess({ index }));
       },
       error: (error) => {
         this.savingRowIndex.set(null);

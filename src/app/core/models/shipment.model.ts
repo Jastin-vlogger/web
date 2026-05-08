@@ -12,6 +12,16 @@ export interface Shipment {
   status: string;
 }
 
+export interface BlRowDefinitionItem {
+  key: string;
+  sn: number;
+  description: string;
+  visibleTo: string[];
+  defaultQty: number;
+  defaultRate: number;
+  isActive?: boolean;
+}
+
 export interface ShipmentListResponse {
   page: number;
   limit: number;
@@ -192,6 +202,7 @@ export interface CreateShipmentPayload {
   countryOfOrigin?: string;
   brandName?: string;
   barcode?: string;
+  dmBarcode?: string;
   variant?: string;
   hsCode?: string;
   packing?: string;
@@ -506,6 +517,7 @@ export interface ShipmentInfo {
   paymentTerms?: string;
   bankName?: string;
   barcode?: string;
+  dmBarcode?: string;
   variant?: string;
   hsCode?: string;
   lpoDocumentName?: string;
@@ -675,6 +687,9 @@ export interface ActualContainer {
   costSheetBookings?: {
     sn?: number;
     description?: string;
+    visibleTo?: string[];
+    defaultQty?: number;
+    defaultRate?: number;
     requestAmount?: number;
     paidAmount?: number;
   }[];
@@ -734,6 +749,13 @@ export interface ActualContainer {
   dpApprovalDate?: string;
   dpApprovalRemarks?: string;
 
+  // New BOE fields (renamed from dpApproval)
+  boePassingDate?: string;
+  boePassingDocumentUrl?: string;
+  boePassingDocumentName?: string;
+  boePassingRemarks?: string;
+  dmBarcode?: string;
+
   customsClearanceDocumentUrl?: string;
   customsClearanceDocumentName?: string;
   customsClearanceDate?: string;
@@ -777,6 +799,29 @@ export interface ActualContainer {
     delayHours?: number;
   }>;
   lockedLogisticsSections?: string[];
+  
+  // Customs Original Document Submission
+  customsOriginalDocuments?: {
+    boeSubmissionDate?: string;
+    boeDocumentUrl?: string;
+    boeDocumentName?: string;
+    doSubmissionDate?: string;
+    doDocumentUrl?: string;
+    doDocumentName?: string;
+    blOriginalSubmissionDate?: string;
+    blOriginalDocumentUrl?: string;
+    blOriginalDocumentName?: string;
+    invoiceSubmissionDate?: string;
+    invoiceDocumentUrl?: string;
+    invoiceDocumentName?: string;
+    packingListSubmissionDate?: string;
+    packingListDocumentUrl?: string;
+    packingListDocumentName?: string;
+    cooSubmissionDate?: string;
+    cooDocumentUrl?: string;
+    cooDocumentName?: string;
+  };
+  
   // Step 4 legacy
   clearExpectedOn?: string;
   shipmentArrivedOn?: string;
@@ -864,13 +909,21 @@ export interface ActualContainer {
   paymentAllocations?: {
     sn?: number;
     description?: string;
+    visibleTo?: string[];
+    defaultQty?: number;
+    defaultRate?: number;
     requestAmount?: number;
     paidAmount?: number;
     reference?: string;
+    attachmentDocumentUrl?: string;
+    attachmentDocumentName?: string;
   }[];
   paymentCostings?: {
     sn?: number;
     description?: string;
+    visibleTo?: string[];
+    defaultQty?: number;
+    defaultRate?: number;
     requestAmount?: number;
     paidAmount?: number;
     actualPaid?: number;

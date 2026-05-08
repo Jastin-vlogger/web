@@ -260,15 +260,15 @@
                           <i class="pi pi-pencil"></i>
                         </button>
                       }
+                      <button
+                        type="button"
+                        (click)="generateCostSheetReport(i)"
+                        class="rbac-allow-interaction inline-flex h-10 items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 text-[10px] font-black uppercase tracking-wider text-blue-600 hover:bg-blue-100"
+                      >
+                        <i class="pi pi-file-export text-[10px]"></i>
+                        Generate Report
+                      </button>
                       @if (canEditClearingAdvance(i)) {
-                        <button
-                          type="button"
-                          (click)="generateCostSheetReport(i)"
-                          class="inline-flex h-10 items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 text-[10px] font-black uppercase tracking-wider text-blue-600 hover:bg-blue-100"
-                        >
-                          <i class="pi pi-file-export text-[10px]"></i>
-                          Generate Report
-                        </button>
                         <button
                           type="button"
                           (click)="saveCostSheet(i)"
@@ -343,11 +343,11 @@
                   </div>
 
                   <div class="flex flex-col">
-                    @for (row of getVisibleCostSheetRows(group, i); track $index; let rowIndex = $index) {
-                        <div [formGroup]="$any(row)" class="border-b last:border-b-0 border-slate-100 p-4">
+                    @for (rowEntry of getVisibleCostSheetRows(group, i); track rowEntry.index; let visibleIndex = $index) {
+                        <div [formGroup]="$any(rowEntry.control)" class="border-b last:border-b-0 border-slate-100 p-4">
                         <div class="hidden md:grid md:grid-cols-[60px_minmax(0,1.8fr)_160px_160px] gap-3 items-start">
-                          <div class="flex items-center min-h-10 text-sm font-bold text-slate-700">{{ row.get('sn')?.value }}</div>
-                          <div class="flex items-center min-h-10 text-sm font-semibold text-slate-700">{{ row.get('description')?.value }}</div>
+                          <div class="flex items-center min-h-10 text-sm font-bold text-slate-700">{{ visibleIndex + 1 }}</div>
+                          <div class="flex items-center min-h-10 text-sm font-semibold text-slate-700">{{ rowEntry.control.get('description')?.value }}</div>
                           <p-inputNumber formControlName="requestAmount" styleClass="w-full" inputStyleClass="table-input w-full" placeholder="0.00" [minFractionDigits]="2" [maxFractionDigits]="2" [useGrouping]="true" />
                           <!-- POINT 5: Replaced Paid Amount with Remarks -->
                           <input pInputText formControlName="remarks" class="table-input-text w-full" placeholder="Remarks..." [readonly]="!isCostSheetEditing(i)" />
@@ -355,13 +355,13 @@
 
                         <div class="md:hidden flex flex-col gap-3">
                           <div class="flex items-center justify-between">
-                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">SN {{ row.get('sn')?.value }}</span>
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">SN {{ visibleIndex + 1 }}</span>
                           </div>
                           <div class="grid grid-cols-1 gap-3">
                             <div class="flex flex-col gap-1.5">
                               <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Description</label>
                               <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-700">
-                                {{ row.get('description')?.value }}
+                                {{ rowEntry.control.get('description')?.value }}
                               </div>
                             </div>
                             <div class="grid grid-cols-2 gap-3">

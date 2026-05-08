@@ -194,6 +194,7 @@ export class CreateShipmentComponent implements OnInit, OnDestroy {
       itemCode: [''],
       brandName: [''],
       barcode: [''],
+      dmBarcode: [''],
       variant: [''],
       hsCode: [''],
       itemDescription: [''],
@@ -630,6 +631,7 @@ export class CreateShipmentComponent implements OnInit, OnDestroy {
     patch['brandName'] = uniqueOrMixed((item) => item.brandName, primaryItem.brandName || '');
     patch['countryOfOrigin'] = uniqueOrMixed((item) => item.countryOfOrigin, primaryItem.countryOfOrigin || '');
     patch['barcode'] = uniqueOrMixed((item) => item.barcode, primaryItem.barcode || '');
+    patch['dmBarcode'] = uniqueOrMixed((item) => item.dmBarcode, primaryItem.dmBarcode || '');
     patch['variant'] = uniqueOrMixed((item) => item.variant, primaryItem.variant || '');
     patch['hsCode'] = uniqueOrMixed((item) => item.hsCode, primaryItem.hsCode || '');
     patch['packagingType'] = uniqueOrMixed((item) => item.packagingType, primaryItem.packagingType || '');
@@ -791,6 +793,7 @@ export class CreateShipmentComponent implements OnInit, OnDestroy {
           this.shipmentForm.patchValue({
             brandName: item.brand || this.shipmentForm.get('brandName')?.value || '',
             barcode: item.barcode || this.shipmentForm.get('barcode')?.value || '',
+            dmBarcode: item.dm_barcode || this.shipmentForm.get('dmBarcode')?.value || '',
             variant: item.variant || this.shipmentForm.get('variant')?.value || '',
             hsCode: item.hsCode || item.hs_code || this.shipmentForm.get('hsCode')?.value || '',
             countryOfOrigin: item.country_of_origin || this.shipmentForm.get('countryOfOrigin')?.value || '',
@@ -857,6 +860,7 @@ export class CreateShipmentComponent implements OnInit, OnDestroy {
       countryOfOrigin: formValue.countryOfOrigin || '',
       brandName: formValue.brandName || '',
       barcode: formValue.barcode || '',
+      dmBarcode: formValue.dmBarcode || '',
       variant: formValue.variant || '',
       hsCode: formValue.hsCode || '',
       packing: formValue.packagingType || '',

@@ -96,12 +96,16 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
   readonly submittedActualIndices = toSignal(this.store.select(selectSubmittedActualIndices), {
     initialValue: [],
   });
-  readonly submittingPlanned = toSignal(this.store.select(selectSubmittingPlanned), {
+  readonly storeSubmittingPlanned = toSignal(this.store.select(selectSubmittingPlanned), {
     initialValue: false,
   });
-  readonly submittingRowIndex = toSignal(this.store.select(selectSubmittingRowIndex), {
+  readonly storeSubmittingRowIndex = toSignal(this.store.select(selectSubmittingRowIndex), {
     initialValue: null,
   });
+  readonly localSubmittingPlanned = signal(false);
+  readonly localSubmittingRowIndex = signal<number | null>(null);
+  readonly submittingPlanned = computed(() => this.localSubmittingPlanned() || this.storeSubmittingPlanned());
+  readonly submittingRowIndex = computed(() => this.localSubmittingRowIndex() ?? this.storeSubmittingRowIndex());
 
   /** Row index for which bill-no extraction is in progress (show spinner). */
   readonly extractingBillNoRowIndex = signal<number | null>(null);
@@ -986,6 +990,79 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     return `${base}/ACT${String(index + 1).padStart(2, '0')}`;
   }
 
+  private patchPlannedRowsAfterSave(containers: any[]): void {
+    if (!Array.isArray(containers) || !containers.length) return;
+
+    containers.forEach((container, index) => {
+      const planned = this.plannedSplits.at(index) as FormGroup | null;
+      if (planned) {
+        planned.patchValue(
+          {
+            size: container?.planned?.size ?? planned.get('size')?.value,
+            qtyMT: container?.planned?.qtyMT ?? planned.get('qtyMT')?.value,
+            FCL: container?.planned?.FCL ?? planned.get('FCL')?.value,
+            etd: container?.planned?.etd ? new Date(container.planned.etd) : planned.get('etd')?.value,
+            eta: container?.planned?.eta ? new Date(container.planned.eta) : planned.get('eta')?.value,
+            weekWiseShipment: container?.planned?.weekWiseShipment ?? planned.get('weekWiseShipment')?.value,
+          },
+          { emitEvent: false }
+        );
+      }
+
+      const actual = this.actualSplits.at(index) as FormGroup | null;
+      if (actual) {
+        actual.patchValue(
+          {
+            containerId: container?._id ?? actual.get('containerId')?.value,
+            FCL: container?.planned?.FCL ?? actual.get('FCL')?.value,
+            size: container?.planned?.size ?? actual.get('size')?.value,
+            qtyMT: container?.planned?.qtyMT ?? actual.get('qtyMT')?.value,
+            updatedETD: container?.planned?.etd ? new Date(container.planned.etd) : actual.get('updatedETD')?.value,
+            updatedETA: container?.planned?.eta ? new Date(container.planned.eta) : actual.get('updatedETA')?.value,
+          },
+          { emitEvent: false }
+        );
+      }
+    });
+  }
+
+  private patchActualRowAfterSave(index: number, response: any): void {
+    const row = this.actualSplits.at(index) as FormGroup | null;
+    const actual = response?.container?.actual;
+    if (!row || !actual) return;
+
+    row.patchValue(
+      {
+        actualSerialNo: actual.actualSerialNo || this.getActualShipmentId(index),
+        commercialInvoiceNo: actual.commercialInvoiceNo || '',
+        shipOnBoardDate: actual.shipOnBoardDate ? new Date(actual.shipOnBoardDate) : null,
+        qtyMT: actual.qtyMT ?? row.get('qtyMT')?.value,
+        bags: actual.bags ?? row.get('bags')?.value,
+        pallet: actual.pallet ?? row.get('pallet')?.value,
+        portOfLoading: actual.portOfLoading || '',
+        portOfDischarge: actual.portOfDischarge || '',
+        noOfContainers: actual.noOfContainers ?? null,
+        noOfBags: actual.noOfBags ?? null,
+        quantityByMt: actual.quantityByMt ?? null,
+        shippingLine: actual.shippingLine || '',
+        freeDetentionDays: actual.freeDetentionDays ?? null,
+        maximumDetentionDays: actual.maximumDetentionDays ?? null,
+        freightPrepared: actual.freightPrepared || 'No',
+        billExtractionData: actual.billExtractionData || null,
+        extractedContainers: actual.extractedContainers || [],
+        packagingList: actual.packagingList || null,
+        packagingListDocumentUrl: actual.packagingListDocumentUrl || '',
+        packagingListDocumentName: actual.packagingListDocumentName || '',
+        updatedETD: actual.updatedETD ? new Date(actual.updatedETD) : row.get('updatedETD')?.value,
+        updatedETA: actual.updatedETA ? new Date(actual.updatedETA) : row.get('updatedETA')?.value,
+        receivedOn: actual.receivedOn ? new Date(actual.receivedOn) : null,
+        status: 'Actual',
+        BLNo: actual.BLNo || '',
+      },
+      { emitEvent: false }
+    );
+  }
+
   canDeletePlannedRow(index: number): boolean {
     if (this.isPlannedRowLocked(index)) return false;
     if (this.isPlannedLocked()) return false;
@@ -1405,16 +1482,47 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
       etd: c.etd ? new Date(c.etd).toISOString().split('T')[0] : '',
       eta: c.eta ? new Date(c.eta).toISOString().split('T')[0] : '',
     }));
-    this.store.dispatch(
-      ShipmentActions.submitPlannedContainers({
-        shipmentId: shipmentData.shipment._id || (shipmentData as any).shipment.id,
-        containers: containers,
-        plannedQtyMT: shipmentData.shipment.plannedQtyMT || 0,
-        noOfShipments: targetNoOfShipments,
-        keepTab: this.isPlannedLocked(),
-      })
-    );
-    this.editablePlannedRows.set([]);
+    const shipmentId = shipmentData.shipment._id || (shipmentData as any).shipment.id;
+
+    if (!this.isPlannedLocked()) {
+      this.store.dispatch(
+        ShipmentActions.submitPlannedContainers({
+          shipmentId,
+          containers: containers,
+          plannedQtyMT: shipmentData.shipment.plannedQtyMT || 0,
+          noOfShipments: targetNoOfShipments,
+          keepTab: this.isPlannedLocked(),
+        })
+      );
+      this.editablePlannedRows.set([]);
+      return;
+    }
+
+    this.localSubmittingPlanned.set(true);
+    this.shipmentService.createPlannedContainers({
+      shipmentId,
+      plannedContainers: containers,
+      noOfShipments: targetNoOfShipments,
+    }).subscribe({
+      next: (response: any) => {
+        this.localSubmittingPlanned.set(false);
+        this.patchPlannedRowsAfterSave(response?.containers || []);
+        this.editablePlannedRows.set([]);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Saved',
+          detail: response?.message || 'Scheduled shipments updated successfully.',
+        });
+      },
+      error: (error) => {
+        this.localSubmittingPlanned.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: error.error?.message || 'Failed to save scheduled shipments.',
+        });
+      },
+    });
   }
 
   getRowDiffs(entry: ScheduledHistoryEntry): HistoryDiffRow[] {
@@ -1600,7 +1708,30 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
       }
     }
 
-    this.store.dispatch(ShipmentActions.submitActualContainer({ containerId, index, payload }));
+    this.localSubmittingRowIndex.set(index);
+    this.shipmentService.createActualContainer(containerId, payload).subscribe({
+      next: (response: any) => {
+        this.localSubmittingRowIndex.set(null);
+        this.patchActualRowAfterSave(index, response);
+        this.clearBillDocumentFile(index);
+        this.clearPackagingListFile(index);
+        this.setActualExtractionError(index, null);
+        this.store.dispatch(ShipmentActions.submitActualSuccess({ index }));
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Saved',
+          detail: response?.message || 'Actual container submitted successfully',
+        });
+      },
+      error: (error) => {
+        this.localSubmittingRowIndex.set(null);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: error.error?.message || 'Failed to submit actual container',
+        });
+      },
+    });
   }
 
   // ─── Track Order Modal ────────────────────────────────────────────────────

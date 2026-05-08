@@ -23,6 +23,8 @@ import { DialogModule } from 'primeng/dialog';
 import { ShipmentPaymentCostingComponent } from '../shipment-payment-costing/shipment-payment-costing.component';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { normalizeBlRole, normalizeBlVisibleTo, type BlVisibleRole } from '../../shared/bl-row-definitions';
+import { downloadAdvanceRequestReportPdf } from '../../shared/advance-request-report';
 import {
   selectIsPlannedLocked,
   selectShipmentData,
@@ -33,38 +35,6 @@ import {
   selectSubmittedStep6Indices,
   selectSubmittedStep7Indices,
 } from '../../../../../../store/shipment/shipment.selectors';
-
-const COST_SHEET_DESCRIPTIONS = [
-  'Invoice Attestation - MOFAIC',
-  'DC Charges',
-  'DO Extension',
-  'Air Cargo Clearing Charge',
-  'Labour Charges',
-  'Other Charges',
-  'BOE',
-  'Custom Duty 5%',
-  'Custom Pay Service Charges',
-  'DP Charges',
-  'TLUC',
-  'THC',
-  'DP Storage Charges 01',
-  'DP Storage Charges 02',
-  'Mun Charges',
-  'Addi Gate Token',
-  'DP Gate Token',
-  'Transportation Single @rate (ALAIN)',
-  'Transportation Single @rate (AD)',
-  'Transportation Single/Couple @rate (DIC)',
-  'Transportation Single/Couple @rate (Location)',
-  'Inspection Charges 01',
-  'Inspection Charges 02',
-  'Offloading Charges 01',
-  'Offloading Charges 02',
-  'Mecrec Charges',
-  'Open & Close Fees with Sales at Customs',
-  'Other',
-  'Murabaha Profit',
-] as const;
 
 @Component({
   selector: 'app-shipment-bl-details',
@@ -112,14 +82,13 @@ export class ShipmentBlDetailsComponent {
   readonly warehouseOptions = signal<Array<{ label: string; value: string }>>([]);
   readonly costSheetSearchTerm = signal<Record<number, string>>({});
   readonly editingCostSheet = signal<Record<number, boolean>>({});
-  readonly costSheetDescriptions = COST_SHEET_DESCRIPTIONS;
-
   readonly activeTabs = signal<Record<number, 'cost' | 'storage' | 'packaging' | 'payment_allocation' | 'payment_costing'>>({});
   readonly expandedCostSheet = signal<Record<number, boolean>>({});
   readonly bookingFiles = signal<Record<number, File | null>>({});
   readonly statusModalVisible = signal(false);
   readonly statusModalShipmentIndex = signal<number | null>(null);
   readonly savingKey = signal<string | null>(null);
+  readonly actualOverrides = signal<Record<number, any>>({});
   readonly storageValidationModalVisible = signal(false);
   readonly storageValidationMessage = signal('');
   readonly storageValidationDetails = signal<Array<{ storage: string; packaging: string }>>([]);
@@ -212,6 +181,54 @@ export class ShipmentBlDetailsComponent {
     if (!current.includes(panelValue)) {
       this.activeAccordionValues.set([...current, panelValue]);
     }
+  }
+
+  private applyActualOverride(index: number, actual: any): void {
+    if (!actual) return;
+    this.actualOverrides.update((current) => ({ ...current, [index]: actual }));
+  }
+
+  private patchCostSheetFromActual(index: number, actual: any): void {
+    const row = this.formArray.at(index);
+    if (!row || !actual) return;
+
+    row.patchValue({
+      costSheetBookingDocumentUrl: actual.costSheetBookingDocumentUrl || '',
+      costSheetBookingDocumentName: actual.costSheetBookingDocumentName || '',
+    }, { emitEvent: false });
+
+    const rows = this.getCostSheetRows(row);
+    const actualRows = Array.isArray(actual.costSheetBookings) ? actual.costSheetBookings : [];
+    rows.controls.forEach((control, rowIndex) => {
+      const saved = actualRows[rowIndex];
+      if (!saved) return;
+      control.patchValue({
+        sn: Number(saved.sn) || rowIndex + 1,
+        description: control.get('description')?.value || saved.description || '',
+        visibleTo: normalizeBlVisibleTo(control.get('visibleTo')?.value ?? ['logistic', 'fas']),
+        requestAmount: Number(saved.requestAmount ?? 0),
+        remarks: saved.remarks ?? '',
+      }, { emitEvent: false });
+    });
+  }
+
+  private patchStorageAllocationsFromActual(index: number, actual: any): void {
+    const row = this.formArray.at(index);
+    if (!row || !actual) return;
+
+    const rows = this.getStorageRows(row);
+    const actualRows = Array.isArray(actual.storageAllocations) ? actual.storageAllocations : [];
+    rows.controls.forEach((control, rowIndex) => {
+      const saved = actualRows[rowIndex];
+      if (!saved) return;
+      control.patchValue({
+        sn: Number(saved.sn) || rowIndex + 1,
+        containerSerialNo: saved.containerSerialNo || '',
+        bags: Number(saved.bags ?? 0),
+        warehouse: saved.warehouse || '',
+        storageAvailability: Number(saved.storageAvailability ?? 0),
+      }, { emitEvent: false });
+    });
   }
 
   setCostSheetSearchTerm(index: number, term: string): void {
@@ -322,7 +339,7 @@ export class ShipmentBlDetailsComponent {
   }
 
   private getActualShipment(index: number): any {
-    return this.shipmentData()?.actual?.[index] || null;
+    return this.actualOverrides()[index] || this.shipmentData()?.actual?.[index] || null;
   }
 
   private getEffectiveClearingAdvanceStatus(index: number): 'draft' | 'pending_fas' | 'pending_fas_manager' | 'approved' {
@@ -436,6 +453,19 @@ export class ShipmentBlDetailsComponent {
 
   private isFasRole(): boolean {
     return (this.authService.getCurrentUser()?.role || '') === 'FAS';
+  }
+
+  private getCurrentBlVisibleRole(): BlVisibleRole | null {
+    return normalizeBlRole(this.authService.getCurrentUser()?.role);
+  }
+
+  private canCurrentUserSeeBlRow(row: AbstractControl | any): boolean {
+    if (this.authService.isAdminLevelRole()) return true;
+    const role = this.getCurrentBlVisibleRole();
+    if (!role) return true;
+    const visibleTo = row instanceof AbstractControl ? row.get('visibleTo')?.value : row?.visibleTo;
+    if (!Array.isArray(visibleTo) || visibleTo.length === 0) return true;
+    return visibleTo.includes(role);
   }
 
   private isFasManagerRole(): boolean {
@@ -653,11 +683,13 @@ export class ShipmentBlDetailsComponent {
     this.storageValidationDetails.set([]);
   }
 
-  getVisibleCostSheetRows(group: AbstractControl, shipmentIndex: number): AbstractControl[] {
-    const rows = this.getCostSheetRows(group).controls;
+  getVisibleCostSheetRows(group: AbstractControl, shipmentIndex: number): Array<{ control: AbstractControl; index: number }> {
+    const rows = this.getCostSheetRows(group).controls
+      .map((control, index) => ({ control, index }))
+      .filter(({ control }) => this.canCurrentUserSeeBlRow(control));
     const term = String(this.costSheetSearchTerm()[shipmentIndex] || '').trim().toLowerCase();
     const filteredRows = term
-      ? rows.filter((row) => String(row.get('description')?.value || '').toLowerCase().includes(term))
+      ? rows.filter(({ control }) => String(control.get('description')?.value || '').toLowerCase().includes(term))
       : rows;
     return this.expandedCostSheet()[shipmentIndex] ? filteredRows : filteredRows.slice(0, 5);
   }
@@ -666,9 +698,10 @@ export class ShipmentBlDetailsComponent {
     const term = String(this.costSheetSearchTerm()[shipmentIndex] || '').trim().toLowerCase();
     const total = term
       ? this.getCostSheetRows(group).controls.filter((row) =>
+          this.canCurrentUserSeeBlRow(row) &&
           String(row.get('description')?.value || '').toLowerCase().includes(term)
         ).length
-      : this.getCostSheetRows(group).length;
+      : this.getCostSheetRows(group).controls.filter((row) => this.canCurrentUserSeeBlRow(row)).length;
     return !this.expandedCostSheet()[shipmentIndex] && total > 5;
   }
 
@@ -1213,11 +1246,11 @@ export class ShipmentBlDetailsComponent {
     formData.append('netWeight', row.get('netWeight')?.value || '');
 
     this.shipmentService.submitBLDetails(containerId, formData).subscribe({
-      next: () => {
+      next: (response) => {
         this.savingKey.set(null);
+        this.applyActualOverride(index, response?.container?.actual);
         this.notificationService.success('Saved', 'B/L details saved successfully.');
         this.ensureAccordionOpen(index); // POINT 8: keep accordion open
-        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
       },
       error: (error) => {
         this.savingKey.set(null);
@@ -1248,6 +1281,7 @@ export class ShipmentBlDetailsComponent {
     const costSheetBookings = this.getCostSheetRows(row).getRawValue().map((entry: any) => ({
       sn: Number(entry.sn) || 0,
       description: entry.description || '',
+      visibleTo: normalizeBlVisibleTo(entry.visibleTo),
       requestAmount: Number(entry.requestAmount ?? 0),
       // POINT 5: paidAmount removed, replaced with remarks
       remarks: entry.remarks ?? '',
@@ -1263,13 +1297,14 @@ export class ShipmentBlDetailsComponent {
     }
 
     this.shipmentService.submitBLDetails(containerId, formData).subscribe({
-      next: () => {
+      next: (response) => {
         this.savingKey.set(null);
+        this.applyActualOverride(index, response?.container?.actual);
+        this.patchCostSheetFromActual(index, response?.container?.actual);
         if (bookingFile) this.clearBookingFile(index);
         this.editingCostSheet.update((current) => ({ ...current, [index]: false }));
         this.notificationService.success('Saved', 'Cost sheet booking saved successfully.');
         this.ensureAccordionOpen(index); // POINT 8: keep accordion open
-        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
       },
       error: (error) => {
         this.savingKey.set(null);
@@ -1330,11 +1365,12 @@ export class ShipmentBlDetailsComponent {
     formData.append('storageAllocations', JSON.stringify(storageAllocations));
 
     this.shipmentService.submitBLDetails(containerId, formData).subscribe({
-      next: () => {
+      next: (response) => {
         this.savingKey.set(null);
+        this.applyActualOverride(index, response?.container?.actual);
+        this.patchStorageAllocationsFromActual(index, response?.container?.actual);
         this.notificationService.success('Saved', 'Storage allocations saved successfully.');
         this.ensureAccordionOpen(index); // POINT 8: keep accordion open
-        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
       },
       error: (error) => {
         this.savingKey.set(null);
@@ -1451,20 +1487,11 @@ export class ShipmentBlDetailsComponent {
 
     const shipment = this.shipmentData()?.shipment as any;
     const actual = this.shipmentData()?.actual?.[index] as any;
-    const costRows = this.getCostSheetRows(row).getRawValue();
-    const fmt = (v: unknown) => this.formatCurrency(v);
-    const fmtDate = (v: unknown) => this.formatDateForReport(v);
-
-    // Exchange rate
+    const visibleCostRows = this.getCostSheetRows(row).controls.filter((entry) => this.canCurrentUserSeeBlRow(entry));
     const totalFC = Number(shipment?.totalFC) || 0;
     const amountAED = Number(shipment?.amountAED) || 0;
-    const exchangeRate = totalFC > 0 && amountAED > 0 ? fmt(amountAED / totalFC) : '3.67';
-
-    // Storage / arrival data
-    const firstStorage = actual?.storageSplits?.[0];
-    const grvNo = firstStorage?.grn || actual?.grn?.grnNo || '';
-    const arrivedAtWH = firstStorage?.receivedOnDate ? fmtDate(firstStorage.receivedOnDate) : '';
-    const arrivedAtPort = actual?.arrivalOn ? fmtDate(actual.arrivalOn) : '';
+    const exchangeRate = totalFC > 0 && amountAED > 0 ? this.formatCurrency(amountAED / totalFC) : '3.67';
+    const arrivedAtPort = actual?.arrivalOn ? this.formatDateForReport(actual.arrivalOn) : '';
     const clearedOn = actual?.clearedOn || actual?.clearance?.clearedOn;
     let noOfDaysAtPort = '';
     if (actual?.arrivalOn && clearedOn) {
@@ -1472,63 +1499,53 @@ export class ShipmentBlDetailsComponent {
       noOfDaysAtPort = String(diff);
     }
 
-    const packagingExpenses: any[] = actual?.packagingExpenses || [];
-
-    // Current logged-in user
     const currentUser = this.authService.getCurrentUser();
     const downloadedBy = currentUser
       ? `${currentUser.name} (${currentUser.role}) — ${new Date().toLocaleDateString('en-GB')} ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
       : 'Unknown';
 
-    this.downloadCostingSheetPdf({
-      shipmentNo: this.getShipmentNoLabel(index),
-      date: fmtDate(new Date()),
-      csNo: row.get('blNo')?.value || '',
+    const storage = Array.from(
+      new Set(
+        [
+          ...(Array.isArray(actual?.storageAllocations) ? actual.storageAllocations : []),
+          ...(Array.isArray(actual?.storageSplits) ? actual.storageSplits : []),
+        ]
+          .map((entry: any) => String(entry?.warehouse || '').trim())
+          .filter(Boolean)
+      )
+    ).join(', ');
+
+    downloadAdvanceRequestReportPdf({
+      fileStem: `${this.getShipmentNoLabel(index)}-clearing-advance-report`,
+      sourceLabel: 'Clearing Advance',
+      reportDate: this.formatDateForReport(new Date()),
+      boeDate: this.formatDateForReport(actual?.boePassingDate || actual?.customsClearanceDate),
       vendor: shipment?.supplierName || shipment?.supplier || '',
       country: shipment?.countryOfOrigin || '',
-      invoiceAmountFC: fmt(shipment?.totalFC ?? 0),
-      exchangeRate,
-      invoiceAmountAED: fmt(shipment?.amountAED ?? (Number(shipment?.totalFC ?? 0) * 3.67)),
-      incoTerms: shipment?.incoterms || '',
-      paymentTerms: shipment?.paymentTerms || '',
-      comInv: actual?.commercialInvoiceNo || '',
-      profNo: shipment?.piNo || '',
-      murabahaNo: actual?.murabahaContractSubmittedDate ? fmtDate(actual.murabahaContractSubmittedDate) : '',
-      shipmentNo2: this.getShipmentNoLabel(index),
+      shipmentNo: this.getShipmentNoLabel(index),
       shippingLine: row.get('shippingLine')?.value || actual?.shippingLine || '',
+      invoiceAmountFC: this.formatCurrency(shipment?.totalFC ?? 0),
       blNo: row.get('blNo')?.value || actual?.BLNo || '',
+      exchangeRate,
       noOfContainers: String(row.get('noOfContainers')?.value || actual?.noOfContainers || ''),
+      invoiceAmountAED: this.formatCurrency(shipment?.amountAED ?? (Number(shipment?.totalFC ?? 0) * 3.67)),
       loadingPort: row.get('portOfLoading')?.value || actual?.portOfLoading || shipment?.portOfLoading || '',
       despatchPort: row.get('portOfDischarge')?.value || actual?.portOfDischarge || shipment?.portOfDischarge || '',
-      arrivedAtPort,
-      arrivedAtWH,
+      incoTerms: shipment?.incoterms || '',
+      supplierInvoiceNo: actual?.commercialInvoiceNo || shipment?.piNo || '',
+      eta: arrivedAtPort,
+      item: shipment?.item || shipment?.itemDescription || '',
+      planningToReleaseDate: this.formatDateForReport(actual?.documentsReleasedDate),
       noOfDaysAtPort,
-      grvNo,
-      decNo: '',
-      decValue: fmt(shipment?.totalFC ?? 0),
+      storage,
       downloadedBy,
-      costRows: costRows.map((entry: any) => ({
-        sn: Number(entry.sn) || 0,
-        description: entry.description || '',
-        requestAmount: fmt(entry.requestAmount ?? 0),
-        actualCostDH: fmt(entry.paidAmount ?? 0),
-        billRef: '',
-        remarks: '',
-      })),
-      itemRows: packagingExpenses.map((e: any, i: number) => ({
-        slNo: i + 1,
-        item: e.item || '',
-        packing: e.packing || '',
-        qty: fmt(e.qty ?? 0),
-        uom: e.uom || '',
-        unitCostFC: fmt(e.unitCostFC ?? 0),
-        unitCostDH: fmt(e.unitCostDH ?? 0),
-        totalCostFC: fmt(e.totalCostFC ?? 0),
-        totalCostDH: fmt(e.totalCostDH ?? 0),
-        allocationFactor: fmt(e.expenseAllocationFactor ?? 0),
-        expensesAllocated: fmt(e.expensesAllocated ?? 0),
-        totalValueWithExpenses: fmt(e.totalValueWithExpenses ?? 0),
-        landedCostPerUnit: fmt(e.landedCostPerUnit ?? 0),
+      lines: visibleCostRows.map((entry, visibleIndex) => ({
+        sn: visibleIndex + 1,
+        description: entry.get('description')?.value ?? '',
+        qty: entry.get('defaultQty')?.value ?? 1,
+        rate: entry.get('defaultRate')?.value ?? 0,
+        amount: Number(entry.get('requestAmount')?.value) || 0,
+        paymentReference: entry.get('remarks')?.value ?? '',
       })),
     });
   }
@@ -1536,6 +1553,7 @@ export class ShipmentBlDetailsComponent {
   getCostSheetTotal(group: AbstractControl, field: 'requestAmount' | 'paidAmount'): string {
     const total = this.getCostSheetRows(group)
       .getRawValue()
+      .filter((row: any) => this.canCurrentUserSeeBlRow(row))
       .reduce((sum: number, row: any) => sum + (Number(row?.[field]) || 0), 0);
     return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(total);
   }

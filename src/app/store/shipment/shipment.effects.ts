@@ -53,7 +53,7 @@ export class ShipmentEffects {
                 actualData?.arrivalNoticeDocumentUrl ||
                 actualData?.advanceRequestDate ||
                 actualData?.doReleasedDate ||
-                actualData?.dpApprovalDate ||
+                actualData?.boePassingDate ||
                 actualData?.customsClearanceDate ||
                 actualData?.municipalityDate ||
                 (actualData?.transportationBooked?.length ?? 0) > 0;

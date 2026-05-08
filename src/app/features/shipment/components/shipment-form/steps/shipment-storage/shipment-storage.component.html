@@ -193,7 +193,7 @@
                   </div>
                 </div>
                 <div class="storage-arrival-viewport overflow-x-auto">
-                  <table class="w-full border-separate border-spacing-0" style="min-width: 2100px;">
+                  <table class="w-full border-separate border-spacing-0" [style.min-width]="isStorageArrivalLocked(i) ? '1800px' : '2100px'">
                     <thead>
                       <tr class="bg-slate-50 border-b border-slate-200">
                         <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-10">#</th>
@@ -207,8 +207,10 @@
                         <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-40">Production Date<span class="text-red-500 ml-0.5">*</span></th>
                         <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-40">Expiry Date<span class="text-red-500 ml-0.5">*</span></th>
                         <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-80">Remarks</th>
+                        @if (!isStorageArrivalLocked(i)) {
                         <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-24">Document</th>
                         <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-28">Action</th>
+                        }
                       </tr>
                     </thead>
                     <tbody>
@@ -245,6 +247,7 @@
                           <td class="px-3 py-2">
                             <input pInputText formControlName="remarks" class="table-input-text w-full" placeholder="Remarks" [readonly]="isStorageArrivalLocked(i)" />
                           </td>
+                          @if (!isStorageArrivalLocked(i)) {
                           <td class="px-3 py-2">
                             <div class="flex items-center gap-1">
                               @if (!isStorageArrivalLocked(i)) {
@@ -285,6 +288,7 @@
                             </button>
                             }
                           </td>
+                          }
                         </tr>
                       }
                     </tbody>

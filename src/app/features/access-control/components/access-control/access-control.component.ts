@@ -3,8 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs/operators';
 import { MessageService } from 'primeng/api';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { AccessControlService } from '../../../../core/services/access-control.service';
-import { AccessPermission, AccessPermissionGroup, AccessRole, AccessUser } from '../../../../core/models/access-control.model';
+import { AccessPermission, AccessPermissionGroup, AccessRole, AccessUser, BlRowDefinitionAdminItem } from '../../../../core/models/access-control.model';
 import { AuthService } from '../../../../core/services/auth.service';
 
 type AccessTabKey = 'roles' | 'menu' | 'permissions' | 'users';
@@ -54,7 +55,7 @@ interface RowDefinition {
 @Component({
   selector: 'app-access-control',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MultiSelectModule],
   templateUrl: './access-control.component.html',
   styleUrl: './access-control.component.scss',
 })
@@ -67,13 +68,16 @@ export class AccessControlComponent {
   readonly rolesLoading = signal(false);
   readonly permissionsLoading = signal(false);
   readonly usersLoading = signal(false);
+  readonly blRowsLoading = signal(false);
   readonly saveLoading = signal(false);
+  readonly blRowSaveId = signal<string | 'new' | null>(null);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
 
   readonly roles = signal<AccessRole[]>([]);
   readonly selectedRoleId = signal<string | null>(null);
   readonly permissionGroups = signal<AccessPermissionGroup[]>([]);
+  readonly blRowDefinitions = signal<BlRowDefinitionAdminItem[]>([]);
   readonly users = signal<AccessUser[]>([]);
   readonly selectedUserId = signal<string | null>(null);
   readonly userSearch = signal<string>('');
@@ -89,6 +93,7 @@ export class AccessControlComponent {
   readonly roleForm = signal({ key: '', name: '', description: '', isActive: true });
   readonly editingRoleId = signal<string | null>(null);
   readonly userForm = signal({ email: '', name: '', role: '', isActive: true });
+  readonly newBlRowForm = signal({ description: '', visibleTo: [] as string[], defaultQty: 1, defaultRate: 0 });
 
   readonly canManageAccess = computed(() => {
     return this.authService.isAdminLevelRole();
@@ -603,6 +608,9 @@ export class AccessControlComponent {
     if (tab === 'users' && !this.users().length && !this.usersLoading()) {
       this.loadUsers();
     }
+    if (tab === 'permissions' && !this.blRowDefinitions().length && !this.blRowsLoading()) {
+      this.loadBlRowDefinitions();
+    }
   }
 
   // ─── Expand / collapse matrix rows ───────────────────────────────────────
@@ -614,6 +622,9 @@ export class AccessControlComponent {
         next.delete(rowKey);
       } else {
         next.add(rowKey);
+        if (rowKey === 'bl_details' && !this.blRowDefinitions().length && !this.blRowsLoading()) {
+          this.loadBlRowDefinitions();
+        }
       }
       return next;
     });
@@ -645,6 +656,9 @@ export class AccessControlComponent {
             this.loadRolePermissions(nextId);
           } else {
             this.permissionGroups.set([]);
+          }
+          if (this.activeTab() === 'permissions' && !this.blRowDefinitions().length) {
+            this.loadBlRowDefinitions();
           }
         },
         error: (err) => {
@@ -722,6 +736,128 @@ export class AccessControlComponent {
           this.error.set(err.error?.message || 'Unable to load permissions.');
         },
       });
+  }
+
+  loadBlRowDefinitions(): void {
+    this.blRowsLoading.set(true);
+    this.accessControlService
+      .getBlRowDefinitions()
+      .pipe(finalize(() => this.blRowsLoading.set(false)))
+      .subscribe({
+        next: ({ rows }) => {
+          this.blRowDefinitions.set(rows);
+        },
+        error: (err) => {
+          this.error.set(err.error?.message || 'Unable to load BL row definitions.');
+        },
+      });
+  }
+
+  getRoleOptionsForBlRows(): Array<{ label: string; value: string }> {
+    return this.roles()
+      .filter((role) => role.isActive)
+      .map((role) => ({
+        label: `${role.name} (${role.key})`,
+        value: String(role.key || '').trim().toLowerCase(),
+      }));
+  }
+
+  onBlRowVisibleToChange(event: Event, rowId?: string): void {
+    const target = event.target as HTMLSelectElement | null;
+    if (!target) return;
+    const values = Array.from(target.selectedOptions).map((option) => option.value);
+    if (rowId) {
+      this.updateBlRowDraft(rowId, { visibleTo: values });
+      return;
+    }
+    this.newBlRowForm.set({ ...this.newBlRowForm(), visibleTo: values });
+  }
+
+  updateBlRowDraft(rowId: string, patch: Partial<BlRowDefinitionAdminItem>): void {
+    this.blRowDefinitions.update((rows) =>
+      rows.map((row) => (row._id === rowId ? { ...row, ...patch } : row))
+    );
+  }
+
+  createBlRowDefinition(): void {
+    const form = this.newBlRowForm();
+    if (!form.description.trim()) {
+      this.error.set('BL row description is required.');
+      return;
+    }
+
+    this.blRowSaveId.set('new');
+    this.accessControlService
+      .createBlRowDefinition({
+        description: form.description.trim(),
+        visibleTo: form.visibleTo,
+        defaultQty: Number.isFinite(Number(form.defaultQty)) ? Number(form.defaultQty) : 1,
+        defaultRate: Number.isFinite(Number(form.defaultRate)) ? Number(form.defaultRate) : 0,
+      })
+      .pipe(finalize(() => this.blRowSaveId.set(null)))
+      .subscribe({
+        next: ({ message, row }) => {
+          this.blRowDefinitions.update((rows) => [...rows, row].sort((a, b) => a.sn - b.sn));
+          this.newBlRowForm.set({ description: '', visibleTo: [], defaultQty: 1, defaultRate: 0 });
+          this.messageService.add({ severity: 'success', summary: 'Created', detail: message });
+        },
+        error: (err) => {
+          this.error.set(err.error?.message || 'Unable to create BL row definition.');
+        },
+      });
+  }
+
+  saveBlRowDefinition(row: BlRowDefinitionAdminItem): void {
+    if (!row.description.trim()) {
+      this.error.set('BL row description is required.');
+      return;
+    }
+
+    this.blRowSaveId.set(row._id);
+    this.accessControlService
+      .updateBlRowDefinition(row._id, {
+        description: row.description.trim(),
+        visibleTo: row.visibleTo,
+        defaultQty: Number.isFinite(Number(row.defaultQty)) ? Number(row.defaultQty) : 1,
+        defaultRate: Number.isFinite(Number(row.defaultRate)) ? Number(row.defaultRate) : 0,
+        isActive: row.isActive,
+      })
+      .pipe(finalize(() => this.blRowSaveId.set(null)))
+      .subscribe({
+        next: ({ message, row: savedRow }) => {
+          this.blRowDefinitions.update((rows) =>
+            rows.map((item) => (item._id === savedRow._id ? savedRow : item)).sort((a, b) => a.sn - b.sn)
+          );
+          this.messageService.add({ severity: 'success', summary: 'Saved', detail: message });
+        },
+        error: (err) => {
+          this.error.set(err.error?.message || 'Unable to update BL row definition.');
+        },
+      });
+  }
+
+  deleteBlRowDefinition(row: BlRowDefinitionAdminItem): void {
+    this.blRowSaveId.set(row._id);
+    this.accessControlService
+      .deleteBlRowDefinition(row._id)
+      .pipe(finalize(() => this.blRowSaveId.set(null)))
+      .subscribe({
+        next: ({ message }) => {
+          this.blRowDefinitions.update((rows) => rows.filter((item) => item._id !== row._id));
+          this.messageService.add({ severity: 'success', summary: 'Deleted', detail: message });
+        },
+        error: (err) => {
+          this.error.set(err.error?.message || 'Unable to delete BL row definition.');
+        },
+      });
+  }
+
+  isBlDetailsRow(row: PermissionMatrixRow): boolean {
+    return row.key === 'bl_details';
+  }
+
+  isBlRowSaving(rowId: string | 'new'): boolean {
+    return this.blRowSaveId() === rowId;
   }
 
   /**

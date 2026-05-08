@@ -1,4 +1,4 @@
-import { Component, OnDestroy, computed, effect, inject } from '@angular/core'; // Trigger reload
+import { Component, OnDestroy, computed, effect, inject, signal } from '@angular/core'; // Trigger reload
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormArray, FormControl, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { RouterLink, ActivatedRoute } from '@angular/router';
@@ -35,38 +35,8 @@ import { ShipmentStorageComponent } from './steps/shipment-storage/shipment-stor
 import { ShipmentQualityComponent } from './steps/shipment-quality/shipment-quality.component';
 import { RbacService } from '../../../../core/services/rbac.service';
 import { AuthService } from '../../../../core/services/auth.service';
-
-const COST_SHEET_DESCRIPTIONS = [
-  'Invoice Attestation - MOFAIC',
-  'DC Charges',
-  'DO Extension',
-  'Air Cargo Clearing Charge',
-  'Labour Charges',
-  'Other Charges',
-  'BOE',
-  'Custom Duty 5%',
-  'Custom Pay Service Charges',
-  'DP Charges',
-  'TLUC',
-  'THC',
-  'DP Storage Charges 01',
-  'DP Storage Charges 02',
-  'Mun Charges',
-  'Addi Gate Token',
-  'DP Gate Token',
-  'Transportation Single @rate (ALAIN)',
-  'Transportation Single @rate (AD)',
-  'Transportation Single/Couple @rate (DIC)',
-  'Transportation Single/Couple @rate (Location)',
-  'Inspection Charges 01',
-  'Inspection Charges 02',
-  'Offloading Charges 01',
-  'Offloading Charges 02',
-  'Mecrec Charges',
-  'Open & Close Fees with Sales at Customs',
-  'Other',
-  'Murabaha Profit',
-] as const;
+import { ShipmentService } from '../../../../core/services/shipment.service';
+import { BL_ROW_DEFINITIONS, normalizeBlVisibleTo, type BlRowDefinition } from './shared/bl-row-definitions';
 
 type ShipmentTabKey =
   | 'shipment_entry'
@@ -113,9 +83,11 @@ export class ShipmentFormComponent implements OnDestroy {
   private store = inject(Store);
   private rbacService = inject(RbacService);
   private authService = inject(AuthService);
+  private shipmentService = inject(ShipmentService);
 
   shipmentForm: FormGroup;
   shipmentId: string | null = null;
+  readonly blRowDefinitions = signal<BlRowDefinition[]>([...BL_ROW_DEFINITIONS]);
 
   // Signals from store
   readonly loading = toSignal(this.store.select(selectShipmentLoading), { initialValue: false });
@@ -266,6 +238,7 @@ export class ShipmentFormComponent implements OnDestroy {
 
   constructor() {
     this.shipmentForm = this.buildForm();
+    this.loadBlRowDefinitions();
 
     // Repopulate reactive form when API data arrives
     effect(() => {
@@ -298,6 +271,40 @@ export class ShipmentFormComponent implements OnDestroy {
         this.store.dispatch(ShipmentActions.loadShipmentDetail({ id }));
       }
     });
+  }
+
+  private loadBlRowDefinitions(): void {
+    this.shipmentService.getBlRowDefinitions().subscribe({
+      next: (response) => {
+        const rows = (response?.rows || [])
+          .filter((row) => row?.isActive !== false)
+          .map((row) => ({
+            key: row.key,
+            sn: Number(row.sn) || 0,
+            description: row.description,
+            visibleTo: normalizeBlVisibleTo(row.visibleTo),
+            defaultQty: Number(row.defaultQty ?? 1),
+            defaultRate: Number(row.defaultRate ?? 0),
+          }))
+          .filter((row) => !!row.description)
+          .sort((left, right) => left.sn - right.sn);
+
+        if (!rows.length) return;
+
+        this.blRowDefinitions.set(rows);
+        const data = this.shipmentData();
+        this.shipmentForm = this.buildForm();
+        if (data) this.populateFormWithData(data);
+      },
+      error: () => {
+        // Keep the local fallback definitions if the DB list is unavailable.
+      },
+    });
+  }
+
+  private getActiveBlRowDefinitions(): BlRowDefinition[] {
+    const rows = this.blRowDefinitions();
+    return rows.length ? rows : [...BL_ROW_DEFINITIONS];
   }
 
   getDisplayShipmentNo(): string {
@@ -490,7 +497,7 @@ export class ShipmentFormComponent implements OnDestroy {
       'arrivalNotice',
       'advanceRequest',
       'doReleased',
-      'dpApproval',
+      'boePassingDate',
       'customsClearance',
       'municipality',
       'transportation',
@@ -916,10 +923,10 @@ export class ShipmentFormComponent implements OnDestroy {
             doReleasedDocumentUrl: [actualData?.doReleasedDocumentUrl || ''],
             doReleasedDocumentName: [actualData?.doReleasedDocumentName || ''],
             doReleasedRemarks: [(actualData as any)?.doReleasedRemarks || ''],
-            dpApprovalDate: [actualData?.dpApprovalDate ? new Date(actualData.dpApprovalDate) : null],
-            dpApprovalDocumentUrl: [actualData?.dpApprovalDocumentUrl || ''],
-            dpApprovalDocumentName: [actualData?.dpApprovalDocumentName || ''],
-            dpApprovalRemarks: [actualData?.dpApprovalRemarks || ''],
+            boePassingDate: [actualData?.boePassingDate ? new Date(actualData.boePassingDate) : null],
+            boePassingDocumentUrl: [actualData?.boePassingDocumentUrl || ''],
+            boePassingDocumentName: [actualData?.boePassingDocumentName || ''],
+            boePassingRemarks: [actualData?.boePassingRemarks || ''],
             customsClearanceDate: [actualData?.customsClearanceDate ? new Date(actualData.customsClearanceDate) : null],
             customsClearanceDocumentUrl: [actualData?.customsClearanceDocumentUrl || ''],
             customsClearanceDocumentName: [actualData?.customsClearanceDocumentName || ''],
@@ -945,6 +952,28 @@ export class ShipmentFormComponent implements OnDestroy {
               actualData?.municipalityClearanceRemarks ||
               '',
             ],
+            municipalityStatus: [(actualData as any)?.municipalityStatus || 'open'],
+            municipalityStatusComment: [(actualData as any)?.municipalityStatusComment || ''],
+            dmBarcode: [(actualData as any)?.dmBarcode || ''],
+            // Customs Original Documents
+            customsDocBoeSubmissionDate: [(actualData as any)?.customsOriginalDocuments?.boe?.submissionDate ? new Date((actualData as any).customsOriginalDocuments.boe.submissionDate) : null],
+            customsDocBoeUrl: [(actualData as any)?.customsOriginalDocuments?.boe?.documentUrl || ''],
+            customsDocBoeName: [(actualData as any)?.customsOriginalDocuments?.boe?.documentName || ''],
+            customsDocDoSubmissionDate: [(actualData as any)?.customsOriginalDocuments?.do?.submissionDate ? new Date((actualData as any).customsOriginalDocuments.do.submissionDate) : null],
+            customsDocDoUrl: [(actualData as any)?.customsOriginalDocuments?.do?.documentUrl || ''],
+            customsDocDoName: [(actualData as any)?.customsOriginalDocuments?.do?.documentName || ''],
+            customsDocBlOriginalSubmissionDate: [(actualData as any)?.customsOriginalDocuments?.blOriginal?.submissionDate ? new Date((actualData as any).customsOriginalDocuments.blOriginal.submissionDate) : null],
+            customsDocBlOriginalUrl: [(actualData as any)?.customsOriginalDocuments?.blOriginal?.documentUrl || ''],
+            customsDocBlOriginalName: [(actualData as any)?.customsOriginalDocuments?.blOriginal?.documentName || ''],
+            customsDocInvoiceSubmissionDate: [(actualData as any)?.customsOriginalDocuments?.invoice?.submissionDate ? new Date((actualData as any).customsOriginalDocuments.invoice.submissionDate) : null],
+            customsDocInvoiceUrl: [(actualData as any)?.customsOriginalDocuments?.invoice?.documentUrl || ''],
+            customsDocInvoiceName: [(actualData as any)?.customsOriginalDocuments?.invoice?.documentName || ''],
+            customsDocPackingListSubmissionDate: [(actualData as any)?.customsOriginalDocuments?.packingList?.submissionDate ? new Date((actualData as any).customsOriginalDocuments.packingList.submissionDate) : null],
+            customsDocPackingListUrl: [(actualData as any)?.customsOriginalDocuments?.packingList?.documentUrl || ''],
+            customsDocPackingListName: [(actualData as any)?.customsOriginalDocuments?.packingList?.documentName || ''],
+            customsDocCooSubmissionDate: [(actualData as any)?.customsOriginalDocuments?.coo?.submissionDate ? new Date((actualData as any).customsOriginalDocuments.coo.submissionDate) : null],
+            customsDocCooUrl: [(actualData as any)?.customsOriginalDocuments?.coo?.documentUrl || ''],
+            customsDocCooName: [(actualData as any)?.customsOriginalDocuments?.coo?.documentName || ''],
             transportationBooked: this.createTransportationBookedRows(
               containerCount,
               this.actualSplits.length - 1,
@@ -1211,10 +1240,10 @@ export class ShipmentFormComponent implements OnDestroy {
           doReleasedDocumentUrl: [''],
           doReleasedDocumentName: [''],
           doReleasedRemarks: [''],
-          dpApprovalDate: [null],
-          dpApprovalDocumentUrl: [''],
-          dpApprovalDocumentName: [''],
-          dpApprovalRemarks: [''],
+          boePassingDate: [null],
+          boePassingDocumentUrl: [''],
+          boePassingDocumentName: [''],
+          boePassingRemarks: [''],
           customsClearanceDate: [null],
           customsClearanceDocumentUrl: [''],
           customsClearanceDocumentName: [''],
@@ -1224,6 +1253,28 @@ export class ShipmentFormComponent implements OnDestroy {
           municipalityDocumentUrl: [''],
           municipalityDocumentName: [''],
           municipalityRemarks: [''],
+          municipalityStatus: ['open'],
+          municipalityStatusComment: [''],
+          dmBarcode: [''],
+          // Customs Original Documents
+          customsDocBoeSubmissionDate: [null],
+          customsDocBoeUrl: [''],
+          customsDocBoeName: [''],
+          customsDocDoSubmissionDate: [null],
+          customsDocDoUrl: [''],
+          customsDocDoName: [''],
+          customsDocBlOriginalSubmissionDate: [null],
+          customsDocBlOriginalUrl: [''],
+          customsDocBlOriginalName: [''],
+          customsDocInvoiceSubmissionDate: [null],
+          customsDocInvoiceUrl: [''],
+          customsDocInvoiceName: [''],
+          customsDocPackingListSubmissionDate: [null],
+          customsDocPackingListUrl: [''],
+          customsDocPackingListName: [''],
+          customsDocCooSubmissionDate: [null],
+          customsDocCooUrl: [''],
+          customsDocCooName: [''],
           transportationBooked: this.createTransportationBookedRows(containerCount, shipmentIndex),
         });
       case 'paid':
@@ -1363,13 +1414,16 @@ export class ShipmentFormComponent implements OnDestroy {
       (existingRows || []).map((row) => [Number(row.sn) || 0, row])
     );
     return this.fb.array(
-      COST_SHEET_DESCRIPTIONS.map((description, index) =>
+      this.getActiveBlRowDefinitions().map((definition) =>
         this.fb.group({
-          sn: [index + 1],
-          description: [description],
-          requestAmount: [existingMap.get(index + 1)?.requestAmount ?? null],
+          sn: [definition.sn],
+          description: [definition.description],
+          visibleTo: [normalizeBlVisibleTo([...definition.visibleTo])],
+          defaultQty: [definition.defaultQty ?? 1],
+          defaultRate: [definition.defaultRate ?? 0],
+          requestAmount: [existingMap.get(definition.sn)?.requestAmount ?? null],
           // POINT 5: paidAmount removed, replaced with remarks
-          remarks: [existingMap.get(index + 1)?.remarks ?? ''],
+          remarks: [existingMap.get(definition.sn)?.remarks ?? ''],
         })
       )
     );
@@ -1506,89 +1560,70 @@ export class ShipmentFormComponent implements OnDestroy {
   }
 
   private createPaymentAllocationRows(existingRows: any[] = []): FormArray {
-    const source =
-      existingRows.length > 0
-        ? COST_SHEET_DESCRIPTIONS.map((description, index) => {
-            const existing = existingRows[index];
-            return {
-              sn: existing?.sn ?? index + 1,
-              description: existing?.description || description,
-              requestAmount: existing?.requestAmount ?? null,
-              paidAmount: existing?.paidAmount ?? null,
-              reference: existing?.reference ?? '',
-            };
-          })
-        : COST_SHEET_DESCRIPTIONS.map((description, index) => ({
-            sn: index + 1,
-            description,
-            requestAmount: null,
-            paidAmount: null,
-            reference: '',
-          }));
+    const existingMap = new Map((existingRows || []).map((row) => [Number(row?.sn) || 0, row]));
+    const source = this.getActiveBlRowDefinitions().map((definition) => {
+      const existing = existingMap.get(definition.sn);
+      return {
+        sn: existing?.sn ?? definition.sn,
+        description: definition.description,
+        visibleTo: normalizeBlVisibleTo([...definition.visibleTo]),
+        defaultQty: Number(existing?.defaultQty ?? definition.defaultQty ?? 1),
+        defaultRate: Number(existing?.defaultRate ?? definition.defaultRate ?? 0),
+        requestAmount: existing?.requestAmount ?? null,
+        paidAmount: existing?.paidAmount ?? null,
+        reference: existing?.reference ?? '',
+        attachmentDocumentUrl: existing?.attachmentDocumentUrl ?? '',
+        attachmentDocumentName: existing?.attachmentDocumentName ?? '',
+      };
+    });
     return this.fb.array(
       source.map((row: any, index: number) =>
         this.fb.group({
           sn: [row?.sn ?? index + 1],
           description: [row?.description || ''],
+          visibleTo: [normalizeBlVisibleTo(row?.visibleTo ?? [])],
+          defaultQty: [Number(row?.defaultQty ?? 1)],
+          defaultRate: [Number(row?.defaultRate ?? 0)],
           requestAmount: [row?.requestAmount ?? null],
           paidAmount: [row?.paidAmount ?? null],
           reference: [row?.reference ?? ''],
+          attachmentDocumentUrl: [row?.attachmentDocumentUrl ?? ''],
+          attachmentDocumentName: [row?.attachmentDocumentName ?? ''],
         })
       )
     );
   }
 
   private createPaymentCostingRows(existingRows: any[] = [], seedRows: any[] = []): FormArray {
-    const source =
-      existingRows.length > 0
-        ? COST_SHEET_DESCRIPTIONS.map((description, index) => {
-            const existing = existingRows[index];
-            return {
-              sn: existing?.sn ?? index + 1,
-              description: existing?.description || description,
-              requestAmount: existing?.requestAmount ?? null,
-              paidAmount: existing?.paidAmount ?? null,
-              actualPaid: existing?.actualPaid ?? null,
-              refBillNo: existing?.refBillNo ?? '',
-              refBillDate: existing?.refBillDate ?? null,
-              refBillVendor: existing?.refBillVendor ?? '',
-              refBillDocumentUrl: existing?.refBillDocumentUrl ?? '',
-              refBillDocumentName: existing?.refBillDocumentName ?? '',
-            };
-          })
-        : seedRows.length > 0
-          ? COST_SHEET_DESCRIPTIONS.map((description, index) => {
-              const seeded = seedRows[index];
-              return {
-                sn: seeded?.sn ?? index + 1,
-                description: seeded?.description || description,
-                requestAmount: seeded?.requestAmount ?? null,
-                paidAmount: seeded?.paidAmount ?? null,
-                actualPaid: null,
-                refBillNo: '',
-                refBillDate: null,
-                refBillVendor: '',
-                refBillDocumentUrl: '',
-                refBillDocumentName: '',
-              };
-            })
-        : COST_SHEET_DESCRIPTIONS.map((description, index) => ({
-            sn: index + 1,
-            description,
-            requestAmount: null,
-            paidAmount: null,
-            actualPaid: null,
-            refBillNo: '',
-            refBillDate: null,
-            refBillVendor: '',
-            refBillDocumentUrl: '',
-            refBillDocumentName: '',
-          }));
+    const existingMap = new Map((existingRows || []).map((row) => [Number(row?.sn) || 0, row]));
+    const seedMap = new Map((seedRows || []).map((row) => [Number(row?.sn) || 0, row]));
+    const source = this.getActiveBlRowDefinitions().map((definition) => {
+      const existing = existingMap.get(definition.sn);
+      const seeded = seedMap.get(definition.sn);
+      return {
+        sn: existing?.sn ?? seeded?.sn ?? definition.sn,
+        description: definition.description,
+        visibleTo: normalizeBlVisibleTo([...definition.visibleTo]),
+        defaultQty: Number(existing?.defaultQty ?? seeded?.defaultQty ?? definition.defaultQty ?? 1),
+        defaultRate: Number(existing?.defaultRate ?? seeded?.defaultRate ?? definition.defaultRate ?? 0),
+        requestAmount: existing?.requestAmount ?? seeded?.requestAmount ?? null,
+        paidAmount: existing?.paidAmount ?? seeded?.paidAmount ?? null,
+        actualPaid: existing?.actualPaid ?? null,
+        refBillNo: existing?.refBillNo ?? '',
+        refBillDate: existing?.refBillDate ?? null,
+        refBillVendor: existing?.refBillVendor ?? '',
+        refBillDocumentUrl: existing?.refBillDocumentUrl ?? '',
+        refBillDocumentName: existing?.refBillDocumentName ?? '',
+      };
+    });
     return this.fb.array(
       source.map((row: any, index: number) =>
         this.fb.group({
           sn: [row?.sn ?? index + 1],
           description: [row?.description || ''],
+          visibleTo: [normalizeBlVisibleTo(row?.visibleTo ?? [])],
+          defaultQty: [Number(row?.defaultQty ?? 1)],
+          defaultRate: [Number(row?.defaultRate ?? 0)],
           requestAmount: [row?.requestAmount ?? null],
           paidAmount: [row?.paidAmount ?? null],
           actualPaid: [row?.actualPaid ?? null],

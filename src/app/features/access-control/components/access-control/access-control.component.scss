@@ -92,3 +92,19 @@
 .action-permission-card {
   @apply flex items-start gap-3 rounded-2xl border border-amber-100 bg-amber-50/60 px-4 py-3 transition hover:border-amber-200 hover:bg-amber-50;
 }
+
+:host ::ng-deep .bl-roles-multiselect.p-multiselect {
+  @apply w-full rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-slate-800 shadow-none;
+}
+
+:host ::ng-deep .bl-roles-multiselect .p-multiselect-label-container {
+  @apply px-1;
+}
+
+:host ::ng-deep .bl-roles-multiselect .p-multiselect-label {
+  @apply px-3 py-2 min-h-11 flex items-center flex-wrap gap-1.5;
+}
+
+:host ::ng-deep .bl-roles-multiselect .p-multiselect-chip {
+  @apply rounded-full bg-blue-50 text-blue-700 text-xs font-bold;
+}

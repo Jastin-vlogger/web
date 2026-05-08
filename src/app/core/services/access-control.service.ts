@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { AccessPermission, AccessPermissionGroup, AccessRole, AccessUser, EffectivePermissionsResponse } from '../models/access-control.model';
+import { AccessPermission, AccessPermissionGroup, AccessRole, AccessUser, BlRowDefinitionAdminItem, EffectivePermissionsResponse } from '../models/access-control.model';
 
 @Injectable({
   providedIn: 'root',
@@ -61,5 +61,21 @@ export class AccessControlService {
 
   updateUser(userId: string, payload: Partial<AccessUser>): Observable<{ message: string; user: AccessUser }> {
     return this.http.patch<{ message: string; user: AccessUser }>(`${this.apiUrl}/users/${userId}`, payload);
+  }
+
+  getBlRowDefinitions(): Observable<{ rows: BlRowDefinitionAdminItem[] }> {
+    return this.http.get<{ rows: BlRowDefinitionAdminItem[] }>(`${this.apiUrl}/bl-row-definitions`);
+  }
+
+  createBlRowDefinition(payload: { description: string; visibleTo: string[]; defaultQty: number; defaultRate: number }): Observable<{ message: string; row: BlRowDefinitionAdminItem }> {
+    return this.http.post<{ message: string; row: BlRowDefinitionAdminItem }>(`${this.apiUrl}/bl-row-definitions`, payload);
+  }
+
+  updateBlRowDefinition(rowId: string, payload: { description: string; visibleTo: string[]; defaultQty: number; defaultRate: number; isActive?: boolean }): Observable<{ message: string; row: BlRowDefinitionAdminItem }> {
+    return this.http.patch<{ message: string; row: BlRowDefinitionAdminItem }>(`${this.apiUrl}/bl-row-definitions/${rowId}`, payload);
+  }
+
+  deleteBlRowDefinition(rowId: string): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.apiUrl}/bl-row-definitions/${rowId}`);
   }
 }

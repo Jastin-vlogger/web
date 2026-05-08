@@ -47,3 +47,16 @@ export interface EffectivePermissionsResponse {
   permissionKeys: string[];
   permissionGroups: AccessPermissionGroup[];
 }
+
+export interface BlRowDefinitionAdminItem {
+  _id: string;
+  key: string;
+  sn: number;
+  description: string;
+  visibleTo: string[];
+  defaultQty: number;
+  defaultRate: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}

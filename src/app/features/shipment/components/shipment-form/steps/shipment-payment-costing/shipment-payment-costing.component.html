@@ -20,7 +20,7 @@
             <button
               type="button"
               (click)="generateAllocationReport(singleShipmentIndex!)"
-              class="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-100"
+              class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-100"
             >
               <i class="pi pi-file-export"></i>
               Generate Report
@@ -48,6 +48,7 @@
               <col class="w-[170px]" />
               <col class="w-[180px]" />
               <col class="w-[300px]" />
+              <col class="w-[120px]" />
             </colgroup>
             <thead class="bg-white">
               <tr class="border-b border-slate-100">
@@ -56,25 +57,39 @@
                 <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-slate-500">Request Amount</th>
                 <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Paid Amount</th>
                 <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Reference</th>
+                <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-slate-500">Attachment</th>
               </tr>
             </thead>
             <tbody>
-              @for (row of getVisiblePaymentAllocations(group, singleShipmentIndex!); track $index; let r = $index) {
-                <tr [formGroupName]="r" class="border-b border-slate-100 last:border-b-0">
+              @for (rowEntry of getVisiblePaymentAllocations(group, singleShipmentIndex!); track rowEntry.index; let visibleIndex = $index) {
+                <tr [formGroupName]="rowEntry.index" class="border-b border-slate-100 last:border-b-0">
                   <td class="px-4 py-4 align-middle">
-                    <div class="font-bold text-slate-700">{{ row.get('sn')?.value }}</div>
+                    <div class="font-bold text-slate-700">{{ visibleIndex + 1 }}</div>
                   </td>
                   <td class="px-4 py-4 align-middle">
-                    <div class="font-semibold text-slate-800 break-words">{{ row.get('description')?.value || '—' }}</div>
+                    <div class="font-semibold text-slate-800 break-words">{{ rowEntry.control.get('description')?.value || '—' }}</div>
                   </td>
                   <td class="px-4 py-4 align-middle">
-                    <div class="table-input-text w-full bg-slate-50 min-h-[52px] flex items-center justify-center">{{ row.get('requestAmount')?.value ?? 0 }}</div>
+                    <div class="table-input-text w-full bg-slate-50 min-h-[52px] flex items-center justify-center">{{ rowEntry.control.get('requestAmount')?.value ?? 0 }}</div>
                   </td>
                   <td class="px-4 py-4 align-middle">
                     <p-inputNumber formControlName="paidAmount" styleClass="w-full" inputStyleClass="table-input w-full" [minFractionDigits]="2" [maxFractionDigits]="2"></p-inputNumber>
                   </td>
                   <td class="px-4 py-4 align-middle">
                     <input pInputText formControlName="reference" class="table-input-text w-full" placeholder="Reference" />
+                  </td>
+                  <td class="px-4 py-4 align-middle text-center">
+                    <div class="flex justify-center gap-2">
+                      <button type="button" (click)="clickAllocationAttachmentUpload(singleShipmentIndex!, rowEntry.index)" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-upload"></i></button>
+                      @if (getAllocationAttachmentFile(singleShipmentIndex!, rowEntry.index)) {
+                        <button type="button" (click)="openDocumentPreview(getAllocationAttachmentFile(singleShipmentIndex!, rowEntry.index)!, 'Payment Allocation Attachment')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
+                        <button type="button" (click)="clearAllocationAttachmentFile(singleShipmentIndex!, rowEntry.index)" class="w-9 h-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"><i class="pi pi-trash"></i></button>
+                      } @else if (rowEntry.control.get('attachmentDocumentUrl')?.value) {
+                        <button type="button" (click)="openRemoteDocumentPreview(rowEntry.control.get('attachmentDocumentUrl')?.value, rowEntry.control.get('attachmentDocumentName')?.value || 'Payment Allocation Attachment')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
+                      } @else {
+                        <div class="w-9 h-9 rounded-lg border border-slate-200 bg-slate-50 text-slate-300 flex items-center justify-center"><i class="pi pi-eye"></i></div>
+                      }
+                    </div>
                   </td>
                 </tr>
               }
@@ -86,6 +101,7 @@
                 <td class="px-4 py-3 text-sm font-black text-slate-800 text-center">{{ getAllocationTotal(group, 'requestAmount') }}</td>
                 <td class="px-4 py-3 text-sm font-black text-slate-800">{{ getAllocationTotal(group, 'paidAmount') }}</td>
                 <td class="px-4 py-3"></td>
+                <td class="px-4 py-3"></td>
               </tr>
             </tfoot>
           </table>
@@ -95,7 +111,7 @@
             <button
               type="button"
               (click)="togglePaymentAllocations(singleShipmentIndex!)"
-              class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50"
+              class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50"
             >
               <i class="pi" [class.pi-angle-down]="!expandedAllocations()[singleShipmentIndex!]" [class.pi-angle-up]="expandedAllocations()[singleShipmentIndex!]"></i>
               {{ expandedAllocations()[singleShipmentIndex!] ? 'Show Less' : 'Show More' }}
@@ -112,7 +128,7 @@
               <button
                 type="button"
                 (click)="openPackagingExpensesModal(singleShipmentIndex!)"
-                class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50"
+                class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50"
               >
                 <i class="pi pi-box"></i>
                 Expense For Packaging
@@ -121,10 +137,16 @@
             <button
               type="button"
               (click)="generateReport(singleShipmentIndex!)"
-              class="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-100"
+              [disabled]="generatingCostingReportIndex() === singleShipmentIndex!"
+              class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-100"
             >
-              <i class="pi pi-file-export"></i>
-              Generate Report
+              @if (generatingCostingReportIndex() === singleShipmentIndex!) {
+                <i class="pi pi-spin pi-spinner"></i>
+                Generating...
+              } @else {
+                <i class="pi pi-file-export"></i>
+                Generate Report
+              }
             </button>
             @if (!costingApproved) {
               <button
@@ -144,14 +166,9 @@
           </div>
         </div>
 
-        <div class="payment-costing-scroll-viewport">
-          <p-table
-            [value]="getVisiblePaymentCostings(group, singleShipmentIndex!)"
-            styleClass="p-datatable-sm custom-tracker-table payment-costing-scroll-table"
-            [tableStyle]="{ 'min-width': '1900px' }"
-            formArrayName="paymentCostings"
-          >
-            <ng-template pTemplate="header">
+        <div class="payment-costing-scroll-viewport" formArrayName="paymentCostings">
+          <table class="w-full min-w-[1900px] text-sm custom-tracker-table payment-costing-scroll-table">
+            <thead>
               <tr>
                 <th class="min-w-[64px]">SN</th>
                 <th class="min-w-[320px]">DESCRIPTION</th>
@@ -163,26 +180,27 @@
                 <th class="min-w-[200px]">REF BILL VENDOR</th>
                 <th class="min-w-[120px] text-center">DOCUMENT</th>
               </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-row let-r="rowIndex">
-              <tr [formGroupName]="r">
-                <td class="text-slate-700 font-semibold text-xs">{{ row.get('sn')?.value }}</td>
+            </thead>
+            <tbody>
+              @for (rowEntry of getVisiblePaymentCostings(group, singleShipmentIndex!); track rowEntry.index; let visibleIndex = $index) {
+              <tr [formGroupName]="rowEntry.index">
+                <td class="text-slate-700 font-semibold text-xs">{{ visibleIndex + 1 }}</td>
                 <td>
                   <input pInputText formControlName="description" class="table-input-text w-full bg-slate-50" readonly />
                 </td>
                 <td>
-                  <p-inputNumber formControlName="requestAmount" styleClass="w-full" inputStyleClass="table-input w-full bg-slate-50" [readonly]="true" placeholder="0.00" />
+                  <p-inputNumber formControlName="requestAmount" styleClass="w-full" inputStyleClass="table-input w-full bg-slate-50" [readonly]="!canEditCostingAmounts()" placeholder="0.00" />
                 </td>
                 <td>
-                  <p-inputNumber formControlName="paidAmount" styleClass="w-full" inputStyleClass="table-input w-full bg-slate-50" [readonly]="true" placeholder="0.00" />
+                  <p-inputNumber formControlName="paidAmount" styleClass="w-full" inputStyleClass="table-input w-full bg-slate-50" [readonly]="!canEditCostingAmounts()" placeholder="0.00" />
                 </td>
                 <td class="bg-amber-50">
                   <div class="table-input-text w-full bg-amber-50 text-amber-700 font-bold text-center">
-                    {{ getDifference(row) }}
+                    {{ getDifference(rowEntry.control) }}
                   </div>
                 </td>
                 <td>
-                  <input pInputText formControlName="refBillNo" class="table-input-text w-full" placeholder="Ref bill no" (input)="onRefBillNoInput(group, r)" />
+                  <input pInputText formControlName="refBillNo" class="table-input-text w-full" placeholder="Ref bill no" (input)="onRefBillNoInput(group, rowEntry.index)" />
                 </td>
                 <td>
                   <p-datepicker formControlName="refBillDate" appendTo="body" inputStyleClass="table-input w-full" styleClass="w-full" placeholder="Date" dateFormat="dd/mm/yy"></p-datepicker>
@@ -192,20 +210,21 @@
                 </td>
                 <td class="text-center">
                   <div class="flex justify-center gap-2">
-                    <button type="button" (click)="clickRefBillUpload(singleShipmentIndex!, r)" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-upload"></i></button>
-                    @if (getRefBillFile(singleShipmentIndex!, r)) {
-                      <button type="button" (click)="openDocumentPreview(getRefBillFile(singleShipmentIndex!, r)!, 'Ref Bill Document')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
-                      <button type="button" (click)="clearRefBillFile(singleShipmentIndex!, r)" class="w-9 h-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"><i class="pi pi-trash"></i></button>
-                    } @else if (row.get('refBillDocumentUrl')?.value) {
-                      <button type="button" (click)="openRemoteDocumentPreview(row.get('refBillDocumentUrl')?.value, row.get('refBillDocumentName')?.value || 'Ref Bill Document')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
+                    <button type="button" (click)="clickRefBillUpload(singleShipmentIndex!, rowEntry.index)" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-upload"></i></button>
+                    @if (getRefBillFile(singleShipmentIndex!, rowEntry.index)) {
+                      <button type="button" (click)="openDocumentPreview(getRefBillFile(singleShipmentIndex!, rowEntry.index)!, 'Ref Bill Document')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
+                      <button type="button" (click)="clearRefBillFile(singleShipmentIndex!, rowEntry.index)" class="w-9 h-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"><i class="pi pi-trash"></i></button>
+                    } @else if (rowEntry.control.get('refBillDocumentUrl')?.value) {
+                      <button type="button" (click)="openRemoteDocumentPreview(rowEntry.control.get('refBillDocumentUrl')?.value, rowEntry.control.get('refBillDocumentName')?.value || 'Ref Bill Document')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
                     } @else {
                       <div class="w-9 h-9 rounded-lg border border-slate-200 bg-slate-50 text-slate-300 flex items-center justify-center"><i class="pi pi-eye"></i></div>
                     }
                   </div>
                 </td>
               </tr>
-            </ng-template>
-          </p-table>
+              }
+            </tbody>
+          </table>
         </div>
         <div class="border-t border-slate-100 bg-slate-50/70 px-4 py-3">
           <div class="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_160px_160px_160px] md:items-center">
@@ -221,7 +240,7 @@
             <button
               type="button"
               (click)="togglePaymentCostings(singleShipmentIndex!)"
-              class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50"
+              class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50"
             >
               <i class="pi" [class.pi-angle-down]="!expandedCostings()[singleShipmentIndex!]" [class.pi-angle-up]="expandedCostings()[singleShipmentIndex!]"></i>
               {{ expandedCostings()[singleShipmentIndex!] ? 'Show Less' : 'Show More' }}
@@ -300,7 +319,7 @@
                     <button
                       type="button"
                       (click)="generateAllocationReport(i)"
-                      class="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-100"
+                      class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-100"
                     >
                       <i class="pi pi-file-export"></i>
                       Generate Report
@@ -328,6 +347,7 @@
                       <col class="w-[170px]" />
                       <col class="w-[180px]" />
                       <col class="w-[300px]" />
+                      <col class="w-[120px]" />
                     </colgroup>
                     <thead class="bg-white">
                       <tr class="border-b border-slate-100">
@@ -336,25 +356,39 @@
                         <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-slate-500">Request Amount</th>
                         <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Paid Amount</th>
                         <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Reference</th>
+                        <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-slate-500">Attachment</th>
                       </tr>
                     </thead>
                     <tbody>
-                      @for (row of getVisiblePaymentAllocations(group, i); track $index; let r = $index) {
-                        <tr [formGroupName]="r" class="border-b border-slate-100 last:border-b-0">
+                      @for (rowEntry of getVisiblePaymentAllocations(group, i); track rowEntry.index; let visibleIndex = $index) {
+                        <tr [formGroupName]="rowEntry.index" class="border-b border-slate-100 last:border-b-0">
                           <td class="px-4 py-4 align-middle">
-                            <div class="font-bold text-slate-700">{{ row.get('sn')?.value }}</div>
+                            <div class="font-bold text-slate-700">{{ visibleIndex + 1 }}</div>
                           </td>
                           <td class="px-4 py-4 align-middle">
-                            <div class="font-semibold text-slate-800 break-words">{{ row.get('description')?.value || '—' }}</div>
+                            <div class="font-semibold text-slate-800 break-words">{{ rowEntry.control.get('description')?.value || '—' }}</div>
                           </td>
                           <td class="px-4 py-4 align-middle">
-                            <div class="table-input-text w-full bg-slate-50 min-h-[52px] flex items-center justify-center">{{ row.get('requestAmount')?.value ?? 0 }}</div>
+                            <div class="table-input-text w-full bg-slate-50 min-h-[52px] flex items-center justify-center">{{ rowEntry.control.get('requestAmount')?.value ?? 0 }}</div>
                           </td>
                           <td class="px-4 py-4 align-middle">
                             <p-inputNumber formControlName="paidAmount" styleClass="w-full" inputStyleClass="table-input w-full" [minFractionDigits]="2" [maxFractionDigits]="2"></p-inputNumber>
                           </td>
                           <td class="px-4 py-4 align-middle">
                             <input pInputText formControlName="reference" class="table-input-text w-full" placeholder="Reference" />
+                          </td>
+                          <td class="px-4 py-4 align-middle text-center">
+                            <div class="flex justify-center gap-2">
+                              <button type="button" (click)="clickAllocationAttachmentUpload(i, rowEntry.index)" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-upload"></i></button>
+                              @if (getAllocationAttachmentFile(i, rowEntry.index)) {
+                                <button type="button" (click)="openDocumentPreview(getAllocationAttachmentFile(i, rowEntry.index)!, 'Payment Allocation Attachment')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
+                                <button type="button" (click)="clearAllocationAttachmentFile(i, rowEntry.index)" class="w-9 h-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"><i class="pi pi-trash"></i></button>
+                              } @else if (rowEntry.control.get('attachmentDocumentUrl')?.value) {
+                                <button type="button" (click)="openRemoteDocumentPreview(rowEntry.control.get('attachmentDocumentUrl')?.value, rowEntry.control.get('attachmentDocumentName')?.value || 'Payment Allocation Attachment')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
+                              } @else {
+                                <div class="w-9 h-9 rounded-lg border border-slate-200 bg-slate-50 text-slate-300 flex items-center justify-center"><i class="pi pi-eye"></i></div>
+                              }
+                            </div>
                           </td>
                         </tr>
                       }
@@ -366,6 +400,7 @@
                         <td class="px-4 py-3 text-sm font-black text-slate-800 text-center">{{ getAllocationTotal(group, 'requestAmount') }}</td>
                         <td class="px-4 py-3 text-sm font-black text-slate-800">{{ getAllocationTotal(group, 'paidAmount') }}</td>
                         <td class="px-4 py-3"></td>
+                        <td class="px-4 py-3"></td>
                       </tr>
                     </tfoot>
                   </table>
@@ -375,7 +410,7 @@
                     <button
                       type="button"
                       (click)="togglePaymentAllocations(i)"
-                      class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50"
+                      class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50"
                     >
                       <i class="pi" [class.pi-angle-down]="!expandedAllocations()[i]" [class.pi-angle-up]="expandedAllocations()[i]"></i>
                       {{ expandedAllocations()[i] ? 'Show Less' : 'Show More' }}
@@ -392,7 +427,7 @@
                       <button
                         type="button"
                         (click)="openPackagingExpensesModal(i)"
-                        class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50"
+                        class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50"
                       >
                         <i class="pi pi-box"></i>
                         Expense For Packaging
@@ -401,10 +436,16 @@
                     <button
                       type="button"
                       (click)="generateReport(i)"
-                      class="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-100"
+                      [disabled]="generatingCostingReportIndex() === i"
+                      class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-100"
                     >
-                      <i class="pi pi-file-export"></i>
-                      Generate Report
+                      @if (generatingCostingReportIndex() === i) {
+                        <i class="pi pi-spin pi-spinner"></i>
+                        Generating...
+                      } @else {
+                        <i class="pi pi-file-export"></i>
+                        Generate Report
+                      }
                     </button>
                     <button
                       type="button"
@@ -422,48 +463,42 @@
                   </div>
                 </div>
 
-                <!-- Scrollable table — same pattern as Quality table -->
-                <div class="payment-costing-scroll-viewport">
-                  <p-table
-                    [value]="getVisiblePaymentCostings(group, i)"
-                    styleClass="p-datatable-sm custom-tracker-table payment-costing-scroll-table"
-                    [tableStyle]="{ 'min-width': '1900px' }"
-                    formArrayName="paymentCostings"
-                  >
-                    <ng-template pTemplate="header">
+                <div class="payment-costing-scroll-viewport" formArrayName="paymentCostings">
+                  <table class="w-full min-w-[1900px] text-sm custom-tracker-table payment-costing-scroll-table">
+                    <thead>
                       <tr>
                         <th class="min-w-[64px]">SN</th>
                         <th class="min-w-[320px]">DESCRIPTION</th>
                         <th class="min-w-[160px]">REQUEST AMOUNT</th>
                         <th class="min-w-[160px]">PAID AMOUNT</th>
-                        <!-- POINT 7: ACTUAL PAID column removed -->
                         <th class="min-w-[160px] bg-amber-50">DIFFERENCE (PAID - REQUEST)</th>
                         <th class="min-w-[250px]">REF BILL NO</th>
                         <th class="min-w-[160px]">REF BILL DATE</th>
                         <th class="min-w-[200px]">REF BILL VENDOR</th>
                         <th class="min-w-[120px] text-center">DOCUMENT</th>
                       </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-row let-r="rowIndex">
-                      <tr [formGroupName]="r">
-                        <td class="text-slate-700 font-semibold text-xs">{{ row.get('sn')?.value }}</td>
+                    </thead>
+                    <tbody>
+                      @for (rowEntry of getVisiblePaymentCostings(group, i); track rowEntry.index; let visibleIndex = $index) {
+                      <tr [formGroupName]="rowEntry.index">
+                        <td class="text-slate-700 font-semibold text-xs">{{ visibleIndex + 1 }}</td>
                         <td>
                           <input pInputText formControlName="description" class="table-input-text w-full bg-slate-50" readonly />
                         </td>
                         <td>
-                          <p-inputNumber formControlName="requestAmount" styleClass="w-full" inputStyleClass="table-input w-full bg-slate-50" [readonly]="true" placeholder="0.00" />
+                          <p-inputNumber formControlName="requestAmount" styleClass="w-full" inputStyleClass="table-input w-full bg-slate-50" [readonly]="!canEditCostingAmounts()" placeholder="0.00" />
                         </td>
                         <td>
-                          <p-inputNumber formControlName="paidAmount" styleClass="w-full" inputStyleClass="table-input w-full bg-slate-50" [readonly]="true" placeholder="0.00" />
+                          <p-inputNumber formControlName="paidAmount" styleClass="w-full" inputStyleClass="table-input w-full bg-slate-50" [readonly]="!canEditCostingAmounts()" placeholder="0.00" />
                         </td>
                         <!-- POINT 7: actualPaid cell removed -->
                         <td class="bg-amber-50">
                           <div class="table-input-text w-full bg-amber-50 text-amber-700 font-bold text-center">
-                            {{ getDifference(row) }}
+                            {{ getDifference(rowEntry.control) }}
                           </div>
                         </td>
                         <td>
-                          <input pInputText formControlName="refBillNo" class="table-input-text w-full" placeholder="Ref bill no" (input)="onRefBillNoInput(group, r)" />
+                          <input pInputText formControlName="refBillNo" class="table-input-text w-full" placeholder="Ref bill no" (input)="onRefBillNoInput(group, rowEntry.index)" />
                         </td>
                         <td>
                           <p-datepicker formControlName="refBillDate" appendTo="body" inputStyleClass="table-input w-full" styleClass="w-full" placeholder="Date" dateFormat="dd/mm/yy"></p-datepicker>
@@ -473,20 +508,21 @@
                         </td>
                         <td class="text-center">
                           <div class="flex justify-center gap-2">
-                            <button type="button" (click)="clickRefBillUpload(i, r)" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-upload"></i></button>
-                            @if (getRefBillFile(i, r)) {
-                              <button type="button" (click)="openDocumentPreview(getRefBillFile(i, r)!, 'Ref Bill Document')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
-                              <button type="button" (click)="clearRefBillFile(i, r)" class="w-9 h-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"><i class="pi pi-trash"></i></button>
-                            } @else if (row.get('refBillDocumentUrl')?.value) {
-                              <button type="button" (click)="openRemoteDocumentPreview(row.get('refBillDocumentUrl')?.value, row.get('refBillDocumentName')?.value || 'Ref Bill Document')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
+                            <button type="button" (click)="clickRefBillUpload(i, rowEntry.index)" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-upload"></i></button>
+                            @if (getRefBillFile(i, rowEntry.index)) {
+                              <button type="button" (click)="openDocumentPreview(getRefBillFile(i, rowEntry.index)!, 'Ref Bill Document')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
+                              <button type="button" (click)="clearRefBillFile(i, rowEntry.index)" class="w-9 h-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"><i class="pi pi-trash"></i></button>
+                            } @else if (rowEntry.control.get('refBillDocumentUrl')?.value) {
+                              <button type="button" (click)="openRemoteDocumentPreview(rowEntry.control.get('refBillDocumentUrl')?.value, rowEntry.control.get('refBillDocumentName')?.value || 'Ref Bill Document')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
                             } @else {
                               <div class="w-9 h-9 rounded-lg border border-slate-200 bg-slate-50 text-slate-300 flex items-center justify-center"><i class="pi pi-eye"></i></div>
                             }
                           </div>
                         </td>
                       </tr>
-                    </ng-template>
-                  </p-table>
+                      }
+                    </tbody>
+                  </table>
                 </div>
                 <div class="border-t border-slate-100 bg-slate-50/70 px-4 py-3">
                   <div class="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_160px_160px_160px] md:items-center">
@@ -503,7 +539,7 @@
                     <button
                       type="button"
                       (click)="togglePaymentCostings(i)"
-                      class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50"
+                      class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50"
                     >
                       <i class="pi" [class.pi-angle-down]="!expandedCostings()[i]" [class.pi-angle-up]="expandedCostings()[i]"></i>
                       {{ expandedCostings()[i] ? 'Show Less' : 'Show More' }}
@@ -524,6 +560,7 @@
   </p-accordion>
 }
 
+<input #allocationAttachmentInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onAllocationAttachmentInputChange($event)" />
 <input #refBillDocInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onRefBillInputChange($event)" />
 <input #paymentCostingDocInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onPaymentCostingInputChange($event)" />
 

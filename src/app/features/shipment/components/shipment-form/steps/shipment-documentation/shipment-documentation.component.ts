@@ -7,6 +7,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NotificationService } from '../../../../../../core/services/notification.service';
 import { ConfirmDialogService } from '../../../../../../core/services/confirm-dialog.service';
 import { RbacService } from '../../../../../../core/services/rbac.service';
+import { ShipmentService } from '../../../../../../core/services/shipment.service';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -119,6 +120,7 @@ export class ShipmentDocumentationComponent {
   private notificationService = inject(NotificationService);
   private sanitizer = inject(DomSanitizer);
   private rbacService = inject(RbacService);
+  private shipmentService = inject(ShipmentService);
 
   private readonly DOCUMENT_MILESTONE_VIEW_KEYS: Record<string, string> = {
     courier: 'shipment.tab.document_tracker.milestone_1.view',
@@ -198,6 +200,7 @@ export class ShipmentDocumentationComponent {
   readonly openAccordionPanels = signal<string[]>([]);
   // Per-row and per-milestone edit states
   readonly editingMilestones = signal<Record<number, Record<string, boolean>>>({});
+  readonly savedMilestoneOverrides = signal<Record<number, Record<string, boolean>>>({});
   readonly savingMilestone = signal<{row: number, milestone: string} | null>(null);
 
   // POINT 10: Bulk save modal state
@@ -252,62 +255,30 @@ export class ShipmentDocumentationComponent {
 
   /** Save a milestone without confirmation dialog (used in bulk save) */
   private async saveMilestoneQuiet(index: number, milestone: string): Promise<void> {
-    const row = this.formArray.at(index);
-    const formValue = row.getRawValue();
-    const containerId = formValue['containerId'];
-    if (!containerId) return;
+    const request = this.buildMilestoneRequest(index, milestone);
+    if (!request?.containerId) return;
 
     this.savingMilestone.set({ row: index, milestone });
     this.ensureAccordionOpen(`doc-${index}`);
-
-    const toDate = (val: any) =>
-      val ? (val instanceof Date ? val.toISOString().split('T')[0] : new Date(val).toISOString().split('T')[0]) : '';
-
-    const payload = new FormData();
-    payload.append('BLNo', formValue['BLNo'] || '');
-
-    switch (milestone) {
-      case 'courier':
-        payload.append('courierTrackNo', formValue['courierTrackNo'] || '');
-        payload.append('courierServiceProvider', formValue['courierServiceProvider'] || '');
-        payload.append('DHL', formValue['courierTrackNo'] || '');
-        payload.append('docArrivalNotes', formValue['docArrivalNotes'] || '');
-        break;
-      case 'receiving':
-        payload.append('receiver', formValue['receiver'] || '');
-        payload.append('bankName', formValue['bankName'] || '');
-        payload.append('expectedDocDate', toDate(formValue['expectedDocDate']));
-        break;
-      case 'inward':
-        payload.append('inwardCollectionAdviceDate', toDate(formValue['inwardCollectionAdviceDate']));
-        const inf = this.getFile(index, 'inwardAdvice');
-        if (inf) payload.append('inwardCollectionAdviceDocument', inf, inf.name);
-        break;
-      case 'murabaha_process':
-        payload.append('murabahaContractReleasedDate', toDate(formValue['murabahaContractReleasedDate']));
-        payload.append('murabahaContractApprovedDate', toDate(formValue['murabahaContractApprovedDate']));
-        break;
-      case 'murabaha_submit':
-        payload.append('murabahaContractSubmittedDate', toDate(formValue['murabahaContractSubmittedDate']));
-        const msf = this.getFile(index, 'murabahaSubmitted');
-        if (msf) payload.append('murabahaContractSubmittedDocument', msf, msf.name);
-        break;
-      case 'release':
-        payload.append('documentsReleasedDate', toDate(formValue['documentsReleasedDate']));
-        const drf = this.getFile(index, 'documentsReleased');
-        if (drf) payload.append('documentsReleasedDocument', drf, drf.name);
-        break;
-    }
-
     return new Promise<void>((resolve) => {
-      this.store.dispatch(ShipmentActions.submitDocumentation({ containerId, index, payload }));
-      // Brief delay to allow store dispatch to process
-      setTimeout(resolve, 300);
+      this.shipmentService.submitDocumentationPayment(request.containerId, request.payload).subscribe({
+        next: (response) => {
+          this.applyDocumentationResponse(index, response?.container?.actual, milestone);
+          resolve();
+        },
+        error: () => {
+          this.savingMilestone.set(null);
+          resolve();
+        },
+      });
     });
   }
 
   /** Checks if a specific milestone has data saved from the server (Source of Truth). */
   isMilestoneSaved(index: number, milestone: string): boolean {
+    if (this.savedMilestoneOverrides()[index]?.[milestone]) {
+      return true;
+    }
     const shipment = this.shipmentData()?.actual?.[index];
     if (!shipment) return false;
 
@@ -804,55 +775,23 @@ export class ShipmentDocumentationComponent {
     });
     if (!confirmed) return;
 
-    const formValue = row.getRawValue();
-    const containerId = formValue['containerId'];
-    if (!containerId) return;
-
     this.savingMilestone.set({ row: index, milestone });
 
     // Keep the accordion panel open after the save reloads data
     this.ensureAccordionOpen(`doc-${index}`);
+    const request = this.buildMilestoneRequest(index, milestone);
+    if (!request?.containerId) return;
 
-    const toDate = (val: any) =>
-      val ? (val instanceof Date ? val.toISOString().split('T')[0] : new Date(val).toISOString().split('T')[0]) : '';
-
-    const payload = new FormData();
-    payload.append('BLNo', formValue['BLNo'] || '');
-
-    switch (milestone) {
-      case 'courier':
-        payload.append('courierTrackNo', formValue['courierTrackNo'] || '');
-        payload.append('courierServiceProvider', formValue['courierServiceProvider'] || '');
-        payload.append('DHL', formValue['courierTrackNo'] || '');
-        payload.append('docArrivalNotes', formValue['docArrivalNotes'] || '');
-        break;
-      case 'receiving':
-        payload.append('receiver', formValue['receiver'] || '');
-        payload.append('bankName', formValue['bankName'] || '');
-        payload.append('expectedDocDate', toDate(formValue['expectedDocDate']));
-        break;
-      case 'inward':
-        payload.append('inwardCollectionAdviceDate', toDate(formValue['inwardCollectionAdviceDate']));
-        const inf = this.getFile(index, 'inwardAdvice');
-        if (inf) payload.append('inwardCollectionAdviceDocument', inf, inf.name);
-        break;
-      case 'murabaha_process':
-        payload.append('murabahaContractReleasedDate', toDate(formValue['murabahaContractReleasedDate']));
-        payload.append('murabahaContractApprovedDate', toDate(formValue['murabahaContractApprovedDate']));
-        break;
-      case 'murabaha_submit':
-        payload.append('murabahaContractSubmittedDate', toDate(formValue['murabahaContractSubmittedDate']));
-        const msf = this.getFile(index, 'murabahaSubmitted');
-        if (msf) payload.append('murabahaContractSubmittedDocument', msf, msf.name);
-        break;
-      case 'release':
-        payload.append('documentsReleasedDate', toDate(formValue['documentsReleasedDate']));
-        const drf = this.getFile(index, 'documentsReleased');
-        if (drf) payload.append('documentsReleasedDocument', drf, drf.name);
-        break;
-    }
-
-    this.store.dispatch(ShipmentActions.submitDocumentation({ containerId, index, payload }));
+    this.shipmentService.submitDocumentationPayment(request.containerId, request.payload).subscribe({
+      next: (response) => {
+        this.applyDocumentationResponse(index, response?.container?.actual, milestone);
+        this.notificationService.success('Saved', `${milestoneLabel[milestone] || milestone} saved successfully.`);
+      },
+      error: (error) => {
+        this.savingMilestone.set(null);
+        this.notificationService.error('Save failed', error.error?.message || 'Could not save milestone.');
+      },
+    });
   }
 
   // Row-level save for legacy support
@@ -890,7 +829,135 @@ export class ShipmentDocumentationComponent {
     if (fl2) payload.append('murabahaContractSubmittedDocument', fl2, fl2.name);
     if (fl3) payload.append('documentsReleasedDocument', fl3, fl3.name);
 
-    this.store.dispatch(ShipmentActions.submitDocumentation({ containerId: formValue['containerId'], index, payload }));
+    this.savingMilestone.set({ row: index, milestone: 'all' });
+    this.shipmentService.submitDocumentationPayment(formValue['containerId'], payload).subscribe({
+      next: (response) => {
+        this.applyDocumentationResponse(index, response?.container?.actual, 'all');
+        this.notificationService.success('Saved', 'Documentation saved successfully.');
+      },
+      error: (error) => {
+        this.savingMilestone.set(null);
+        this.notificationService.error('Save failed', error.error?.message || 'Could not save documentation.');
+      },
+    });
+  }
+
+  private buildMilestoneRequest(index: number, milestone: string): { containerId: string; payload: FormData } | null {
+    const row = this.formArray.at(index);
+    const formValue = row.getRawValue();
+    const containerId = formValue['containerId'];
+    if (!containerId) return null;
+
+    const toDate = (val: any) =>
+      val ? (val instanceof Date ? val.toISOString().split('T')[0] : new Date(val).toISOString().split('T')[0]) : '';
+
+    const payload = new FormData();
+    payload.append('BLNo', formValue['BLNo'] || '');
+
+    switch (milestone) {
+      case 'courier':
+        payload.append('courierTrackNo', formValue['courierTrackNo'] || '');
+        payload.append('courierServiceProvider', formValue['courierServiceProvider'] || '');
+        payload.append('DHL', formValue['courierTrackNo'] || '');
+        payload.append('docArrivalNotes', formValue['docArrivalNotes'] || '');
+        break;
+      case 'receiving':
+        payload.append('receiver', formValue['receiver'] || '');
+        payload.append('bankName', formValue['bankName'] || '');
+        payload.append('expectedDocDate', toDate(formValue['expectedDocDate']));
+        break;
+      case 'inward': {
+        payload.append('inwardCollectionAdviceDate', toDate(formValue['inwardCollectionAdviceDate']));
+        const inf = this.getFile(index, 'inwardAdvice');
+        if (inf) payload.append('inwardCollectionAdviceDocument', inf, inf.name);
+        break;
+      }
+      case 'murabaha_process':
+        payload.append('murabahaContractReleasedDate', toDate(formValue['murabahaContractReleasedDate']));
+        payload.append('murabahaContractApprovedDate', toDate(formValue['murabahaContractApprovedDate']));
+        break;
+      case 'murabaha_submit': {
+        payload.append('murabahaContractSubmittedDate', toDate(formValue['murabahaContractSubmittedDate']));
+        const msf = this.getFile(index, 'murabahaSubmitted');
+        if (msf) payload.append('murabahaContractSubmittedDocument', msf, msf.name);
+        break;
+      }
+      case 'release': {
+        payload.append('documentsReleasedDate', toDate(formValue['documentsReleasedDate']));
+        const drf = this.getFile(index, 'documentsReleased');
+        if (drf) payload.append('documentsReleasedDocument', drf, drf.name);
+        break;
+      }
+    }
+
+    return { containerId, payload };
+  }
+
+  private applyDocumentationResponse(index: number, actual: any, milestone: string): void {
+    const row = this.formArray.at(index) as FormGroup | null;
+    if (!row || !actual) {
+      this.savingMilestone.set(null);
+      return;
+    }
+
+    row.patchValue({
+      BLNo: actual.BLNo || '',
+      courierTrackNo: actual.courierTrackNo || actual.DHL || '',
+      courierServiceProvider: actual.courierServiceProvider || '',
+      docArrivalNotes: actual.docArrivalNotes || '',
+      expectedDocDate: actual.expectedDocDate ? new Date(actual.expectedDocDate) : null,
+      receiver: actual.receiver || '',
+      bankName: actual.bankName || '',
+      inwardCollectionAdviceDate: actual.inwardCollectionAdviceDate ? new Date(actual.inwardCollectionAdviceDate) : null,
+      inwardCollectionAdviceDocumentUrl: actual.inwardCollectionAdviceDocumentUrl || '',
+      inwardCollectionAdviceDocumentName: actual.inwardCollectionAdviceDocumentName || '',
+      murabahaContractReleasedDate: actual.murabahaContractReleasedDate ? new Date(actual.murabahaContractReleasedDate) : null,
+      murabahaContractApprovedDate: actual.murabahaContractApprovedDate ? new Date(actual.murabahaContractApprovedDate) : null,
+      murabahaContractSubmittedDate: actual.murabahaContractSubmittedDate ? new Date(actual.murabahaContractSubmittedDate) : null,
+      murabahaContractSubmittedDocumentUrl: actual.murabahaContractSubmittedDocumentUrl || '',
+      murabahaContractSubmittedDocumentName: actual.murabahaContractSubmittedDocumentName || '',
+      documentsReleasedDate: actual.documentsReleasedDate ? new Date(actual.documentsReleasedDate) : null,
+      documentsReleasedDocumentUrl: actual.documentsReleasedDocumentUrl || '',
+      documentsReleasedDocumentName: actual.documentsReleasedDocumentName || '',
+    }, { emitEvent: false });
+
+    const milestoneKeys = milestone === 'all'
+      ? ['courier', 'receiving', 'inward', 'murabaha_process', 'murabaha_submit', 'release']
+      : [milestone];
+
+    this.savedMilestoneOverrides.update((current) => {
+      const rowState = current[index] || {};
+      const next = { ...rowState };
+      milestoneKeys.forEach((key) => {
+        next[key] = true;
+      });
+      return { ...current, [index]: next };
+    });
+
+    if (milestoneKeys.includes('inward')) this.clearFile(index, 'inwardAdvice');
+    if (milestoneKeys.includes('murabaha_submit')) this.clearFile(index, 'murabahaSubmitted');
+    if (milestoneKeys.includes('release')) this.clearFile(index, 'documentsReleased');
+    if (milestone !== 'all') this.toggleEditMilestone(index, milestone, false);
+
+    this.savingMilestone.set(null);
+
+    if (this.isDocumentationCompleteFromActual(actual) && !this.submittedIndices().includes(index)) {
+      this.store.dispatch(ShipmentActions.submitDocumentationSuccess({ index }));
+    }
+  }
+
+  private isDocumentationCompleteFromActual(actual: any): boolean {
+    const receiver = String(actual?.receiver || '').trim().toLowerCase();
+    const isDirect = receiver === 'direct';
+    const hasCourier = !!(actual?.courierTrackNo || actual?.courierServiceProvider || actual?.docArrivalNotes);
+    const hasReceiving = !!(actual?.expectedDocDate || (actual?.receiver && actual?.bankName));
+    const hasRelease = !!(actual?.documentsReleasedDate || actual?.documentsReleasedDocumentUrl);
+    if (isDirect) return hasCourier && hasReceiving && hasRelease;
+
+    const hasInward = !!(actual?.inwardCollectionAdviceDate || actual?.inwardCollectionAdviceDocumentUrl);
+    const hasMurabahaProcess = !!(actual?.murabahaContractReleasedDate || actual?.murabahaContractApprovedDate);
+    const hasMurabahaSubmit = !!(actual?.murabahaContractSubmittedDate || actual?.murabahaContractSubmittedDocumentUrl);
+    return hasCourier && hasReceiving && hasInward && hasMurabahaProcess && hasMurabahaSubmit && hasRelease;
   }
 
   openStatusModal(index: number): void {

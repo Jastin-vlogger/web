@@ -208,6 +208,10 @@
               <input pInputText formControlName="barcode" placeholder="Enter barcode" class="w-full" />
             </div>
             <div class="flex flex-col">
+              <label class="sl-label">DM Barcode</label>
+              <input pInputText formControlName="dmBarcode" placeholder="Enter DM barcode" class="w-full" />
+            </div>
+            <div class="flex flex-col">
               <label class="sl-label">Variant</label>
               <input pInputText formControlName="variant" placeholder="Enter variant" class="w-full" />
             </div>
@@ -274,6 +278,7 @@
                         <th class="extracted-table-head min-w-[150px]">Origin</th>
                         <th class="extracted-table-head min-w-[140px]">Brand</th>
                         <th class="extracted-table-head min-w-[150px]">Barcode</th>
+                        <th class="extracted-table-head min-w-[150px]">DM Barcode</th>
                         <th class="extracted-table-head min-w-[130px]">Variant</th>
                         <th class="extracted-table-head min-w-[130px]">H.S Code</th>
                         <th class="extracted-table-head min-w-[130px]">Packing</th>
@@ -295,6 +300,7 @@
                           <td class="extracted-table-cell text-slate-700">{{ item.countryOfOrigin || '—' }}</td>
                           <td class="extracted-table-cell text-slate-700">{{ item.brandName || '—' }}</td>
                           <td class="extracted-table-cell text-slate-700">{{ item.barcode || '—' }}</td>
+                          <td class="extracted-table-cell text-slate-700">{{ item.dmBarcode || '—' }}</td>
                           <td class="extracted-table-cell text-slate-700">{{ item.variant || '—' }}</td>
                           <td class="extracted-table-cell text-slate-700">{{ item.hsCode || '—' }}</td>
                           <td class="extracted-table-cell text-slate-700">{{ item.packagingType || '—' }}</td>
@@ -343,6 +349,10 @@
                       <div class="flex flex-col gap-2">
                         <label class="sl-label">Barcode</label>
                         <div class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">{{ item.barcode || '—' }}</div>
+                      </div>
+                      <div class="flex flex-col gap-2">
+                        <label class="sl-label">DM Barcode</label>
+                        <div class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">{{ item.dmBarcode || '—' }}</div>
                       </div>
                       <div class="flex flex-col gap-2">
                         <label class="sl-label">Variant</label>
