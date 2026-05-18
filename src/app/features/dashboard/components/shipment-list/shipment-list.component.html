@@ -1,18 +1,36 @@
 <div class="flex flex-col h-full gap-4 md:gap-6">
   <!-- Header Section - Stacked on mobile, side-by-side on md+ -->
   <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
-    <div>
+    <div class="w-full sm:w-auto">
       <h1 class="font-bold text-xl md:text-2xl text-slate-900 tracking-tight">Shipments</h1>
       <p class="text-slate-500 text-xs md:text-sm">Monitor and manage your active logistics fleet</p>
     </div>
-    @if (canCreateShipment()) {
-      <div class="w-full sm:w-auto">
+    <div class="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+      <div class="relative w-full sm:w-[320px]">
+        <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+        <input
+          type="text"
+          [value]="searchQuery()"
+          (input)="onSearchInput($event)"
+          placeholder="Search shipment, supplier, PI, FPO..."
+          class="w-full h-11 rounded-xl border border-slate-200 bg-white pl-9 pr-10 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all" />
+        @if (searchQuery()) {
+          <button
+            type="button"
+            (click)="clearSearch()"
+            class="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            aria-label="Clear search">
+            <i class="pi pi-times text-[11px]"></i>
+          </button>
+        }
+      </div>
+      @if (canCreateShipment()) {
         <button appButton routerLink="/shipments/create" class="w-full sm:w-auto shadow-sm" aria-label="Create new shipment">
           <i class="pi pi-plus-circle mr-2" aria-hidden="true"></i>
           <span>Create Shipment</span>
         </button>
-      </div>
-    }
+      }
+    </div>
   </header>
 
   <!-- Table Container -->
@@ -44,7 +62,7 @@
                           getSeverity(shipment.status || '') === 'warn' ? 'bg-amber-50 text-amber-700 border-amber-100' :
                           getSeverity(shipment.status || '') === 'danger' ? 'bg-rose-50 text-rose-700 border-rose-100' :
                           'bg-slate-50 text-slate-700 border-slate-100')">
-                {{shipment.status}}
+                {{ getDisplayStageName(shipment.status) }}
               </span>
             </div>
 
@@ -90,7 +108,7 @@
               </div>
               <div>
                 <h3 class="text-sm font-bold text-slate-900">No shipments found</h3>
-                <p class="text-xs text-slate-500 mt-1">Try adjusting your filters or search terms</p>
+                <p class="text-xs text-slate-500 mt-1">Try adjusting your search terms</p>
               </div>
             </div>
           </div>
@@ -143,7 +161,7 @@
           } @else {
             @for (shipment of shipments(); track shipment._id; let i = $index) {
           <tr class="hover:bg-slate-50/50 transition-colors group cursor-default" role="row">
-            <td class="p-4 text-xs text-slate-500 font-medium">{{(currentPage() - 1) * pageSize() + i + 1}}</td>
+            <td class="p-4 text-xs text-slate-500 font-medium">{{ getDisplaySerial(i) }}</td>
             <td class="p-4 text-xs text-slate-600">{{shipment.year}}</td>
             <td class="p-4 text-xs font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{{shipment.shipmentNo}}</td>
             <td class="p-4 text-xs text-slate-600">{{shipment.orderDate | date:'dd/MM/yyyy'}}</td>
@@ -161,7 +179,7 @@
                           getSeverity(shipment.status || '') === 'warn' ? 'bg-amber-50 text-amber-700 border-amber-100' :
                           getSeverity(shipment.status || '') === 'danger' ? 'bg-rose-50 text-rose-700 border-rose-100' :
                           'bg-slate-50 text-slate-700 border-slate-100')">
-                {{shipment.status}}
+                {{ getDisplayStageName(shipment.status) }}
               </span>
             </td>
             <td class="p-4 text-xs text-center">
@@ -191,7 +209,7 @@
                 </div>
                 <div>
                   <h3 class="text-sm font-bold text-slate-900">No shipments found</h3>
-                  <p class="text-xs text-slate-500 mt-1">Try adjusting your filters or search terms</p>
+                  <p class="text-xs text-slate-500 mt-1">Try adjusting your search terms</p>
                 </div>
               </div>
             </td>
@@ -205,7 +223,7 @@
     <!-- Paginator Footer - Responsive flex -->
     <footer class="shrink-0 p-4 border-t border-slate-200 bg-slate-50/30 flex flex-col sm:flex-row items-center justify-between gap-4">
       <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center sm:text-left">
-        Showing <span class="text-slate-900 mx-1">{{(currentPage() - 1) * pageSize() + 1}} – {{Math.min(currentPage() * pageSize(), totalRecords())}}</span> of <span class="text-slate-900 mx-1">{{totalRecords()}}</span> Shipments
+        Showing <span class="text-slate-900 mx-1">{{ totalRecords() ? ((currentPage() - 1) * pageSize() + 1) : 0 }} – {{Math.min(currentPage() * pageSize(), totalRecords())}}</span> of <span class="text-slate-900 mx-1">{{totalRecords()}}</span> Shipments
       </div>
       
       <nav class="flex items-center gap-1.5" aria-label="Pagination">

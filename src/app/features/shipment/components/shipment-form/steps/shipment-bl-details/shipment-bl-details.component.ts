@@ -85,6 +85,7 @@ export class ShipmentBlDetailsComponent {
   readonly activeTabs = signal<Record<number, 'cost' | 'storage' | 'packaging' | 'payment_allocation' | 'payment_costing'>>({});
   readonly expandedCostSheet = signal<Record<number, boolean>>({});
   readonly bookingFiles = signal<Record<number, File | null>>({});
+  readonly costSheetAttachmentFiles = signal<Record<string, File | null>>({});
   readonly statusModalVisible = signal(false);
   readonly statusModalShipmentIndex = signal<number | null>(null);
   readonly savingKey = signal<string | null>(null);
@@ -149,10 +150,14 @@ export class ShipmentBlDetailsComponent {
   }
 
   isCostSheetSaved(index: number): boolean {
-    const shipment = this.shipmentData()?.actual?.[index];
+    const shipment = this.getActualShipment(index);
     if (!shipment) return false;
     const rows = shipment.costSheetBookings || [];
-    return rows.some((entry: any) => Number(entry?.requestAmount || 0) > 0 || Number(entry?.paidAmount || 0) > 0);
+    return rows.some((entry: any) =>
+      Number(entry?.requestAmount || 0) > 0 ||
+      String(entry?.remarks || '').trim().length > 0 ||
+      String(entry?.attachmentDocumentUrl || '').trim().length > 0
+    );
   }
 
   isCostSheetEditing(index: number): boolean {
@@ -208,6 +213,8 @@ export class ShipmentBlDetailsComponent {
         visibleTo: normalizeBlVisibleTo(control.get('visibleTo')?.value ?? ['logistic', 'fas']),
         requestAmount: Number(saved.requestAmount ?? 0),
         remarks: saved.remarks ?? '',
+        attachmentDocumentUrl: saved.attachmentDocumentUrl || '',
+        attachmentDocumentName: saved.attachmentDocumentName || '',
       }, { emitEvent: false });
     });
   }
@@ -345,10 +352,13 @@ export class ShipmentBlDetailsComponent {
   private getEffectiveClearingAdvanceStatus(index: number): 'draft' | 'pending_fas' | 'pending_fas_manager' | 'approved' {
     const actual = this.getActualShipment(index);
     const rawStatus = actual?.clearingAdvanceApproval?.status || 'draft';
+    if (rawStatus === 'pending_fas_manager') return 'approved';
     if (rawStatus !== 'draft') return rawStatus;
     const rows = actual?.costSheetBookings || [];
     const hasSavedData = Array.isArray(rows) && rows.some((entry: any) =>
-      Number(entry?.requestAmount || 0) > 0 || String(entry?.remarks || '').trim().length > 0
+      Number(entry?.requestAmount || 0) > 0 ||
+      String(entry?.remarks || '').trim().length > 0 ||
+      String(entry?.attachmentDocumentUrl || '').trim().length > 0
     );
     return hasSavedData ? 'pending_fas' : 'draft';
   }
@@ -408,8 +418,6 @@ export class ShipmentBlDetailsComponent {
     switch (status) {
       case 'pending_fas':
         return 'Pending FAS Approval';
-      case 'pending_fas_manager':
-        return 'Pending FAS Manager Approval';
       case 'approved':
         return 'Approved';
       default:
@@ -481,10 +489,7 @@ export class ShipmentBlDetailsComponent {
   canApproveClearingAdvance(index: number): boolean {
     const status = this.getEffectiveClearingAdvanceStatus(index);
     if (status === 'pending_fas') {
-      return this.authService.isAdminLevelRole() || this.isFasRole();
-    }
-    if (status === 'pending_fas_manager') {
-      return this.authService.isAdminLevelRole() || this.isFasManagerRole();
+      return this.authService.isAdminLevelRole() || this.isFasRole() || this.isFasManagerRole();
     }
     return false;
   }
@@ -727,6 +732,33 @@ export class ShipmentBlDetailsComponent {
 
   clearBookingFile(shipmentIndex: number): void {
     this.bookingFiles.update((current) => ({ ...current, [shipmentIndex]: null }));
+  }
+
+  private costSheetAttachmentKey(shipmentIndex: number, rowIndex: number): string {
+    return `${shipmentIndex}:${rowIndex}`;
+  }
+
+  onCostSheetAttachmentSelected(event: Event, shipmentIndex: number, rowIndex: number): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    if (!file) return;
+
+    this.costSheetAttachmentFiles.update((current) => ({
+      ...current,
+      [this.costSheetAttachmentKey(shipmentIndex, rowIndex)]: file,
+    }));
+    input.value = '';
+  }
+
+  getCostSheetAttachmentFile(shipmentIndex: number, rowIndex: number): File | null {
+    return this.costSheetAttachmentFiles()[this.costSheetAttachmentKey(shipmentIndex, rowIndex)] ?? null;
+  }
+
+  clearCostSheetAttachmentFile(shipmentIndex: number, rowIndex: number): void {
+    this.costSheetAttachmentFiles.update((current) => ({
+      ...current,
+      [this.costSheetAttachmentKey(shipmentIndex, rowIndex)]: null,
+    }));
   }
 
   getSavedBookingUrl(group: AbstractControl): string {
@@ -1285,6 +1317,8 @@ export class ShipmentBlDetailsComponent {
       requestAmount: Number(entry.requestAmount ?? 0),
       // POINT 5: paidAmount removed, replaced with remarks
       remarks: entry.remarks ?? '',
+      attachmentDocumentUrl: entry.attachmentDocumentUrl ?? '',
+      attachmentDocumentName: entry.attachmentDocumentName ?? '',
     }));
 
     this.savingKey.set(`cost-${index}`);
@@ -1295,6 +1329,12 @@ export class ShipmentBlDetailsComponent {
     if (bookingFile) {
       formData.append('costSheetBookingDocument', bookingFile, bookingFile.name);
     }
+    this.getCostSheetRows(row).controls.forEach((_, rowIndex) => {
+      const attachmentFile = this.getCostSheetAttachmentFile(index, rowIndex);
+      if (attachmentFile) {
+        formData.append(`costSheetBookings_${rowIndex}_attachment`, attachmentFile, attachmentFile.name);
+      }
+    });
 
     this.shipmentService.submitBLDetails(containerId, formData).subscribe({
       next: (response) => {
@@ -1302,6 +1342,7 @@ export class ShipmentBlDetailsComponent {
         this.applyActualOverride(index, response?.container?.actual);
         this.patchCostSheetFromActual(index, response?.container?.actual);
         if (bookingFile) this.clearBookingFile(index);
+        this.getCostSheetRows(row).controls.forEach((_, rowIndex) => this.clearCostSheetAttachmentFile(index, rowIndex));
         this.editingCostSheet.update((current) => ({ ...current, [index]: false }));
         this.notificationService.success('Saved', 'Cost sheet booking saved successfully.');
         this.ensureAccordionOpen(index); // POINT 8: keep accordion open

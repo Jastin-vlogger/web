@@ -40,7 +40,7 @@ export class ReportsLandingComponent implements OnInit {
     { header: 'Rice Name', key: 'riceName', width: 18 },
     { header: 'Packing', key: 'packing', width: 12 },
     { header: 'PI No.', key: 'piNo', width: 20 },
-    { header: 'CI No.', key: 'ciNo', width: 20 },
+    // { header: 'CI No.', key: 'ciNo', width: 20 },
     { header: 'FCL', key: 'fcl', width: 10 },
     { header: 'Cont. Size', key: 'containerSize', width: 12 },
     { header: 'Buying Unit', key: 'buyingUnit', width: 14 },
@@ -48,7 +48,7 @@ export class ReportsLandingComponent implements OnInit {
     { header: 'FC per Unit', key: 'fcPerUnit', width: 14 },
     { header: 'Total FC', key: 'totalFC', width: 16 },
     { header: 'Inco Terms', key: 'incoterms', width: 14 },
-    { header: 'PO Number', key: 'poNumber', width: 20 },
+    // { header: 'PO Number', key: 'poNumber', width: 20 },
     { header: 'FPO Number', key: 'fpoNo', width: 20 },
     { header: 'Bank Name', key: 'bankName', width: 18 },
     { header: 'Payment Terms', key: 'paymentTerms', width: 18 },
@@ -56,8 +56,8 @@ export class ReportsLandingComponent implements OnInit {
     { header: 'No. of Shipments', key: 'noOfShipments', width: 16 },
     { header: 'Port of Loading', key: 'portOfLoading', width: 20 },
     { header: 'Port of Discharge', key: 'portOfDischarge', width: 20 },
-    { header: 'Planned ETD', key: 'plannedETD', width: 14 },
-    { header: 'Planned ETA', key: 'plannedETA', width: 14 },
+    // { header: 'Planned ETD', key: 'plannedETD', width: 14 },
+    // { header: 'Planned ETA', key: 'plannedETA', width: 14 },
     { header: 'Advance Amount', key: 'advanceAmount', width: 16 },
     { header: 'Bags', key: 'bags', width: 12 },
     { header: 'Pallet', key: 'pallet', width: 12 },
@@ -167,6 +167,7 @@ export class ReportsLandingComponent implements OnInit {
   }
 
   formatCellValue(value: unknown, key?: keyof ShipmentReportExportRow): string | number {
+    if (key === 'noOfShipments' && (value == null || value === '')) return 0;
     if (value == null || value === '') return '';
     if (typeof value === 'number') {
       if (['fcPerUnit', 'totalFC', 'advanceAmount'].includes(String(key))) {

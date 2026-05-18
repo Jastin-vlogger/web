@@ -692,6 +692,9 @@ export interface ActualContainer {
     defaultRate?: number;
     requestAmount?: number;
     paidAmount?: number;
+    remarks?: string;
+    attachmentDocumentUrl?: string;
+    attachmentDocumentName?: string;
   }[];
   clearingAdvanceApproval?: ClearingAdvanceApprovalState;
   storageAllocations?: {

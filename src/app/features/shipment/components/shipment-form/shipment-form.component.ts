@@ -1424,6 +1424,8 @@ export class ShipmentFormComponent implements OnDestroy {
           requestAmount: [existingMap.get(definition.sn)?.requestAmount ?? null],
           // POINT 5: paidAmount removed, replaced with remarks
           remarks: [existingMap.get(definition.sn)?.remarks ?? ''],
+          attachmentDocumentUrl: [existingMap.get(definition.sn)?.attachmentDocumentUrl ?? ''],
+          attachmentDocumentName: [existingMap.get(definition.sn)?.attachmentDocumentName ?? ''],
         })
       )
     );

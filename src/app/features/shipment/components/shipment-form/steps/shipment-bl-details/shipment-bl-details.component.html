@@ -335,22 +335,49 @@
                     </div>
                   }
 
-                  <div class="hidden md:grid md:grid-cols-[60px_minmax(0,1.8fr)_160px_160px] gap-3 px-4 py-2.5 bg-slate-50/70 border-b border-slate-100">
+                  <div class="hidden md:grid md:grid-cols-[60px_minmax(0,1.8fr)_160px_160px_160px] gap-3 px-4 py-2.5 bg-slate-50/70 border-b border-slate-100">
                     <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">SN</span>
                     <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Description</span>
                     <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Request Amount</span>
                     <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Remarks</span>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider text-center">Attachment</span>
                   </div>
 
                   <div class="flex flex-col">
                     @for (rowEntry of getVisibleCostSheetRows(group, i); track rowEntry.index; let visibleIndex = $index) {
                         <div [formGroup]="$any(rowEntry.control)" class="border-b last:border-b-0 border-slate-100 p-4">
-                        <div class="hidden md:grid md:grid-cols-[60px_minmax(0,1.8fr)_160px_160px] gap-3 items-start">
+                        <div class="hidden md:grid md:grid-cols-[60px_minmax(0,1.8fr)_160px_160px_160px] gap-3 items-start">
                           <div class="flex items-center min-h-10 text-sm font-bold text-slate-700">{{ visibleIndex + 1 }}</div>
                           <div class="flex items-center min-h-10 text-sm font-semibold text-slate-700">{{ rowEntry.control.get('description')?.value }}</div>
                           <p-inputNumber formControlName="requestAmount" styleClass="w-full" inputStyleClass="table-input w-full" placeholder="0.00" [minFractionDigits]="2" [maxFractionDigits]="2" [useGrouping]="true" />
                           <!-- POINT 5: Replaced Paid Amount with Remarks -->
                           <input pInputText formControlName="remarks" class="table-input-text w-full" placeholder="Remarks..." [readonly]="!isCostSheetEditing(i)" />
+                          <div class="flex items-center justify-center gap-2 min-h-10">
+                            @if (canEditClearingAdvance(i) && !isClearingAdvanceApproved(i)) {
+                              <label class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-blue-600 cursor-pointer shrink-0">
+                                <i class="pi pi-upload"></i>
+                                <input type="file" class="hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onCostSheetAttachmentSelected($event, i, rowEntry.index)" />
+                              </label>
+                            }
+                            @if (getCostSheetAttachmentFile(i, rowEntry.index)) {
+                              <button type="button" (click)="openDocumentPreview(getCostSheetAttachmentFile(i, rowEntry.index)!, 'Clearing Advance Attachment')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600">
+                                <i class="pi pi-eye"></i>
+                              </button>
+                              @if (canEditClearingAdvance(i) && !isClearingAdvanceApproved(i)) {
+                                <button type="button" (click)="clearCostSheetAttachmentFile(i, rowEntry.index)" class="w-9 h-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100">
+                                  <i class="pi pi-trash"></i>
+                                </button>
+                              }
+                            } @else if (rowEntry.control.get('attachmentDocumentUrl')?.value) {
+                              <button type="button" (click)="openRemoteDocumentPreview(rowEntry.control.get('attachmentDocumentUrl')?.value, rowEntry.control.get('attachmentDocumentName')?.value || 'Clearing Advance Attachment')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600">
+                                <i class="pi pi-eye"></i>
+                              </button>
+                            } @else {
+                              <div class="w-9 h-9 rounded-lg border border-slate-200 bg-slate-50 text-slate-300 flex items-center justify-center">
+                                <i class="pi pi-eye"></i>
+                              </div>
+                            }
+                          </div>
                         </div>
 
                         <div class="md:hidden flex flex-col gap-3">
@@ -375,17 +402,47 @@
                                 <input pInputText formControlName="remarks" class="table-input-text w-full" placeholder="Remarks..." [readonly]="!isCostSheetEditing(i)" />
                               </div>
                             </div>
+                            <div class="flex flex-col gap-1.5">
+                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Attachment</label>
+                              <div class="flex items-center gap-2">
+                                @if (canEditClearingAdvance(i) && !isClearingAdvanceApproved(i)) {
+                                  <label class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-blue-600 cursor-pointer shrink-0">
+                                    <i class="pi pi-upload"></i>
+                                    <input type="file" class="hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onCostSheetAttachmentSelected($event, i, rowEntry.index)" />
+                                  </label>
+                                }
+                                @if (getCostSheetAttachmentFile(i, rowEntry.index)) {
+                                  <button type="button" (click)="openDocumentPreview(getCostSheetAttachmentFile(i, rowEntry.index)!, 'Clearing Advance Attachment')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600">
+                                    <i class="pi pi-eye"></i>
+                                  </button>
+                                  @if (canEditClearingAdvance(i) && !isClearingAdvanceApproved(i)) {
+                                    <button type="button" (click)="clearCostSheetAttachmentFile(i, rowEntry.index)" class="w-9 h-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100">
+                                      <i class="pi pi-trash"></i>
+                                    </button>
+                                  }
+                                } @else if (rowEntry.control.get('attachmentDocumentUrl')?.value) {
+                                  <button type="button" (click)="openRemoteDocumentPreview(rowEntry.control.get('attachmentDocumentUrl')?.value, rowEntry.control.get('attachmentDocumentName')?.value || 'Clearing Advance Attachment')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600">
+                                    <i class="pi pi-eye"></i>
+                                  </button>
+                                } @else {
+                                  <div class="w-9 h-9 rounded-lg border border-slate-200 bg-slate-50 text-slate-300 flex items-center justify-center">
+                                    <i class="pi pi-eye"></i>
+                                  </div>
+                                }
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
                     }
                   </div>
                   <div class="border-t border-slate-100 bg-slate-50/70 px-4 py-3">
-                    <div class="hidden md:grid md:grid-cols-[60px_minmax(0,1.8fr)_160px_160px] gap-3 items-center">
+                    <div class="hidden md:grid md:grid-cols-[60px_minmax(0,1.8fr)_160px_160px_160px] gap-3 items-center">
                       <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">Total</span>
                       <span></span>
                       <span class="text-sm font-black text-slate-800">{{ getCostSheetTotal(group, 'requestAmount') }}</span>
                       <span class="text-[10px] text-slate-400 italic">—</span>
+                      <span></span>
                     </div>
                     <div class="md:hidden grid grid-cols-2 gap-3">
                       <div class="rounded-xl border border-slate-200 bg-white px-3 py-2">

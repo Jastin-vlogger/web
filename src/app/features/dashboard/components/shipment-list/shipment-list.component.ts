@@ -2,6 +2,7 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { SkeletonModule } from 'primeng/skeleton';
+import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { PrimaryButtonDirective } from '../../../../shared/directives/button.directive';
 import { ShipmentService } from '../../../../core/services/shipment.service';
@@ -32,18 +33,31 @@ export class ShipmentListComponent implements OnInit {
     pageSize = signal(20);
     totalRecords = signal(0);
     totalPages = signal(0);
+    searchQuery = signal('');
     readonly canCreateShipment = computed(() =>
         this.rbacService.hasPermission('shipment.screen.create_shipment.view')
     );
+    private readonly searchInput$ = new Subject<string>();
 
     ngOnInit() {
+        this.searchInput$
+            .pipe(debounceTime(300), distinctUntilChanged())
+            .subscribe((value) => {
+                this.searchQuery.set(value.trim());
+                this.currentPage.set(1);
+                this.fetchShipments();
+            });
         this.fetchShipments();
     }
 
     fetchShipments() {
         this.loading.set(true);
-        
-        this.shipmentService.getShipments(this.currentPage(), this.pageSize()).subscribe({
+
+        const request$ = this.searchQuery()
+            ? this.shipmentService.searchShipments(this.searchQuery(), this.currentPage(), this.pageSize())
+            : this.shipmentService.getShipments(this.currentPage(), this.pageSize());
+
+        request$.subscribe({
             next: (response) => {
                 this.shipments.set(response.shipments);
                 this.totalRecords.set(response.totalRecords);
@@ -65,9 +79,29 @@ export class ShipmentListComponent implements OnInit {
         }
     }
 
+    onSearchInput(event: Event): void {
+        const value = (event.target as HTMLInputElement)?.value ?? '';
+        this.searchInput$.next(value);
+    }
+
+    clearSearch(): void {
+        this.searchQuery.set('');
+        this.currentPage.set(1);
+        this.fetchShipments();
+    }
+
+    getDisplaySerial(index: number): number {
+        return this.totalRecords() - ((this.currentPage() - 1) * this.pageSize() + index);
+    }
+
+    getDisplayStageName(status: string | null | undefined): string {
+        return String(status || '').trim() === 'Planned Split' ? 'Shipment Split' : String(status || '');
+    }
+
     getSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
-        if (!status) return 'secondary';
-        const s = status.toLowerCase();
+        const displayStatus = this.getDisplayStageName(status);
+        if (!displayStatus) return 'secondary';
+        const s = displayStatus.toLowerCase();
         if (s.includes('completed') || s === 'payment costing') return 'success';
         if (s.includes('quality')) return 'success';
         if (s.includes('storage')) return 'info';

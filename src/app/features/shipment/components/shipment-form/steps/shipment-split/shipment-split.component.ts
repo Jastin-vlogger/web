@@ -1761,7 +1761,7 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
 
     this.trackOrderData.set({
       shipmentNo: this.getActualShipmentId(rowIndex),
-      currentStage: shipment?.currentStage || 'Shipment Entry',
+      currentStage: this.getDisplayStageName(shipment?.currentStage || 'Shipment Entry'),
       portOfLoading: actual?.portOfLoading || shipment?.portOfLoading || '',
       portOfDischarge: actual?.portOfDischarge || shipment?.portOfDischarge || '',
       etd: formatDate(actual?.updatedETD || planned?.etd || group.get('updatedETD')?.value),
@@ -1773,6 +1773,10 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
   onTrackOrderModalVisibleChange(visible: boolean): void {
     this.trackOrderModalVisible.set(visible);
     if (!visible) this.trackOrderData.set(null);
+  }
+
+  getDisplayStageName(stage: string): string {
+    return String(stage || '').trim() === 'Planned Split' ? 'Shipment Split' : String(stage || '');
   }
 
   /**

@@ -206,6 +206,15 @@ export class ShipmentService {
     return this.http.get<ShipmentListResponse>(this.apiUrl, { params });
   }
 
+  searchShipments(query: string, page: number = 1, limit: number = 20): Observable<ShipmentListResponse> {
+    const params = new HttpParams()
+      .set('q', query)
+      .set('page', page.toString())
+      .set('limit', limit.toString());
+
+    return this.http.get<ShipmentListResponse>(`${this.apiUrl}/search`, { params });
+  }
+
   getShipmentById(id: string): Observable<ShipmentDetailsResponse> {
     return this.http.get<ShipmentDetailsResponse>(`${this.apiUrl}/${id}`);
   }
