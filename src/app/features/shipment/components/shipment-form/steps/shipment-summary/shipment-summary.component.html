@@ -337,7 +337,7 @@
           <h2>Quantity & Financial Summary</h2>
         </div>
         <div class="sl-card-body">
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
             <div class="flex flex-col gap-1">
               <span class="sl-label text-[10px] uppercase tracking-wider text-blue-500">Total USD</span>
               <span class="text-xl font-black text-slate-900 tracking-tight">{{ (shipmentData()?.shipment?.payment ?? 0) | currency: 'USD' }}</span>
@@ -347,10 +347,67 @@
               <span class="sl-label text-[10px] uppercase tracking-wider text-emerald-500">Total AED</span>
               <span class="text-xl font-black text-emerald-800 tracking-tight">{{ (shipmentData()?.shipment?.totalAED ?? 0) | number:'1.2-2' }}</span>
             </div>
-            @if ((shipmentData()?.shipment?.paymentTerms || '').includes('CAD')) {
-              <div class="flex flex-col gap-1">
+            @if ((shipmentData()?.shipment?.paymentTerms || '').includes('CAD') && canViewBankName()) {
+              <div class="flex flex-col gap-1 min-w-0 xl:col-span-2">
                 <span class="sl-label text-[10px] uppercase tracking-wider text-slate-500">Bank Name</span>
-                <span class="text-sm font-semibold text-slate-900">{{ shipmentData()?.shipment?.bankName || '–' }}</span>
+                @if (!editingBankName()) {
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-sm font-semibold text-slate-900 break-words">{{ shipmentData()?.shipment?.bankName || '–' }}</span>
+                    @if (canEditBankName()) {
+                      <button
+                        type="button"
+                        (click)="startBankNameEdit()"
+                        class="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-blue-600 hover:border-blue-200 flex items-center justify-center transition-colors"
+                        title="Edit bank name"
+                      >
+                        <i class="pi pi-pencil text-[10px]"></i>
+                      </button>
+                    }
+                  </div>
+                } @else {
+                  <div class="flex flex-col gap-1.5">
+                    <div class="flex flex-col gap-3 pr-2">
+                      <p-select
+                        [options]="bankOptions()"
+                        [ngModel]="bankNameDraft()"
+                        (ngModelChange)="bankNameDraft.set($event)"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Enter bank name"
+                        [showClear]="true"
+                        [disabled]="bankNameSaving()"
+                        styleClass="w-full"
+                        appendTo="body">
+                      </p-select>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          (click)="saveBankName()"
+                          [disabled]="bankNameSaving()"
+                          class="h-9 px-4 rounded-lg bg-blue-600 text-white text-[10px] font-bold uppercase hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 whitespace-nowrap"
+                        >
+                          @if (bankNameSaving()) {
+                            <i class="pi pi-spin pi-spinner text-xs"></i>
+                          } @else {
+                            <i class="pi pi-check text-xs"></i>
+                          }
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          (click)="cancelBankNameEdit()"
+                          [disabled]="bankNameSaving()"
+                          class="h-9 px-4 rounded-lg border border-slate-200 text-slate-500 text-[10px] font-bold uppercase hover:bg-slate-50 disabled:opacity-50 whitespace-nowrap"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                    @if (bankNameError()) {
+                      <p class="text-[11px] text-red-600 font-medium">{{ bankNameError() }}</p>
+                    }
+                  </div>
+                }
               </div>
             }
             <div class="flex flex-col gap-1">

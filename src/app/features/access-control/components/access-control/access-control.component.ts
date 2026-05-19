@@ -7,6 +7,7 @@ import { MultiSelectModule } from 'primeng/multiselect';
 import { AccessControlService } from '../../../../core/services/access-control.service';
 import { AccessPermission, AccessPermissionGroup, AccessRole, AccessUser, BlRowDefinitionAdminItem } from '../../../../core/models/access-control.model';
 import { AuthService } from '../../../../core/services/auth.service';
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 
 type AccessTabKey = 'roles' | 'menu' | 'permissions' | 'users';
 
@@ -63,6 +64,7 @@ export class AccessControlComponent {
   private accessControlService = inject(AccessControlService);
   private authService = inject(AuthService);
   private messageService = inject(MessageService);
+  private confirmDialog = inject(ConfirmDialogService);
 
   readonly activeTab = signal<AccessTabKey>('roles');
   readonly rolesLoading = signal(false);
@@ -70,6 +72,7 @@ export class AccessControlComponent {
   readonly usersLoading = signal(false);
   readonly blRowsLoading = signal(false);
   readonly saveLoading = signal(false);
+  readonly resetPasswordLoading = signal(false);
   readonly blRowSaveId = signal<string | 'new' | null>(null);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
@@ -981,6 +984,42 @@ export class AccessControlComponent {
         },
         error: (err) => {
           this.error.set(err.error?.message || 'Unable to update user.');
+        },
+      });
+  }
+
+  async resetSelectedUserPassword(): Promise<void> {
+    const userId = this.selectedUserId();
+    const user = this.selectedUser();
+    if (!userId || !user) {
+      this.error.set('Select a user first.');
+      return;
+    }
+
+    const confirmed = await this.confirmDialog.ask({
+      header: 'Reset Password',
+      message: 'Password would be reset',
+      acceptLabel: 'Yes, Reset',
+      severity: 'warning',
+    });
+    if (!confirmed) return;
+
+    this.resetPasswordLoading.set(true);
+    this.error.set(null);
+    this.success.set(null);
+
+    this.accessControlService
+      .resetUserPassword(userId)
+      .pipe(finalize(() => this.resetPasswordLoading.set(false)))
+      .subscribe({
+        next: ({ message, user: updatedUser }) => {
+          this.users.update((users) => users.map((u) => (u._id === updatedUser._id ? updatedUser : u)));
+          this.selectUser(updatedUser._id);
+          this.success.set(message);
+          this.messageService.add({ severity: 'success', summary: 'Password Reset', detail: message });
+        },
+        error: (err) => {
+          this.error.set(err.error?.message || 'Unable to reset password.');
         },
       });
   }

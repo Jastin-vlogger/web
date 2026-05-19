@@ -671,7 +671,7 @@
                 [readonlyInput]="true"
                 [showIcon]="true"
                 [showOnFocus]="true"
-                [minDate]="getStrictMinDate($any(group), 'shipOnBoardDate')"
+                [minDate]="isRowSubmitted(i) ? null : getStrictMinDate($any(group), 'shipOnBoardDate')"
               ></p-datepicker>
             </td>
             <td class="actual-col-date">
@@ -681,7 +681,7 @@
                 [readonlyInput]="true"
                 [showIcon]="true"
                 [showOnFocus]="true"
-                [minDate]="getStrictMinDate($any(group), group.get('updatedETD')?.value ? 'updatedETD' : 'shipOnBoardDate')"
+                [minDate]="isRowSubmitted(i) ? null : getStrictMinDate($any(group), group.get('updatedETD')?.value ? 'updatedETD' : 'shipOnBoardDate')"
               ></p-datepicker>
             </td>
             <td class="actual-col-action text-center">

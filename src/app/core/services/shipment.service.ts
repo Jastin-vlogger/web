@@ -390,4 +390,11 @@ export class ShipmentService {
       { supplierEmail }
     );
   }
+
+  updateBankName(shipmentId: string, bankName: string): Observable<{ message: string; bankName: string }> {
+    return this.http.patch<{ message: string; bankName: string }>(
+      `${this.apiUrl}/${shipmentId}/bank-name`,
+      { bankName }
+    );
+  }
 }

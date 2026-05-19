@@ -752,6 +752,15 @@
           </div>
 
           <div class="mt-5 flex flex-wrap gap-3">
+            @if (selectedUser()) {
+              <button
+                type="button"
+                class="rounded-full border border-amber-200 bg-amber-50 px-5 py-3 text-xs font-black uppercase tracking-[0.18em] text-amber-700 transition hover:bg-amber-100 disabled:opacity-60"
+                [disabled]="resetPasswordLoading()"
+                (click)="resetSelectedUserPassword()">
+                {{ resetPasswordLoading() ? 'Resetting...' : 'Reset Password' }}
+              </button>
+            }
             <button
               type="button"
               class="rounded-full bg-slate-950 px-5 py-3 text-xs font-black uppercase tracking-[0.18em] text-white transition hover:bg-slate-800 disabled:opacity-60"

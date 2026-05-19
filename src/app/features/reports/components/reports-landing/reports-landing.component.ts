@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { finalize } from 'rxjs/operators';
-import { ShipmentReportExportRow } from '../../../../core/models/shipment.model';
+import { ShipmentReportExportChildRow, ShipmentReportExportRow } from '../../../../core/models/shipment.model';
 import { ShipmentService } from '../../../../core/services/shipment.service';
 import { AuthService } from '../../../../core/services/auth.service';
 
@@ -27,11 +27,13 @@ export class ReportsLandingComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly rows = signal<ShipmentReportExportRow[]>([]);
   readonly generatedAt = signal<string | null>(null);
+  readonly expandedShipments = signal<Record<string, boolean>>({});
 
   readonly columns: ReportColumn[] = [
     { header: 'S/N', key: 'sn', width: 8 },
     { header: 'Year', key: 'year', width: 10 },
     { header: 'Shipment No.', key: 'shipmentNo', width: 26 },
+    { header: 'Actual Shipment No.', key: 'actualShipmentNo', width: 26 },
     { header: 'Date', key: 'date', width: 14 },
     { header: 'Supplier', key: 'supplier', width: 28 },
     { header: 'Country', key: 'country', width: 16 },
@@ -41,7 +43,7 @@ export class ReportsLandingComponent implements OnInit {
     { header: 'Packing', key: 'packing', width: 12 },
     { header: 'PI No.', key: 'piNo', width: 20 },
     // { header: 'CI No.', key: 'ciNo', width: 20 },
-    { header: 'FCL', key: 'fcl', width: 10 },
+    // { header: 'FCL', key: 'fcl', width: 10 },
     { header: 'Cont. Size', key: 'containerSize', width: 12 },
     { header: 'Buying Unit', key: 'buyingUnit', width: 14 },
     { header: 'Buying Qty (MT)', key: 'buyingQtyMT', width: 16 },
@@ -56,11 +58,24 @@ export class ReportsLandingComponent implements OnInit {
     { header: 'No. of Shipments', key: 'noOfShipments', width: 16 },
     { header: 'Port of Loading', key: 'portOfLoading', width: 20 },
     { header: 'Port of Discharge', key: 'portOfDischarge', width: 20 },
-    // { header: 'Planned ETD', key: 'plannedETD', width: 14 },
-    // { header: 'Planned ETA', key: 'plannedETA', width: 14 },
+    { header: 'Planned ETD', key: 'plannedETD', width: 14 },
+    { header: 'Planned ETA', key: 'plannedETA', width: 14 },
+    { header: 'Week', key: 'weekWiseShipment', width: 12 },
     { header: 'Advance Amount', key: 'advanceAmount', width: 16 },
     { header: 'Bags', key: 'bags', width: 12 },
     { header: 'Pallet', key: 'pallet', width: 12 },
+  ];
+
+  readonly childColumns: Array<{ header: string; key: keyof ShipmentReportExportChildRow }> = [
+    { header: 'Shipment Split', key: 'shipmentNo' },
+    { header: 'Actual Shipment', key: 'actualShipmentNo' },
+    { header: 'Schedule ETD', key: 'scheduledETD' },
+    { header: 'Schedule ETA', key: 'scheduledETA' },
+    { header: 'Actual ETD', key: 'actualETD' },
+    { header: 'Actual ETA', key: 'actualETA' },
+    { header: 'ETA Difference', key: 'etaDifference' },
+    { header: 'Week', key: 'weekWiseShipment' },
+    { header: 'Stage', key: 'currentStage' },
   ];
 
   readonly reportCards = computed(() => [
@@ -173,8 +188,32 @@ export class ReportsLandingComponent implements OnInit {
       if (['fcPerUnit', 'totalFC', 'advanceAmount'].includes(String(key))) {
         return Number(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
       }
+      if (['bags', 'pallet', 'buyingQtyMT', 'fcl', 'noOfShipments'].includes(String(key))) {
+        return Number(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+      }
       return value;
     }
     return String(value);
+  }
+
+  formatChildCellValue(value: unknown, key?: keyof ShipmentReportExportChildRow): string | number {
+    if (value == null || value === '') return '';
+    return String(value);
+  }
+
+  hasChildren(row: ShipmentReportExportRow): boolean {
+    return Array.isArray(row.children) && row.children.length > 0;
+  }
+
+  isExpanded(row: ShipmentReportExportRow): boolean {
+    return !!this.expandedShipments()[row.shipmentNo];
+  }
+
+  toggleRow(row: ShipmentReportExportRow): void {
+    if (!this.hasChildren(row)) return;
+    this.expandedShipments.update((current) => ({
+      ...current,
+      [row.shipmentNo]: !current[row.shipmentNo],
+    }));
   }
 }

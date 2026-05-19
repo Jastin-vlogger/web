@@ -63,6 +63,10 @@ export class AccessControlService {
     return this.http.patch<{ message: string; user: AccessUser }>(`${this.apiUrl}/users/${userId}`, payload);
   }
 
+  resetUserPassword(userId: string): Observable<{ message: string; user: AccessUser }> {
+    return this.http.patch<{ message: string; user: AccessUser }>(`${this.apiUrl}/users/${userId}/reset-password`, {});
+  }
+
   getBlRowDefinitions(): Observable<{ rows: BlRowDefinitionAdminItem[] }> {
     return this.http.get<{ rows: BlRowDefinitionAdminItem[] }>(`${this.apiUrl}/bl-row-definitions`);
   }

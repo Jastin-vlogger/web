@@ -71,6 +71,7 @@
         <table class="report-table">
           <thead>
             <tr>
+              <th class="report-expand-col"></th>
               @for (column of columns; track column.header) {
                 <th>{{ column.header }}</th>
               }
@@ -78,11 +79,71 @@
           </thead>
           <tbody>
             @for (row of rows(); track row.shipmentNo + '-' + row.sn) {
-              <tr>
+              <tr class="report-parent-row">
+                <td class="report-expand-col">
+                  @if (hasChildren(row)) {
+                    <button
+                      type="button"
+                      class="report-expand-button"
+                      (click)="toggleRow(row)"
+                      [attr.aria-expanded]="isExpanded(row)"
+                      [title]="isExpanded(row) ? 'Collapse shipment splits' : 'Expand shipment splits'">
+                      <i class="pi" [ngClass]="isExpanded(row) ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
+                    </button>
+                  }
+                </td>
                 @for (column of columns; track column.header) {
                   <td>{{ formatCellValue(row[column.key], column.key) }}</td>
                 }
               </tr>
+              @if (isExpanded(row) && hasChildren(row)) {
+                <tr class="report-child-shell">
+                  <td [attr.colspan]="columns.length + 1" class="report-child-cell">
+                    <div class="report-child-wrapper">
+                      <div class="report-child-title">
+                        {{ row.noOfShipments || row.children?.length || 0 }} shipment split(s)
+                      </div>
+                      <table class="report-child-table">
+                        <colgroup>
+                          <col class="report-child-col-split" />
+                          <col class="report-child-col-actual" />
+                          <col class="report-child-col-date" />
+                          <col class="report-child-col-date" />
+                          <col class="report-child-col-date" />
+                          <col class="report-child-col-date" />
+                          <col class="report-child-col-diff" />
+                          <col class="report-child-col-week" />
+                          <col class="report-child-col-stage" />
+                        </colgroup>
+                        <thead>
+                          <tr>
+                            @for (column of childColumns; track column.header) {
+                              <th
+                                [class.report-child-highlight-header]="column.key === 'shipmentNo' || column.key === 'actualShipmentNo'"
+                                [class.report-child-neutral-header]="column.key !== 'shipmentNo' && column.key !== 'actualShipmentNo'">
+                                {{ column.header }}
+                              </th>
+                            }
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (child of row.children || []; track child.shipmentNo + '-' + ($index); let childIndex = $index) {
+                            <tr>
+                              @for (column of childColumns; track column.header) {
+                                <td
+                                  [class.report-child-highlight-cell]="column.key === 'shipmentNo' || column.key === 'actualShipmentNo'"
+                                  [class.report-child-neutral-cell]="column.key !== 'shipmentNo' && column.key !== 'actualShipmentNo'">
+                                  {{ formatChildCellValue(child[column.key], column.key) }}
+                                </td>
+                              }
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </td>
+                </tr>
+              }
             }
           </tbody>
         </table>

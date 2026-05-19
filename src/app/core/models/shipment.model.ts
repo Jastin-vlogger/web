@@ -30,7 +30,26 @@ export interface ShipmentListResponse {
   shipments: Shipment[];
 }
 
+export interface ShipmentReportExportChildRow {
+  rowType: 'child';
+  shipmentNo: string;
+  actualShipmentNo?: string;
+  scheduledETD: string;
+  scheduledETA: string;
+  actualETD: string;
+  actualETA: string;
+  etaDifference: string;
+  fcl: number | string;
+  containerSize: number | string;
+  buyingQtyMT: number | string;
+  bags: number | string;
+  pallet: number | string;
+  weekWiseShipment?: string;
+  currentStage: string;
+}
+
 export interface ShipmentReportExportRow {
+  rowType?: 'parent';
   sn: number;
   year: number | string;
   shipmentNo: string;
@@ -63,6 +82,9 @@ export interface ShipmentReportExportRow {
   advanceAmount: number | string;
   bags: number | string;
   pallet: number | string;
+  actualShipmentNo?: string;
+  weekWiseShipment?: string;
+  children?: ShipmentReportExportChildRow[];
 }
 
 export interface ShipmentReportExportResponse {

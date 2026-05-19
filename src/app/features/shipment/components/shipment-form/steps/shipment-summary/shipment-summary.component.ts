@@ -6,15 +6,17 @@ import { Store } from '@ngrx/store';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
 import { selectShipmentData, selectIsPlannedLocked } from '../../../../../../store/shipment/shipment.selectors';
 import { ShipmentService } from '../../../../../../core/services/shipment.service';
 import * as ShipmentActions from '../../../../../../store/shipment/shipment.actions';
 import { RbacService } from '../../../../../../core/services/rbac.service';
+import { ExchangeRateService } from '../../../../../../core/services/exchange-rate.service';
 
 @Component({
   selector: 'app-shipment-summary',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, InputNumberModule, InputTextModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, InputNumberModule, InputTextModule, SelectModule],
   templateUrl: './shipment-summary.component.html',
 })
 export class ShipmentSummaryComponent {
@@ -24,6 +26,7 @@ export class ShipmentSummaryComponent {
   private sanitizer = inject(DomSanitizer);
   private shipmentService = inject(ShipmentService);
   private rbacService = inject(RbacService);
+  private exchangeRateService = inject(ExchangeRateService);
 
   readonly shipmentData = toSignal(this.store.select(selectShipmentData));
   readonly isPlannedLocked = toSignal(this.store.select(selectIsPlannedLocked), { initialValue: false });
@@ -31,6 +34,8 @@ export class ShipmentSummaryComponent {
   readonly canViewQuantityFinancialSummary = computed(() =>
     this.rbacService.hasPermission('shipment.field.shipment_entry.quantityFinancialSummary.view')
   );
+  readonly canViewBankName = computed(() => this.rbacService.hasPermission('shipment.field.shipment_entry.bankName.view'));
+  readonly canEditBankName = computed(() => this.rbacService.hasPermission('shipment.field.shipment_entry.bankName.edit'));
 
   // ── Document preview ──────────────────────────────────────────────────────
   readonly showPreviewModal = signal(false);
@@ -50,6 +55,26 @@ export class ShipmentSummaryComponent {
   readonly emailDraft = signal('');
   readonly emailSaving = signal(false);
   readonly emailError = signal<string | null>(null);
+  readonly editingBankName = signal(false);
+  readonly bankNameDraft = signal('');
+  readonly bankNameSaving = signal(false);
+  readonly bankNameError = signal<string | null>(null);
+  readonly bankOptions = signal<Array<{ label: string; value: string }>>([]);
+
+  constructor() {
+    this.exchangeRateService.getActive().subscribe({
+      next: (rates) => {
+        this.bankOptions.set(
+          rates
+            .filter((rate) => !rate.isDefault)
+            .map((rate) => ({ label: rate.bankName, value: rate.bankName }))
+        );
+      },
+      error: () => {
+        this.bankOptions.set([]);
+      },
+    });
+  }
 
   startEmailEdit(): void {
     if (!this.canEditSupplierEmail()) return;
@@ -83,6 +108,37 @@ export class ShipmentSummaryComponent {
       error: (err) => {
         this.emailSaving.set(false);
         this.emailError.set(err?.error?.message || 'Failed to update email. Please try again.');
+      },
+    });
+  }
+
+  startBankNameEdit(): void {
+    if (!this.canEditBankName()) return;
+    this.bankNameDraft.set(this.shipmentData()?.shipment?.bankName || '');
+    this.bankNameError.set(null);
+    this.editingBankName.set(true);
+  }
+
+  cancelBankNameEdit(): void {
+    this.editingBankName.set(false);
+    this.bankNameError.set(null);
+  }
+
+  saveBankName(): void {
+    const shipmentId = this.shipmentData()?.shipment?._id;
+    if (!shipmentId) return;
+
+    this.bankNameSaving.set(true);
+    this.bankNameError.set(null);
+    this.shipmentService.updateBankName(shipmentId, this.bankNameDraft().trim()).subscribe({
+      next: () => {
+        this.bankNameSaving.set(false);
+        this.editingBankName.set(false);
+        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+      },
+      error: (err) => {
+        this.bankNameSaving.set(false);
+        this.bankNameError.set(err?.error?.message || 'Failed to update bank name. Please try again.');
       },
     });
   }

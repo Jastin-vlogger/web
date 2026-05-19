@@ -1009,7 +1009,14 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
         );
       }
 
-      const actual = this.actualSplits.at(index) as FormGroup | null;
+      const actualRowIndex = this.actualSplits.controls.findIndex((control) => {
+        const rowContainerId = (control as FormGroup).get('containerId')?.value;
+        return String(rowContainerId || '') === String(container?._id || '');
+      });
+      const actual = (
+        actualRowIndex >= 0 ? this.actualSplits.at(actualRowIndex) : this.actualSplits.at(index)
+      ) as FormGroup | null;
+      const actualData = container?.actual || {};
       if (actual) {
         actual.patchValue(
           {
@@ -1017,8 +1024,16 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
             FCL: container?.planned?.FCL ?? actual.get('FCL')?.value,
             size: container?.planned?.size ?? actual.get('size')?.value,
             qtyMT: container?.planned?.qtyMT ?? actual.get('qtyMT')?.value,
-            updatedETD: container?.planned?.etd ? new Date(container.planned.etd) : actual.get('updatedETD')?.value,
-            updatedETA: container?.planned?.eta ? new Date(container.planned.eta) : actual.get('updatedETA')?.value,
+            updatedETD: actualData?.updatedETD
+              ? new Date(actualData.updatedETD)
+              : container?.planned?.etd
+                ? new Date(container.planned.etd)
+                : actual.get('updatedETD')?.value,
+            updatedETA: actualData?.updatedETA
+              ? new Date(actualData.updatedETA)
+              : container?.planned?.eta
+                ? new Date(container.planned.eta)
+                : actual.get('updatedETA')?.value,
           },
           { emitEvent: false }
         );
