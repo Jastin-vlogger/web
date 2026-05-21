@@ -12,6 +12,7 @@ import { ShipmentService } from '../../../../../../core/services/shipment.servic
 import * as ShipmentActions from '../../../../../../store/shipment/shipment.actions';
 import { RbacService } from '../../../../../../core/services/rbac.service';
 import { ExchangeRateService } from '../../../../../../core/services/exchange-rate.service';
+import { getComputedShipmentStatus, getShipmentStatusSeverity, type ShipmentStatusSeverity } from '../../shared/shipment-status';
 
 @Component({
   selector: 'app-shipment-summary',
@@ -195,7 +196,7 @@ export class ShipmentSummaryComponent {
     return value > 0 ? String(value) : 'Not Created Yet';
   }
 
-  getShipmentStatuses(): Array<{ shipmentNo: string; stage: string; badge: 'success' | 'info' | 'warn' }> {
+  getShipmentStatuses(): Array<{ shipmentNo: string; status: string; badge: ShipmentStatusSeverity }> {
     const data = this.shipmentData();
     const planned = data?.planned || [];
     const actual = data?.actual || [];
@@ -210,36 +211,45 @@ export class ShipmentSummaryComponent {
     return Array.from({ length: shipmentCount }, (_, index) => {
       const row = actual[index];
       const plannedRow = planned[index];
-      const stage =
-        row?.paymentCostings?.length || row?.packagingExpenses?.length
-          ? 'Payment & Costing'
-          : row?.qualityRows?.length || row?.qualityReports?.length
-            ? 'Quality'
-            : row?.storageSplits?.length
-              ? 'Storage Allocation & Arrival'
-              : row?.transportationBooked?.length || row?.arrivalNoticeDate || row?.customsClearanceDate
-                ? 'Port & Customs Clearance'
-                : row?.documentsReleasedDate || row?.receiver
-                  ? 'Document Tracker'
-                  : row?.BLNo
-                    ? 'BL Details'
-                    : plannedRow
-                      ? 'Shipment Tracker'
-                      : 'Shipment Entry';
+      const status =
+        row?.shipmentStatus ||
+        plannedRow?.shipmentStatus ||
+        getComputedShipmentStatus({
+          shipmentCurrentStage: data?.shipment?.currentStage,
+          plannedRow,
+          actualRow: row,
+          fallbackStageLabel:
+            row?.paymentCostings?.length || row?.packagingExpenses?.length
+              ? 'Payment & Costing'
+              : row?.qualityRows?.length || row?.qualityReports?.length
+                ? 'Quality'
+                : row?.storageSplits?.length
+                  ? 'Storage Allocation & Arrival'
+                  : row?.transportationBooked?.length || row?.arrivalNoticeDate || row?.customsClearanceDate
+                    ? 'Port & Customs Clearance'
+                    : row?.documentsReleasedDate || row?.receiver
+                      ? 'Document Tracker'
+                      : row?.BLNo
+                        ? 'BL Details'
+                        : plannedRow
+                          ? 'Shipment Tracker'
+                          : 'Shipment Entry',
+        });
 
       const rowShipmentNo = shipmentCount > 1 ? `${baseShipmentNo}-${index + 1}` : baseShipmentNo;
 
       return {
         shipmentNo: rowShipmentNo,
-        stage,
-        badge: stage === 'Payment & Costing' || stage === 'Quality' ? 'success' : stage === 'Shipment Tracker' ? 'info' : 'warn',
+        status,
+        badge: getShipmentStatusSeverity(status),
       };
     });
   }
 
-  getStatusBadgeClass(badge: 'success' | 'info' | 'warn'): string {
+  getStatusBadgeClass(badge: ShipmentStatusSeverity): string {
     if (badge === 'success') return 'bg-emerald-50 text-emerald-700';
     if (badge === 'info') return 'bg-sky-50 text-sky-700';
+    if (badge === 'secondary') return 'bg-slate-100 text-slate-700';
     return 'bg-amber-50 text-amber-700';
   }
 

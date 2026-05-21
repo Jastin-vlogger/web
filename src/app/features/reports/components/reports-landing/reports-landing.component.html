@@ -93,7 +93,15 @@
                   }
                 </td>
                 @for (column of columns; track column.header) {
-                  <td>{{ formatCellValue(row[column.key], column.key) }}</td>
+                  <td>
+                    @if (column.key === 'shipmentStatus') {
+                      <span [class]="getStatusClasses(row[column.key])">
+                        {{ formatCellValue(row[column.key], column.key) }}
+                      </span>
+                    } @else {
+                      {{ formatCellValue(row[column.key], column.key) }}
+                    }
+                  </td>
                 }
               </tr>
               @if (isExpanded(row) && hasChildren(row)) {
@@ -112,6 +120,11 @@
                           <col class="report-child-col-date" />
                           <col class="report-child-col-date" />
                           <col class="report-child-col-diff" />
+                          <col class="report-child-col-mini" />
+                          <col class="report-child-col-mini" />
+                          <col class="report-child-col-qty" />
+                          <col class="report-child-col-qty" />
+                          <col class="report-child-col-mini" />
                           <col class="report-child-col-week" />
                           <col class="report-child-col-stage" />
                         </colgroup>
@@ -133,7 +146,13 @@
                                 <td
                                   [class.report-child-highlight-cell]="column.key === 'shipmentNo' || column.key === 'actualShipmentNo'"
                                   [class.report-child-neutral-cell]="column.key !== 'shipmentNo' && column.key !== 'actualShipmentNo'">
-                                  {{ formatChildCellValue(child[column.key], column.key) }}
+                                  @if (column.key === 'shipmentStatus') {
+                                    <span [class]="getChildStatusClasses(child[column.key])">
+                                      {{ formatChildCellValue(child[column.key], column.key) }}
+                                    </span>
+                                  } @else {
+                                    {{ formatChildCellValue(child[column.key], column.key) }}
+                                  }
                                 </td>
                               }
                             </tr>

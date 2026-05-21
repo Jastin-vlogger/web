@@ -42,8 +42,7 @@ export class ReportsLandingComponent implements OnInit {
     { header: 'Rice Name', key: 'riceName', width: 18 },
     { header: 'Packing', key: 'packing', width: 12 },
     { header: 'PI No.', key: 'piNo', width: 20 },
-    // { header: 'CI No.', key: 'ciNo', width: 20 },
-    // { header: 'FCL', key: 'fcl', width: 10 },
+    { header: 'FCL', key: 'fcl', width: 10 },
     { header: 'Cont. Size', key: 'containerSize', width: 12 },
     { header: 'Buying Unit', key: 'buyingUnit', width: 14 },
     { header: 'Buying Qty (MT)', key: 'buyingQtyMT', width: 16 },
@@ -54,12 +53,11 @@ export class ReportsLandingComponent implements OnInit {
     { header: 'FPO Number', key: 'fpoNo', width: 20 },
     { header: 'Bank Name', key: 'bankName', width: 18 },
     { header: 'Payment Terms', key: 'paymentTerms', width: 18 },
-    { header: 'Current Stage', key: 'currentStage', width: 18 },
+    { header: 'Shipment Status', key: 'shipmentStatus', width: 18 },
     { header: 'No. of Shipments', key: 'noOfShipments', width: 16 },
     { header: 'Port of Loading', key: 'portOfLoading', width: 20 },
     { header: 'Port of Discharge', key: 'portOfDischarge', width: 20 },
-    { header: 'Planned ETD', key: 'plannedETD', width: 14 },
-    { header: 'Planned ETA', key: 'plannedETA', width: 14 },
+    { header: 'Month', key: 'month', width: 12 },
     { header: 'Week', key: 'weekWiseShipment', width: 12 },
     { header: 'Advance Amount', key: 'advanceAmount', width: 16 },
     { header: 'Bags', key: 'bags', width: 12 },
@@ -74,8 +72,14 @@ export class ReportsLandingComponent implements OnInit {
     { header: 'Actual ETD', key: 'actualETD' },
     { header: 'Actual ETA', key: 'actualETA' },
     { header: 'ETA Difference', key: 'etaDifference' },
+    { header: 'FCL', key: 'fcl' },
+    { header: 'Cont. Size', key: 'containerSize' },
+    { header: 'Buying Qty (MT)', key: 'buyingQtyMT' },
+    { header: 'Bags', key: 'bags' },
+    { header: 'Pallet', key: 'pallet' },
+    { header: 'Month', key: 'month' },
     { header: 'Week', key: 'weekWiseShipment' },
-    { header: 'Stage', key: 'currentStage' },
+    { header: 'Status', key: 'shipmentStatus' },
   ];
 
   readonly reportCards = computed(() => [
@@ -198,7 +202,52 @@ export class ReportsLandingComponent implements OnInit {
 
   formatChildCellValue(value: unknown, key?: keyof ShipmentReportExportChildRow): string | number {
     if (value == null || value === '') return '';
+    if (
+      key &&
+      ['fcl', 'containerSize', 'buyingQtyMT', 'bags', 'pallet'].includes(String(key)) &&
+      !Number.isNaN(Number(value))
+    ) {
+      return Number(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
     return String(value);
+  }
+
+  getStatusSeverity(status: string | null | undefined): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
+    const s = String(status || '').trim().toLowerCase();
+    if (!s) return 'secondary';
+    if (s.includes('reached wh')) return 'success';
+    if (s.includes('at port of discharge')) return 'warn';
+    if (s.includes('on transit')) return 'info';
+    if (s.includes('etd yet to due')) return 'secondary';
+    if (s.includes('completed')) return 'success';
+    if (s.includes('delayed') || s.includes('error')) return 'danger';
+    return 'secondary';
+  }
+
+  getStatusClasses(status: string | undefined): string {
+    const severity = this.getStatusSeverity(status);
+    const baseClasses = 'inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em]';
+    const severityClasses = {
+      success: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+      info: 'border-blue-200 bg-blue-50 text-blue-700',
+      warn: 'border-amber-200 bg-amber-50 text-amber-700',
+      danger: 'border-rose-200 bg-rose-50 text-rose-700',
+      secondary: 'border-slate-200 bg-slate-50 text-slate-700'
+    };
+    return `${baseClasses} ${severityClasses[severity]}`;
+  }
+
+  getChildStatusClasses(status: string | undefined): string {
+    const severity = this.getStatusSeverity(status);
+    const baseClasses = 'inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]';
+    const severityClasses = {
+      success: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+      info: 'border-blue-200 bg-blue-50 text-blue-700',
+      warn: 'border-amber-200 bg-amber-50 text-amber-700',
+      danger: 'border-rose-200 bg-rose-50 text-rose-700',
+      secondary: 'border-slate-200 bg-slate-50 text-slate-700'
+    };
+    return `${baseClasses} ${severityClasses[severity]}`;
   }
 
   hasChildren(row: ShipmentReportExportRow): boolean {

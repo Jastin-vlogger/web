@@ -30,6 +30,7 @@ import { AuthService } from '../../../../../../core/services/auth.service';
 import * as ShipmentActions from '../../../../../../store/shipment/shipment.actions';
 import { normalizeBlRole, normalizeBlVisibleTo, type BlVisibleRole } from '../../shared/bl-row-definitions';
 import { downloadAdvanceRequestReportPdf } from '../../shared/advance-request-report';
+import { getComputedShipmentStatus, getShipmentStatusSeverity, type ShipmentStatusSeverity } from '../../shared/shipment-status';
 
 @Component({
   selector: 'app-shipment-payment-costing',
@@ -892,6 +893,26 @@ export class ShipmentPaymentCostingComponent {
     if (this.submittedActualIndices().includes(index)) return 'BL Details';
     if (this.isPlannedLocked()) return 'Shipment Tracker';
     return 'Shipment Entry';
+  }
+
+  getShipmentStatus(index: number): string {
+    const shipment = this.shipmentData()?.shipment as any;
+    const actual = this.shipmentData()?.actual?.[index] as any;
+    const planned = this.shipmentData()?.planned?.[index] as any;
+    return actual?.shipmentStatus || planned?.shipmentStatus || shipment?.shipmentStatus || getComputedShipmentStatus({
+      shipmentCurrentStage: shipment?.currentStage,
+      plannedRow: planned,
+      actualRow: actual,
+      fallbackStageLabel: this.getShipmentReachedStage(index),
+    });
+  }
+
+  getStatusBadgeClass(status: string): string {
+    const severity: ShipmentStatusSeverity = getShipmentStatusSeverity(status);
+    if (severity === 'success') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    if (severity === 'info') return 'bg-sky-50 text-sky-700 border-sky-200';
+    if (severity === 'secondary') return 'bg-slate-100 text-slate-700 border-slate-200';
+    return 'bg-amber-50 text-amber-700 border-amber-200';
   }
 
   isStageCompletedForShipment(index: number, stageIndex: number): boolean {

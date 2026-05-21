@@ -44,7 +44,9 @@ export interface ShipmentReportExportChildRow {
   buyingQtyMT: number | string;
   bags: number | string;
   pallet: number | string;
+  month?: string;
   weekWiseShipment?: string;
+  shipmentStatus?: string;
   currentStage: string;
 }
 
@@ -73,12 +75,12 @@ export interface ShipmentReportExportRow {
   fpoNo: string;
   bankName: string;
   paymentTerms: string;
+  shipmentStatus?: string;
   currentStage: string;
   noOfShipments: number | string;
   portOfLoading: string;
   portOfDischarge: string;
-  plannedETD: string;
-  plannedETA: string;
+  month?: string;
   advanceAmount: number | string;
   bags: number | string;
   pallet: number | string;
@@ -581,6 +583,7 @@ export interface ShipmentInfo {
 // Step 1: Planned Split
 export interface PlannedContainer {
   containerId: string;
+  shipmentStatus?: string;
   size: string;
   FCL: number;
   qtyMT: number;
@@ -641,6 +644,7 @@ export interface StorageArrivalApprovalState {
 // Steps 2-7: Actual Container Data
 export interface ActualContainer {
   containerId: string;
+  shipmentStatus?: string;
   size?: string;
   // Step 2: Actual Split
   actualSerialNo?: string;

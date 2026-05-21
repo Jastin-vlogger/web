@@ -262,7 +262,14 @@
           <div class="flex items-center justify-between w-full pr-2 gap-3">
             <div class="flex items-center gap-2.5 min-w-0">
               <span class="w-6 h-6 rounded-full bg-slate-800 text-white text-[10px] font-black flex items-center justify-center shrink-0">{{ i + 1 }}</span>
-              <span class="text-xs font-bold text-slate-700 truncate">Shipment No: {{ getShipmentNoLabel(i) }}</span>
+              <div class="flex flex-wrap items-center gap-2 min-w-0">
+                <span class="text-xs font-bold text-slate-700 truncate">Shipment No: {{ getShipmentNoLabel(i) }}</span>
+                <span
+                  class="inline-flex rounded-md border px-2 py-1 text-[9px] font-black uppercase tracking-[0.14em] shrink-0"
+                  [ngClass]="getStatusBadgeClass(getShipmentStatus(i))">
+                  {{ getShipmentStatus(i) }}
+                </span>
+              </div>
             </div>
             <button
               type="button"
@@ -731,9 +738,13 @@
         <p class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Shipment</p>
         <p class="text-sm font-bold text-slate-800 mt-1">{{ getShipmentNoLabel(idx) }}</p>
       </div>
-      <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5">
-        <p class="text-[10px] font-black text-emerald-600 uppercase tracking-wider">Current Stage</p>
-        <p class="text-sm font-bold text-emerald-700 mt-1">{{ getShipmentReachedStage(idx) }}</p>
+      <div class="rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Shipment Status</p>
+        <span
+          class="mt-1 inline-flex rounded-md border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em]"
+          [ngClass]="getStatusBadgeClass(getShipmentStatus(idx))">
+          {{ getShipmentStatus(idx) }}
+        </span>
       </div>
       <div class="flex flex-col gap-2">
         @for (stage of shipmentStages; track $index; let s = $index) {

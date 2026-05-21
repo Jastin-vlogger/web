@@ -17,6 +17,7 @@ import { DialogModule } from 'primeng/dialog';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogService } from '../../../../../../core/services/confirm-dialog.service';
 import { RbacService } from '../../../../../../core/services/rbac.service';
+import { getComputedShipmentStatus, getShipmentStatusSeverity, type ShipmentStatusSeverity } from '../../shared/shipment-status';
 
 import {
   selectActiveSplitTab,
@@ -117,6 +118,7 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
   readonly trackOrderData = signal<{
     shipmentNo: string;
     currentStage: string;
+    shipmentStatus: string;
     portOfLoading: string;
     portOfDischarge: string;
     etd: string;
@@ -1777,6 +1779,7 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     this.trackOrderData.set({
       shipmentNo: this.getActualShipmentId(rowIndex),
       currentStage: this.getDisplayStageName(shipment?.currentStage || 'Shipment Entry'),
+      shipmentStatus: this.getShipmentStatus(rowIndex),
       portOfLoading: actual?.portOfLoading || shipment?.portOfLoading || '',
       portOfDischarge: actual?.portOfDischarge || shipment?.portOfDischarge || '',
       etd: formatDate(actual?.updatedETD || planned?.etd || group.get('updatedETD')?.value),
@@ -1792,6 +1795,26 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
 
   getDisplayStageName(stage: string): string {
     return String(stage || '').trim() === 'Planned Split' ? 'Shipment Split' : String(stage || '');
+  }
+
+  getShipmentStatus(index: number): string {
+    const shipment = this.shipmentData()?.shipment as any;
+    const actual = this.shipmentData()?.actual?.[index] as any;
+    const planned = this.shipmentData()?.planned?.[index] as any;
+    return actual?.shipmentStatus || planned?.shipmentStatus || shipment?.shipmentStatus || getComputedShipmentStatus({
+      shipmentCurrentStage: shipment?.currentStage,
+      plannedRow: planned,
+      actualRow: actual,
+      fallbackStageLabel: this.getDisplayStageName(shipment?.currentStage || 'Shipment Entry'),
+    });
+  }
+
+  getStatusBadgeClass(status: string): string {
+    const severity: ShipmentStatusSeverity = getShipmentStatusSeverity(status);
+    if (severity === 'success') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    if (severity === 'info') return 'bg-sky-50 text-sky-700 border-sky-200';
+    if (severity === 'secondary') return 'bg-slate-100 text-slate-700 border-slate-200';
+    return 'bg-amber-50 text-amber-700 border-amber-200';
   }
 
   /**

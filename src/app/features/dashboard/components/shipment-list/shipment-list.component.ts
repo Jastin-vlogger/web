@@ -102,6 +102,10 @@ export class ShipmentListComponent implements OnInit {
         const displayStatus = this.getDisplayStageName(status);
         if (!displayStatus) return 'secondary';
         const s = displayStatus.toLowerCase();
+        if (s.includes('reached wh')) return 'success';
+        if (s.includes('at port of discharge')) return 'warn';
+        if (s.includes('on transit')) return 'info';
+        if (s.includes('etd yet to due')) return 'secondary';
         if (s.includes('completed') || s === 'payment costing') return 'success';
         if (s.includes('quality')) return 'success';
         if (s.includes('storage')) return 'info';

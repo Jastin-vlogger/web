@@ -172,6 +172,18 @@ export class DashboardComponent implements OnInit {
     return this.dashboard()?.recentShipments ?? [];
   });
 
+  getStatusSeverity(status: string | null | undefined): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
+    const s = String(status || '').trim().toLowerCase();
+    if (!s) return 'secondary';
+    if (s.includes('reached wh')) return 'success';
+    if (s.includes('at port of discharge')) return 'warn';
+    if (s.includes('on transit')) return 'info';
+    if (s.includes('etd yet to due')) return 'secondary';
+    if (s.includes('completed')) return 'success';
+    if (s.includes('delayed') || s.includes('error')) return 'danger';
+    return 'secondary';
+  }
+
   readonly chartDataConfig = computed<ChartData<'bar'>>(() => {
     const data = this.dashboard()?.chartData;
     if (!data) return { labels: [], datasets: [] };

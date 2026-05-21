@@ -790,7 +790,7 @@ export class ShipmentFormComponent implements OnDestroy {
     if (data.planned && data.planned.length > 0) {
       data.planned.forEach((plannedContainer) => {
         const actualData = data.actual?.find(
-          (a) => a.containerId === plannedContainer.containerId
+          (a) => String(a.containerId || '') === String(plannedContainer.containerId || '')
         );
 
         this.actualSplits.push(

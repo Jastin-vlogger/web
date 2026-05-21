@@ -254,7 +254,13 @@
                                 <td class="py-3 px-4 text-slate-600 truncate max-w-[200px]" [title]="row.supplier || ''">{{ row.supplier || '-' }}</td>
                                 <td class="py-3 px-4 text-slate-600 truncate max-w-[200px]" [title]="row.item || ''">{{ row.item || '-' }}</td>
                                 <td class="py-3 px-4">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                    <span
+                                        [class]="'inline-flex items-center px-2.5 py-1 rounded-full border text-[10px] font-bold uppercase tracking-[0.14em] ' +
+                                          (getStatusSeverity(row.status) === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' :
+                                           getStatusSeverity(row.status) === 'info' ? 'border-blue-200 bg-blue-50 text-blue-700' :
+                                           getStatusSeverity(row.status) === 'warn' ? 'border-amber-200 bg-amber-50 text-amber-700' :
+                                           getStatusSeverity(row.status) === 'danger' ? 'border-rose-200 bg-rose-50 text-rose-700' :
+                                           'border-slate-200 bg-slate-50 text-slate-700')">
                                         {{ row.status || 'Unknown' }}
                                     </span>
                                 </td>

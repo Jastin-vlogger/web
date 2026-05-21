@@ -92,7 +92,7 @@
 
 .report-child-table {
   width: max-content;
-  min-width: 1180px;
+  min-width: 1600px;
   max-width: 100%;
   border-collapse: collapse;
   font-size: 0.86rem;
@@ -164,5 +164,13 @@
 }
 
 .report-child-col-diff {
+  width: 118px;
+}
+
+.report-child-col-mini {
+  width: 88px;
+}
+
+.report-child-col-qty {
   width: 118px;
 }
