@@ -1691,6 +1691,18 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     payload.append('BLNo', formValue['BLNo'] || '');
 
     const billDocument = this.getBillDocumentFile(index);
+    
+    // 🔥 VALIDATION: BL Document is required
+    const existingBlDocumentUrl = this.shipmentData()?.actual?.[index]?.blDocumentUrl;
+    if (!billDocument && !existingBlDocumentUrl) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'BL Document Required',
+        detail: 'Please upload the Bill of Lading (BL) document before submitting the actual container.',
+      });
+      return;
+    }
+    
     if (billDocument) {
       payload.append('blDocument', billDocument, billDocument.name);
     }
