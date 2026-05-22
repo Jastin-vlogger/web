@@ -1,5 +1,5 @@
 export const environment = {
   production: true,
-  apiUrl: "https://backend-plum-phi-70.vercel.app/api/v1",
-  socketUrl: "https://backend-plum-phi-70.vercel.app"
+  apiUrl: "http://api.shipmenttracker.rhutility.com:8080/api/v1",
+  socketUrl: "http://api.shipmenttracker.rhutility.com:8080"
 };
