@@ -42,6 +42,32 @@ export class DashboardComponent implements OnInit {
     }
   };
 
+  statusPivotChartOptions: ChartConfiguration<'bar'>['options'] = {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom' },
+      tooltip: {
+        callbacks: {
+          label: (context) => `${context.dataset.label}: ${this.formatPivotNumber(Number(context.raw || 0))} MT`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        stacked: true,
+        beginAtZero: true,
+        ticks: {
+          callback: (value) => this.formatPivotNumber(Number(value)),
+        },
+      },
+      y: {
+        stacked: true,
+      },
+    },
+  };
+
   readonly statCards = computed(() => {
     const summary = this.dashboard();
     if (!summary) return [];
@@ -70,6 +96,12 @@ export class DashboardComponent implements OnInit {
         value: summary.kpis.underClearanceShipments,
         tone: 'amber',
         icon: 'pi pi-globe'
+      },
+      {
+        label: summary.rolePending?.label || 'Pending For Your Role',
+        value: summary.rolePending?.count || 0,
+        tone: 'rose',
+        icon: 'pi pi-hourglass'
       }
     ];
   });
@@ -115,6 +147,7 @@ export class DashboardComponent implements OnInit {
     return [
       { label: 'Total Shipments', value: dashboard.kpis.totalShipments },
       { label: 'Total Shipments', value: dashboard.kpis.inProgressShipments },
+      { label: dashboard.rolePending?.label || 'Pending For Your Role', value: dashboard.rolePending?.count || 0 },
       { label: 'Overdue Shipments', value: dashboard.arrivalSummary.overdueShipments },
       { label: 'Open POs', value: dashboard.kpis.totalShipments },
       { label: 'Late Vendor Shipments', value: dashboard.arrivalSummary.pendingArrivalContainers },
@@ -171,6 +204,31 @@ export class DashboardComponent implements OnInit {
   readonly recentShipments = computed(() => {
     return this.dashboard()?.recentShipments ?? [];
   });
+
+  readonly statusPivot = computed(() => this.dashboard()?.statusPivot ?? null);
+
+  readonly statusPivotChartConfig = computed<ChartData<'bar'>>(() => {
+    const pivot = this.statusPivot();
+    if (!pivot || !pivot.rows.length || !pivot.columns.length) {
+      return { labels: [], datasets: [] };
+    }
+
+    const colors = ['#10b981', '#f59e0b', '#3b82f6', '#64748b', '#8b5cf6', '#06b6d4'];
+    return {
+      labels: pivot.rows.map((row) => row.supplier),
+      datasets: pivot.columns.map((column, index) => ({
+        label: column,
+        data: pivot.rows.map((row) => Number(row.values[column] || 0)),
+        backgroundColor: colors[index % colors.length],
+        borderColor: '#ffffff',
+        borderWidth: 1,
+      })),
+    };
+  });
+
+  formatPivotNumber(value: number | null | undefined): string {
+    return Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+  }
 
   getStatusSeverity(status: string | null | undefined): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
     const s = String(status || '').trim().toLowerCase();

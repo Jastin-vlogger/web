@@ -101,6 +101,22 @@ import { getComputedShipmentStatus, getShipmentStatusSeverity, type ShipmentStat
     .courier-parcel-bounce {
       animation: courierBounce 1.4s ease-in-out infinite;
     }
+    @keyframes dhlCourierDrive {
+      0% { transform: translateX(-18%); }
+      50% { transform: translateX(70%); }
+      100% { transform: translateX(-18%); }
+    }
+    @keyframes dhlRoadMove {
+      0% { background-position-x: 0; }
+      100% { background-position-x: 64px; }
+    }
+    .dhl-courier-track {
+      background-image: repeating-linear-gradient(90deg, #fbbf24 0 24px, transparent 24px 48px);
+      animation: dhlRoadMove 0.75s linear infinite;
+    }
+    .dhl-courier-van {
+      animation: dhlCourierDrive 3.6s ease-in-out infinite;
+    }
   `]
 })
 export class ShipmentDocumentationComponent {

@@ -180,6 +180,12 @@ export class ShipmentBlDetailsComponent {
     }
   }
 
+  recalculateCostSheetRequestAmount(row: AbstractControl): void {
+    const qty = Number(row.get('defaultQty')?.value) || 0;
+    const rate = Number(row.get('defaultRate')?.value) || 0;
+    row.get('requestAmount')?.setValue(Number((qty * rate).toFixed(2)), { emitEvent: false });
+  }
+
   /** POINT 8: Ensure accordion panel stays open after save */
   private ensureAccordionOpen(index: number): void {
     const panelValue = `bl-${index}`;
@@ -212,6 +218,8 @@ export class ShipmentBlDetailsComponent {
         sn: Number(saved.sn) || rowIndex + 1,
         description: control.get('description')?.value || saved.description || '',
         visibleTo: normalizeBlVisibleTo(control.get('visibleTo')?.value ?? ['logistic', 'fas']),
+        defaultQty: Number(saved.defaultQty ?? control.get('defaultQty')?.value ?? 1),
+        defaultRate: Number(saved.defaultRate ?? control.get('defaultRate')?.value ?? 0),
         requestAmount: Number(saved.requestAmount ?? 0),
         remarks: saved.remarks ?? '',
         attachmentDocumentUrl: saved.attachmentDocumentUrl || '',
@@ -420,7 +428,7 @@ export class ShipmentBlDetailsComponent {
       case 'pending_fas':
         return 'Pending FAS Approval';
       case 'approved':
-        return 'Approved';
+        return 'Approved by FAS';
       default:
         return 'Draft';
     }
@@ -451,7 +459,7 @@ export class ShipmentBlDetailsComponent {
   }
 
   getApprovalBadgeClasses(label: string): string {
-    if (label === 'Approved') {
+    if (label === 'Approved' || label === 'Approved by FAS') {
       return 'border-emerald-200 bg-emerald-50 text-emerald-700';
     }
     if (label.includes('Pending')) {
@@ -800,6 +808,23 @@ export class ShipmentBlDetailsComponent {
       month: '2-digit',
       year: 'numeric',
     }).format(date);
+  }
+
+  private formatClearingAdvanceApprover(approval: any): string {
+    if (!approval?.fasApprovedAt) return '';
+    const approvedDate = this.formatDateForReport(approval.fasApprovedAt);
+    const dateSuffix = approvedDate && approvedDate !== '—' ? ` - ${approvedDate}` : '';
+    const approver = approval.fasApprovedBy;
+
+    if (approver && typeof approver === 'object') {
+      const name = String(approver.name || approver.email || '').trim();
+      const role = String(approver.role || 'FAS').trim();
+      if (name) {
+        return `${name} (${role})${dateSuffix}`;
+      }
+    }
+
+    return `FAS${dateSuffix}`;
   }
 
   private downloadCostingSheetPdf(config: {
@@ -1315,6 +1340,8 @@ export class ShipmentBlDetailsComponent {
       sn: Number(entry.sn) || 0,
       description: entry.description || '',
       visibleTo: normalizeBlVisibleTo(entry.visibleTo),
+      defaultQty: Number(entry.defaultQty ?? 0),
+      defaultRate: Number(entry.defaultRate ?? 0),
       requestAmount: Number(entry.requestAmount ?? 0),
       // POINT 5: paidAmount removed, replaced with remarks
       remarks: entry.remarks ?? '',
@@ -1546,6 +1573,10 @@ export class ShipmentBlDetailsComponent {
       ? `${currentUser.name} (${currentUser.role}) — ${new Date().toLocaleDateString('en-GB')} ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
       : 'Unknown';
 
+    const preparedBy = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Unknown';
+    const approval = actual?.clearingAdvanceApproval;
+    const approvedBy = this.formatClearingAdvanceApprover(approval);
+
     const storage = Array.from(
       new Set(
         [
@@ -1581,6 +1612,8 @@ export class ShipmentBlDetailsComponent {
       noOfDaysAtPort,
       storage,
       downloadedBy,
+      preparedBy,
+      approvedBy,
       lines: visibleCostRows.map((entry, visibleIndex) => ({
         sn: visibleIndex + 1,
         description: entry.get('description')?.value ?? '',

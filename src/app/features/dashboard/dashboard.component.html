@@ -49,35 +49,69 @@
                 </article>
             </div>
 
-            <!-- Right Side: Dynamic Metrics Explorer -->
+            <!-- Right Side: Shipment Status Report -->
             <article class="sl-panel flex flex-col p-6 bg-white border border-slate-200 rounded-xl shadow-sm lg:col-span-3">
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
-                    <h3 class="font-bold text-slate-800 text-lg">Dynamic Metrics Explorer</h3>
-                    <div class="flex items-center gap-2">
-                        <label for="chartType" class="text-sm font-medium text-slate-500">Metric:</label>
-                        <select id="chartType" class="sl-input py-2 pl-3 pr-8 text-sm w-full sm:w-auto"
-                            [value]="selectedChartType()"
-                            (change)="onChartTypeChange($event)">
-                            <option value="qtyMapping">Quantity by Status (MT)</option>
-                            <option value="valueMapping">Total Value by Status (FC)</option>
-                            <option value="yearlyQtyMapping">Quantity by Status (Yearly)</option>
-                            <option value="supplierAvgFc">Average FC per Unit (by Supplier)</option>
-                            <option value="supplierYearlyQty">Supplier Quantity (Yearly)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="relative w-full h-[400px] flex-1">
-                    @if (chartDataConfig().labels?.length) {
-                        <canvas baseChart [data]="chartDataConfig()" [options]="chartOptions" [type]="'bar'">
-                        </canvas>
-                    } @else {
-                        <div class="absolute inset-0 flex items-center justify-center text-slate-400">
-                            No data available for the selected metric.
+                @if (statusPivot(); as pivot) {
+                    <div class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-lg">Shipment Status as of the date</h3>
+                            <p class="text-sm font-semibold text-slate-500">{{ pivot.valueLabel }}</p>
                         </div>
+                        <span class="rounded-full bg-amber-100 px-4 py-2 text-sm font-black text-amber-900">{{ pivot.asOfDate | date:'dd/MM/yyyy' }}</span>
+                    </div>
+
+                    @if (statusPivotChartConfig().labels?.length) {
+                        <div class="relative min-h-[360px] w-full flex-1">
+                            <canvas baseChart [data]="statusPivotChartConfig()" [options]="statusPivotChartOptions" [type]="'bar'"></canvas>
+                        </div>
+                        <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+                            @for (column of pivot.columns; track column) {
+                                <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                    <div class="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">{{ column }}</div>
+                                    <div class="mt-1 text-xl font-black tabular-nums text-slate-900">{{ formatPivotNumber(pivot.totals[column]) }}</div>
+                                </div>
+                            }
+                            <div class="rounded-xl border border-slate-900 bg-slate-950 px-4 py-3 text-white">
+                                <div class="text-[11px] font-black uppercase tracking-[0.14em] text-slate-300">Grand Total</div>
+                                <div class="mt-1 text-xl font-black tabular-nums">{{ formatPivotNumber(pivot.grandTotal) }}</div>
+                            </div>
+                        </div>
+                    } @else {
+                        <div class="flex h-[320px] items-center justify-center text-slate-400">No shipment status data available.</div>
                     }
-                </div>
+                } @else {
+                    <div class="flex h-[320px] items-center justify-center text-slate-400">No shipment status data available.</div>
+                }
             </article>
+        </section>
+
+        <section class="sl-panel flex flex-col p-6 bg-white border border-slate-200 rounded-xl shadow-sm mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+                <h3 class="font-bold text-slate-800 text-lg">Dynamic Metrics Explorer</h3>
+                <div class="flex items-center gap-2">
+                    <label for="chartType" class="text-sm font-medium text-slate-500">Metric:</label>
+                    <select id="chartType" class="sl-input py-2 pl-3 pr-8 text-sm w-full sm:w-auto"
+                        [value]="selectedChartType()"
+                        (change)="onChartTypeChange($event)">
+                        <option value="qtyMapping">Quantity by Status (MT)</option>
+                        <option value="valueMapping">Total Value by Status (FC)</option>
+                        <option value="yearlyQtyMapping">Quantity by Status (Yearly)</option>
+                        <option value="supplierAvgFc">Average FC per Unit (by Supplier)</option>
+                        <option value="supplierYearlyQty">Supplier Quantity (Yearly)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="relative w-full h-[400px] flex-1">
+                @if (chartDataConfig().labels?.length) {
+                    <canvas baseChart [data]="chartDataConfig()" [options]="chartOptions" [type]="'bar'">
+                    </canvas>
+                } @else {
+                    <div class="absolute inset-0 flex items-center justify-center text-slate-400">
+                        No data available for the selected metric.
+                    </div>
+                }
+            </div>
         </section>
 
         <!-- New Average FC per Unit Comparison Chart -->

@@ -13,6 +13,8 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { ItemService } from '../../../core/services/item.service';
 import { Item } from '../../../core/models/item.model';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { AuthService } from '../../../core/services/auth.service';
+import { RbacService } from '../../../core/services/rbac.service';
 
 @Component({
   selector: 'app-item-code-management',
@@ -37,42 +39,26 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
     <div class="p-6">
       <!-- Tab Navigation -->
       <div class="mb-6 flex flex-wrap items-center gap-3">
-        <a
-          routerLink="/settings/warehouses"
-          routerLinkActive="!bg-slate-900 !text-white"
-          [routerLinkActiveOptions]="{exact: true}"
-          class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
-        >
-          <i class="pi pi-warehouse mr-2"></i>
-          Warehouses
-        </a>
-        <a
-          routerLink="/settings/item-codes"
-          routerLinkActive="!bg-slate-900 !text-white"
-          [routerLinkActiveOptions]="{exact: true}"
-          class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
-        >
-          <i class="pi pi-box mr-2"></i>
-          Items
-        </a>
-        <a
-          routerLink="/settings/transportation"
-          routerLinkActive="!bg-slate-900 !text-white"
-          [routerLinkActiveOptions]="{exact: true}"
-          class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
-        >
-          <i class="pi pi-truck mr-2"></i>
-          Transportation
-        </a>
-        <a
-          routerLink="/settings/exchange-rates"
-          routerLinkActive="!bg-slate-900 !text-white"
-          [routerLinkActiveOptions]="{exact: true}"
-          class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
-        >
-          <i class="pi pi-dollar mr-2"></i>
-          Exchange Rates
-        </a>
+        @if (canViewWarehouses()) {
+          <a routerLink="/settings/warehouses" routerLinkActive="!bg-slate-900 !text-white" [routerLinkActiveOptions]="{exact: true}" class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+            <i class="pi pi-warehouse mr-2"></i>Warehouses
+          </a>
+        }
+        @if (canViewItemCodes()) {
+          <a routerLink="/settings/item-codes" routerLinkActive="!bg-slate-900 !text-white" [routerLinkActiveOptions]="{exact: true}" class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+            <i class="pi pi-box mr-2"></i>Items
+          </a>
+        }
+        @if (canViewTransportation()) {
+          <a routerLink="/settings/transportation" routerLinkActive="!bg-slate-900 !text-white" [routerLinkActiveOptions]="{exact: true}" class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+            <i class="pi pi-truck mr-2"></i>Transportation
+          </a>
+        }
+        @if (canViewExchangeRates()) {
+          <a routerLink="/settings/exchange-rates" routerLinkActive="!bg-slate-900 !text-white" [routerLinkActiveOptions]="{exact: true}" class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+            <i class="pi pi-dollar mr-2"></i>Exchange Rates
+          </a>
+        }
       </div>
 
       <!-- Page Header -->
@@ -81,7 +67,9 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
           <h1 class="text-2xl font-bold text-slate-900">Item Management</h1>
           <p class="text-slate-500 mt-1">Create, edit and maintain items</p>
         </div>
-        <button pButton label="Add Item" icon="pi pi-plus" (click)="openAddDialog()"></button>
+        @if (canEditItemCodes()) {
+          <button pButton label="Add Item" icon="pi pi-plus" (click)="openAddDialog()"></button>
+        }
       </div>
 
       <!-- Table Card -->
@@ -112,8 +100,10 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
               </td>
               <td class="py-4 text-right px-6">
                 <div class="flex justify-end gap-2">
-                  <button pButton icon="pi pi-pencil" class="p-button-text p-button-sm" (click)="openEditDialog(item)"></button>
-                  <button pButton icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger" (click)="confirmDelete(item)"></button>
+                  @if (canEditItemCodes()) {
+                    <button pButton icon="pi pi-pencil" class="p-button-text p-button-sm" (click)="openEditDialog(item)"></button>
+                    <button pButton icon="pi pi-trash" class="p-button-text p-button-sm p-button-danger" (click)="confirmDelete(item)"></button>
+                  }
                 </div>
               </td>
             </tr>
@@ -191,6 +181,8 @@ export class ItemCodeManagementComponent implements OnInit {
   private fb = inject(FormBuilder);
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
+  private authService = inject(AuthService);
+  private rbacService = inject(RbacService);
 
   items = signal<Item[]>([]);
   loading = signal(false);
@@ -218,6 +210,26 @@ export class ItemCodeManagementComponent implements OnInit {
     this.loadItems();
   }
 
+  canEditItemCodes(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.item_codes.edit');
+  }
+
+  canViewWarehouses(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.warehouses.view');
+  }
+
+  canViewItemCodes(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.item_codes.view');
+  }
+
+  canViewTransportation(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.transportation.view');
+  }
+
+  canViewExchangeRates(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.exchange_rates.view');
+  }
+
   loadItems(): void {
     this.loading.set(true);
     this.itemService.getAllItems(1, 200).subscribe({
@@ -233,18 +245,21 @@ export class ItemCodeManagementComponent implements OnInit {
   }
 
   openAddDialog(): void {
+    if (!this.canEditItemCodes()) return;
     this.editingItem.set(null);
     this.itemForm.reset({ unit: 'Bag', status: 'Active' });
     this.displayDialog = true;
   }
 
   openEditDialog(item: Item): void {
+    if (!this.canEditItemCodes()) return;
     this.editingItem.set(item);
     this.itemForm.patchValue(item);
     this.displayDialog = true;
   }
 
   saveItem(): void {
+    if (!this.canEditItemCodes()) return;
     if (this.itemForm.invalid) return;
     this.saving.set(true);
 
@@ -269,6 +284,7 @@ export class ItemCodeManagementComponent implements OnInit {
   }
 
   confirmDelete(item: Item): void {
+    if (!this.canEditItemCodes()) return;
     this.confirmationService.confirm({
       message: `Delete item ${item.itemCode}?`,
       accept: () => {

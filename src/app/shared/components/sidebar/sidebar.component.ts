@@ -17,7 +17,7 @@ interface SidebarMenuItem {
 
 /** Full menu definition — order here is the display order. */
 const ALL_MENU_ITEMS: SidebarMenuItem[] = [
-  { label: 'Dashboard',      icon: 'pi pi-chart-bar',  route: '/dashboard',           permissionKey: 'menu.dashboard.view' },
+  { label: 'Dashboard',      icon: 'pi pi-chart-bar',  route: '/dashboard' },
   { label: 'Shipments',      icon: 'pi pi-truck',       route: '/shipments',           permissionKey: 'menu.shipments.view' },
   { label: 'Suppliers',      icon: 'pi pi-users',       route: '/suppliers',           permissionKey: 'menu.suppliers.view' },
   { label: 'Reports',        icon: 'pi pi-chart-line',  route: '/reports',             permissionKey: 'menu.reports.view' },

@@ -84,16 +84,23 @@
         >
           <i class="pi pi-arrow-left text-xs md:text-base" aria-hidden="true"></i>
         </button>
-        <div>
+        <div class="flex min-w-0 flex-col gap-2">
           <h1 class="font-bold text-xl md:text-2xl text-slate-900 tracking-tight">
             Tracker: {{ getDisplayShipmentNo() }}
           </h1>
-          <p class="text-slate-500 text-xs md:text-sm">
-            Phase:
-            <span class="text-blue-600 font-bold uppercase tracking-wider">
-              {{ currentStepMeta()?.label }}
-            </span>
-          </p>
+          <div class="flex flex-wrap items-center gap-2">
+            <p class="text-slate-500 text-xs md:text-sm">
+              Phase:
+              <span class="text-blue-600 font-bold uppercase tracking-wider">
+                {{ currentStepMeta()?.label }}
+              </span>
+            </p>
+            @if (isStepReadOnly(currentStep())) {
+              <span class="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-amber-700 shadow-sm">
+                View Only
+              </span>
+            }
+          </div>
         </div>
       </div>
     </header>

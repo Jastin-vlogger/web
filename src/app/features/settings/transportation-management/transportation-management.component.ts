@@ -14,6 +14,8 @@ import {
   TransportationCompanyService,
   TransportationCompany,
 } from '../../../core/services/transportation-company.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { RbacService } from '../../../core/services/rbac.service';
 
 @Component({
   selector: 'app-transportation-management',
@@ -38,26 +40,26 @@ import {
 
       <!-- Tab Navigation -->
       <div class="mb-6 flex flex-wrap items-center gap-3">
-        <a routerLink="/settings/warehouses" routerLinkActive="!bg-slate-900 !text-white"
-          [routerLinkActiveOptions]="{exact: true}"
-          class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
-          <i class="pi pi-warehouse mr-2"></i>Warehouses
-        </a>
-        <a routerLink="/settings/item-codes" routerLinkActive="!bg-slate-900 !text-white"
-          [routerLinkActiveOptions]="{exact: true}"
-          class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
-          <i class="pi pi-box mr-2"></i>Items
-        </a>
-        <a routerLink="/settings/transportation" routerLinkActive="!bg-slate-900 !text-white"
-          [routerLinkActiveOptions]="{exact: true}"
-          class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
-          <i class="pi pi-truck mr-2"></i>Transportation
-        </a>
-        <a routerLink="/settings/exchange-rates" routerLinkActive="!bg-slate-900 !text-white"
-          [routerLinkActiveOptions]="{exact: true}"
-          class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
-          <i class="pi pi-dollar mr-2"></i>Exchange Rates
-        </a>
+        @if (canViewWarehouses()) {
+          <a routerLink="/settings/warehouses" routerLinkActive="!bg-slate-900 !text-white" [routerLinkActiveOptions]="{exact: true}" class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+            <i class="pi pi-warehouse mr-2"></i>Warehouses
+          </a>
+        }
+        @if (canViewItemCodes()) {
+          <a routerLink="/settings/item-codes" routerLinkActive="!bg-slate-900 !text-white" [routerLinkActiveOptions]="{exact: true}" class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+            <i class="pi pi-box mr-2"></i>Items
+          </a>
+        }
+        @if (canViewTransportation()) {
+          <a routerLink="/settings/transportation" routerLinkActive="!bg-slate-900 !text-white" [routerLinkActiveOptions]="{exact: true}" class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+            <i class="pi pi-truck mr-2"></i>Transportation
+          </a>
+        }
+        @if (canViewExchangeRates()) {
+          <a routerLink="/settings/exchange-rates" routerLinkActive="!bg-slate-900 !text-white" [routerLinkActiveOptions]="{exact: true}" class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+            <i class="pi pi-dollar mr-2"></i>Exchange Rates
+          </a>
+        }
       </div>
 
       <!-- Page Header -->
@@ -66,13 +68,15 @@ import {
           <h1 class="text-2xl font-bold text-slate-900">Transportation Companies</h1>
           <p class="text-slate-500 mt-1">Manage transport companies used in shipment logistics</p>
         </div>
-        <button
-          pButton
-          label="Add Company"
-          icon="pi pi-plus"
-          class="p-button-primary"
-          (click)="openAddDialog()">
-        </button>
+        @if (canEditTransportation()) {
+          <button
+            pButton
+            label="Add Company"
+            icon="pi pi-plus"
+            class="p-button-primary"
+            (click)="openAddDialog()">
+          </button>
+        }
       </div>
 
       <!-- Table -->
@@ -109,14 +113,16 @@ import {
               </td>
               <td class="py-4 text-right px-6">
                 <div class="flex justify-end gap-2">
-                  <button pButton icon="pi pi-pencil"
-                    class="p-button-text p-button-sm p-button-info hover:bg-blue-50"
-                    (click)="openEditDialog(company)">
-                  </button>
-                  <button pButton icon="pi pi-trash"
-                    class="p-button-text p-button-sm p-button-danger hover:bg-red-50"
-                    (click)="confirmDelete(company)">
-                  </button>
+                  @if (canEditTransportation()) {
+                    <button pButton icon="pi pi-pencil"
+                      class="p-button-text p-button-sm p-button-info hover:bg-blue-50"
+                      (click)="openEditDialog(company)">
+                    </button>
+                    <button pButton icon="pi pi-trash"
+                      class="p-button-text p-button-sm p-button-danger hover:bg-red-50"
+                      (click)="confirmDelete(company)">
+                    </button>
+                  }
                 </div>
               </td>
             </tr>
@@ -203,6 +209,8 @@ export class TransportationManagementComponent implements OnInit {
   private fb = inject(FormBuilder);
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
+  private authService = inject(AuthService);
+  private rbacService = inject(RbacService);
 
   readonly companies = signal<TransportationCompany[]>([]);
   readonly loading = signal(false);
@@ -227,6 +235,26 @@ export class TransportationManagementComponent implements OnInit {
     this.load();
   }
 
+  canEditTransportation(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.transportation.edit');
+  }
+
+  canViewWarehouses(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.warehouses.view');
+  }
+
+  canViewItemCodes(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.item_codes.view');
+  }
+
+  canViewTransportation(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.transportation.view');
+  }
+
+  canViewExchangeRates(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.exchange_rates.view');
+  }
+
   load(): void {
     this.loading.set(true);
     this.svc.getAll().subscribe({
@@ -239,18 +267,21 @@ export class TransportationManagementComponent implements OnInit {
   }
 
   openAddDialog(): void {
+    if (!this.canEditTransportation()) return;
     this.editing.set(null);
     this.form.reset({ status: 'Active' });
     this.displayDialog = true;
   }
 
   openEditDialog(company: TransportationCompany): void {
+    if (!this.canEditTransportation()) return;
     this.editing.set(company);
     this.form.patchValue(company);
     this.displayDialog = true;
   }
 
   save(): void {
+    if (!this.canEditTransportation()) return;
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     this.saving.set(true);
     const payload = this.form.value;
@@ -279,6 +310,7 @@ export class TransportationManagementComponent implements OnInit {
   }
 
   confirmDelete(company: TransportationCompany): void {
+    if (!this.canEditTransportation()) return;
     this.confirmationService.confirm({
       message: `Are you sure you want to delete "${company.name}"?`,
       accept: () => {

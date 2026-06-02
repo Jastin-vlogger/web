@@ -36,6 +36,8 @@ export interface AdvanceRequestReportConfig {
   noOfDaysAtPort: string;
   storage: string;
   downloadedBy: string;
+  preparedBy?: string;
+  approvedBy?: string;
   lines: AdvanceRequestReportLineItem[];
 }
 
@@ -216,9 +218,15 @@ export function downloadAdvanceRequestReportPdf(config: AdvanceRequestReportConf
   const signatureWidth = contentWidth / signatureLabels.length;
   signatureLabels.forEach((label, index) => {
     const x = margin + index * signatureWidth;
+    const value = index === 0 ? config.preparedBy : index === 1 ? config.approvedBy : '';
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7);
     doc.text(label, x + 6, y);
+    if (value) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.text(safe(value), x + 6, y + 17, { maxWidth: signatureWidth - 16 });
+    }
     doc.setDrawColor(120);
     doc.setLineWidth(0.4);
     doc.line(x + 6, y + 24, x + signatureWidth - 10, y + 24);

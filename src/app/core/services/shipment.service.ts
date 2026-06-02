@@ -29,6 +29,22 @@ export interface PlannedContainer {
   eta?: string;
 }
 
+export interface ShipmentReportFilters {
+  date?: string;
+  month?: string;
+  supplier?: string;
+  status?: string;
+  portOfDischarge?: string;
+  portOfLoading?: string;
+  item?: string;
+}
+
+export interface ShipmentReportExportOptions {
+  filters?: ShipmentReportFilters;
+  columns?: string[];
+  childColumns?: string[];
+}
+
 export interface CreatePlannedContainersPayload {
   shipmentId: string;
   plannedContainers: PlannedContainer[];
@@ -227,16 +243,41 @@ export class ShipmentService {
     return this.http.get<DashboardSummaryResponse>(`${this.apiUrl}/dashboard`);
   }
 
-  getShipmentReportExportData(): Observable<ShipmentReportExportResponse> {
-    return this.http.get<ShipmentReportExportResponse>(`${this.apiUrl}/reports/export-data`);
+  private buildReportParams(options: ShipmentReportExportOptions | ShipmentReportFilters = {}): HttpParams {
+    const maybeOptions = options as ShipmentReportExportOptions;
+    const filters = maybeOptions.filters ?? (options as ShipmentReportFilters);
+    let params = new HttpParams();
+    Object.entries(filters || {}).forEach(([key, value]) => {
+      const normalized = String(value ?? '').trim();
+      if (normalized) params = params.set(key, normalized);
+    });
+    if (maybeOptions.columns?.length) {
+      params = params.set('columns', maybeOptions.columns.join(','));
+    }
+    if (maybeOptions.childColumns?.length) {
+      params = params.set('childColumns', maybeOptions.childColumns.join(','));
+    }
+    return params;
   }
 
-  downloadShipmentReportExcel(): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/reports/export/excel`, { responseType: 'blob' });
+  getShipmentReportExportData(filters: ShipmentReportFilters = {}): Observable<ShipmentReportExportResponse> {
+    return this.http.get<ShipmentReportExportResponse>(`${this.apiUrl}/reports/export-data`, {
+      params: this.buildReportParams(filters),
+    });
   }
 
-  downloadShipmentReportPdf(): Observable<Blob> {
-    return this.http.get(`${this.apiUrl}/reports/export/pdf`, { responseType: 'blob' });
+  downloadShipmentReportExcel(options: ShipmentReportExportOptions = {}): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/reports/export/excel`, {
+      params: this.buildReportParams(options),
+      responseType: 'blob',
+    });
+  }
+
+  downloadShipmentReportPdf(options: ShipmentReportExportOptions = {}): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/reports/export/pdf`, {
+      params: this.buildReportParams(options),
+      responseType: 'blob',
+    });
   }
 
   createShipment(payload: CreateShipmentPayload | FormData): Observable<CreateShipmentResponse> {

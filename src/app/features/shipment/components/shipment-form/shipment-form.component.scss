@@ -32,8 +32,8 @@
             @apply relative;
 
             &::after {
-                content: 'View only';
-                @apply absolute right-4 -top-1 z-20 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-amber-700 shadow-sm;
+                content: none;
+                pointer-events: none;
             }
 
             button,
@@ -44,14 +44,19 @@
             .p-inputtext,
             .p-inputnumber,
             .p-dropdown,
-            .p-datepicker,
-            .p-calendar,
             .table-input,
             .table-input-text {
                 pointer-events: none !important;
             }
 
             .rbac-allow-interaction {
+                pointer-events: auto !important;
+            }
+
+            .p-datepicker,
+            .p-datepicker *,
+            .p-calendar,
+            .p-calendar * {
                 pointer-events: auto !important;
             }
 

@@ -57,6 +57,11 @@ export class DashboardService {
           partiallyPaidShipments: response?.paymentSummary?.partiallyPaidShipments ?? 0,
           paidShipments: response?.paymentSummary?.paidShipments ?? 0
         },
+        rolePending: {
+          role: response?.rolePending?.role ?? '',
+          label: response?.rolePending?.label ?? 'Pending For Your Role',
+          count: response?.rolePending?.count ?? 0
+        },
         recentShipments: Array.isArray(response?.recentShipments) ? response.recentShipments : [],
         shippingStatus: {
           orders: Array.isArray(response?.shippingStatus?.orders) ? response.shippingStatus.orders : [],
@@ -67,7 +72,8 @@ export class DashboardService {
             : [],
           monthlyKpis: Array.isArray(response?.shippingStatus?.monthlyKpis) ? response.shippingStatus.monthlyKpis : []
         },
-        chartData: response?.chartData
+        chartData: response?.chartData,
+        statusPivot: response?.statusPivot
       };
   }
 

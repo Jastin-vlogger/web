@@ -5,7 +5,7 @@
         <p class="text-[11px] font-black uppercase tracking-[0.3em] text-blue-200">Reports</p>
         <h1 class="mt-3 text-3xl font-black tracking-tight">Shipment Master Export</h1>
         <p class="mt-3 max-w-3xl text-sm text-slate-300">
-          Download the full shipment data currently available in Royal Horizon systems in both Excel and PDF formats.
+          Filter shipment records, preview the report, and export selected columns to Excel or PDF.
         </p>
       </div>
 
@@ -14,7 +14,7 @@
           type="button"
           class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
           [disabled]="!rows().length || exporting() !== null"
-          (click)="exportExcel()">
+          (click)="openExportModal('excel')">
           <i class="pi pi-file-excel"></i>
           {{ exporting() === 'excel' ? 'Exporting...' : 'Export Excel' }}
         </button>
@@ -22,7 +22,7 @@
           type="button"
           class="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black uppercase tracking-[0.18em] text-slate-950 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
           [disabled]="!rows().length || exporting() !== null"
-          (click)="exportPdf()">
+          (click)="openExportModal('pdf')">
           <i class="pi pi-file-pdf"></i>
           {{ exporting() === 'pdf' ? 'Exporting...' : 'Export PDF' }}
         </button>
@@ -53,10 +53,22 @@
     <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-6 py-4">
       <div>
         <h2 class="text-lg font-black tracking-tight text-slate-900">Report Preview</h2>
-        <p class="mt-1 text-sm text-slate-500">This preview uses the same data and column structure that will be exported.</p>
+        <p class="mt-1 text-sm text-slate-500">Filtered rows here are the same rows used for export.</p>
       </div>
-      <div class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
-        {{ rows().length }} row(s)
+      <div class="flex flex-wrap items-center justify-end gap-3">
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-black uppercase tracking-[0.14em] text-slate-700 transition hover:bg-slate-50"
+          (click)="openFilterModal()">
+          <i class="pi pi-filter"></i>
+          Filters
+          @if (activeFilterCount()) {
+            <span class="rounded-full bg-slate-950 px-2 py-0.5 text-[10px] text-white">{{ activeFilterCount() }}</span>
+          }
+        </button>
+        <div class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+          {{ rows().length }} row(s)
+        </div>
       </div>
     </div>
 
@@ -65,7 +77,7 @@
     } @else if (error()) {
       <div class="px-6 py-12 text-sm font-medium text-rose-500">{{ error() }}</div>
     } @else if (!rows().length) {
-      <div class="px-6 py-12 text-sm font-medium text-slate-500">No shipment data is available to export yet.</div>
+      <div class="px-6 py-12 text-sm font-medium text-slate-500">No shipment data is available for the selected filters.</div>
     } @else {
       <div class="report-scroll">
         <table class="report-table">
@@ -82,22 +94,15 @@
               <tr class="report-parent-row">
                 <td class="report-expand-col">
                   @if (hasChildren(row)) {
-                    <button
-                      type="button"
-                      class="report-expand-button"
-                      (click)="toggleRow(row)"
-                      [attr.aria-expanded]="isExpanded(row)"
-                      [title]="isExpanded(row) ? 'Collapse shipment splits' : 'Expand shipment splits'">
+                    <button type="button" class="report-expand-button" (click)="toggleRow(row)" [attr.aria-expanded]="isExpanded(row)">
                       <i class="pi" [ngClass]="isExpanded(row) ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
                     </button>
                   }
                 </td>
                 @for (column of columns; track column.header) {
                   <td>
-                    @if (column.key === 'shipmentStatus') {
-                      <span [class]="getStatusClasses(row[column.key])">
-                        {{ formatCellValue(row[column.key], column.key) }}
-                      </span>
+                    @if (column.key === 'shipmentStatus' || column.key === 'reportStatus') {
+                      <span [class]="getStatusClasses(row[column.key])">{{ formatCellValue(row[column.key], column.key) }}</span>
                     } @else {
                       {{ formatCellValue(row[column.key], column.key) }}
                     }
@@ -108,48 +113,24 @@
                 <tr class="report-child-shell">
                   <td [attr.colspan]="columns.length + 1" class="report-child-cell">
                     <div class="report-child-wrapper">
-                      <div class="report-child-title">
-                        {{ row.noOfShipments || row.children?.length || 0 }} shipment split(s)
-                      </div>
+                      <div class="report-child-title">{{ row.noOfShipments || row.children?.length || 0 }} shipment split(s)</div>
                       <table class="report-child-table">
-                        <colgroup>
-                          <col class="report-child-col-split" />
-                          <col class="report-child-col-actual" />
-                          <col class="report-child-col-date" />
-                          <col class="report-child-col-date" />
-                          <col class="report-child-col-date" />
-                          <col class="report-child-col-date" />
-                          <col class="report-child-col-diff" />
-                          <col class="report-child-col-mini" />
-                          <col class="report-child-col-mini" />
-                          <col class="report-child-col-qty" />
-                          <col class="report-child-col-qty" />
-                          <col class="report-child-col-mini" />
-                          <col class="report-child-col-week" />
-                          <col class="report-child-col-stage" />
-                        </colgroup>
                         <thead>
                           <tr>
                             @for (column of childColumns; track column.header) {
-                              <th
-                                [class.report-child-highlight-header]="column.key === 'shipmentNo' || column.key === 'actualShipmentNo'"
-                                [class.report-child-neutral-header]="column.key !== 'shipmentNo' && column.key !== 'actualShipmentNo'">
+                              <th [class.report-child-highlight-header]="column.key === 'shipmentNo' || column.key === 'actualShipmentNo'" [class.report-child-neutral-header]="column.key !== 'shipmentNo' && column.key !== 'actualShipmentNo'">
                                 {{ column.header }}
                               </th>
                             }
                           </tr>
                         </thead>
                         <tbody>
-                          @for (child of row.children || []; track child.shipmentNo + '-' + ($index); let childIndex = $index) {
+                          @for (child of row.children || []; track child.shipmentNo + '-' + ($index)) {
                             <tr>
                               @for (column of childColumns; track column.header) {
-                                <td
-                                  [class.report-child-highlight-cell]="column.key === 'shipmentNo' || column.key === 'actualShipmentNo'"
-                                  [class.report-child-neutral-cell]="column.key !== 'shipmentNo' && column.key !== 'actualShipmentNo'">
+                                <td [class.report-child-highlight-cell]="column.key === 'shipmentNo' || column.key === 'actualShipmentNo'" [class.report-child-neutral-cell]="column.key !== 'shipmentNo' && column.key !== 'actualShipmentNo'">
                                   @if (column.key === 'shipmentStatus') {
-                                    <span [class]="getChildStatusClasses(child[column.key])">
-                                      {{ formatChildCellValue(child[column.key], column.key) }}
-                                    </span>
+                                    <span [class]="getChildStatusClasses(child[column.key])">{{ formatChildCellValue(child[column.key], column.key) }}</span>
                                   } @else {
                                     {{ formatChildCellValue(child[column.key], column.key) }}
                                   }
@@ -170,3 +151,103 @@
     }
   </section>
 </div>
+
+@if (filterModalVisible()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4">
+    <section class="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+        <div>
+          <h2 class="text-lg font-black tracking-tight text-slate-900">Report Filters</h2>
+          <p class="mt-1 text-sm text-slate-500">Apply filters to the preview and exported report data.</p>
+        </div>
+        <button type="button" class="rounded-full border border-slate-200 px-3 py-2 text-sm font-black text-slate-600" (click)="closeFilterModal()">Close</button>
+      </div>
+      <div class="grid max-h-[62vh] grid-cols-1 gap-4 overflow-auto p-6 md:grid-cols-2">
+        <label class="flex flex-col gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+          Date
+          <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-slate-800" type="date" [ngModel]="filters().date || ''" (ngModelChange)="updateFilter('date', $event)" />
+        </label>
+        <label class="flex flex-col gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+          Month
+          <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-slate-800" type="month" [ngModel]="filters().month || ''" (ngModelChange)="updateFilter('month', $event)" />
+        </label>
+        <label class="flex flex-col gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+          Supplier
+          <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-slate-800" type="search" [ngModel]="filters().supplier || ''" (ngModelChange)="updateFilter('supplier', $event)" />
+        </label>
+        <label class="flex flex-col gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+          Status
+          <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-slate-800" type="search" [ngModel]="filters().status || ''" (ngModelChange)="updateFilter('status', $event)" />
+        </label>
+        <label class="flex flex-col gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+          Port of Discharge
+          <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-slate-800" type="search" [ngModel]="filters().portOfDischarge || ''" (ngModelChange)="updateFilter('portOfDischarge', $event)" />
+        </label>
+        <label class="flex flex-col gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+          Port of Loading
+          <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-slate-800" type="search" [ngModel]="filters().portOfLoading || ''" (ngModelChange)="updateFilter('portOfLoading', $event)" />
+        </label>
+        <label class="flex flex-col gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500 md:col-span-2">
+          Item
+          <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-slate-800" type="search" [ngModel]="filters().item || ''" (ngModelChange)="updateFilter('item', $event)" />
+        </label>
+      </div>
+      <div class="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+        <button type="button" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-black uppercase tracking-[0.14em] text-slate-700" [disabled]="loading()" (click)="clearFilters()">Clear</button>
+        <button type="button" class="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-black uppercase tracking-[0.14em] text-white disabled:cursor-not-allowed disabled:opacity-60" [disabled]="loading()" (click)="applyFilters()">
+          {{ loading() ? 'Applying...' : 'Apply Filters' }}
+        </button>
+      </div>
+    </section>
+  </div>
+}
+
+@if (exportModalVisible()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 px-4">
+    <section class="max-h-[88vh] w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+        <div>
+          <h2 class="text-lg font-black tracking-tight text-slate-900">Choose Export Columns</h2>
+          <p class="mt-1 text-sm text-slate-500">Selected report filters will also be applied to this export.</p>
+        </div>
+        <button type="button" class="rounded-full border border-slate-200 px-3 py-2 text-sm font-black text-slate-600" (click)="closeExportModal()">Close</button>
+      </div>
+      <div class="grid max-h-[62vh] gap-6 overflow-auto p-6 lg:grid-cols-2">
+        <div>
+          <div class="mb-3 flex items-center justify-between">
+            <h3 class="text-sm font-black uppercase tracking-[0.18em] text-slate-500">Parent Columns</h3>
+            <button type="button" class="text-xs font-black uppercase tracking-[0.16em] text-blue-700" (click)="selectAllColumns(false)">Select All</button>
+          </div>
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            @for (column of columns; track column.key) {
+              <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700">
+                <input type="checkbox" [checked]="selectedColumns().includes(column.key)" (change)="toggleColumn(column.key)" />
+                {{ column.header }}
+              </label>
+            }
+          </div>
+        </div>
+        <div>
+          <div class="mb-3 flex items-center justify-between">
+            <h3 class="text-sm font-black uppercase tracking-[0.18em] text-slate-500">Child Split Columns</h3>
+            <button type="button" class="text-xs font-black uppercase tracking-[0.16em] text-blue-700" (click)="selectAllColumns(true)">Select All</button>
+          </div>
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            @for (column of childColumns; track column.key) {
+              <label class="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700">
+                <input type="checkbox" [checked]="selectedChildColumns().includes(column.key)" (change)="toggleColumn(column.key, true)" />
+                {{ column.header }}
+              </label>
+            }
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+        <button type="button" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-black uppercase tracking-[0.14em] text-slate-700" (click)="closeExportModal()">Cancel</button>
+        <button type="button" class="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-black uppercase tracking-[0.14em] text-white disabled:cursor-not-allowed disabled:opacity-60" [disabled]="exporting() !== null" (click)="exportSelectedColumns()">
+          {{ exporting() ? 'Exporting...' : 'Export Selected' }}
+        </button>
+      </div>
+    </section>
+  </div>
+}

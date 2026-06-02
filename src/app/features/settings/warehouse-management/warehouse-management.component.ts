@@ -12,6 +12,8 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { WarehouseService, Warehouse, WarehouseStorekeeperOption } from '../../../core/services/warehouse.service';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { AuthService } from '../../../core/services/auth.service';
+import { RbacService } from '../../../core/services/rbac.service';
 
 @Component({
   selector: 'app-warehouse-management',
@@ -36,42 +38,26 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
     <div class="p-6 max-w-[1600px] mx-auto">
       <!-- Tab Navigation -->
       <div class="mb-6 flex items-center gap-3">
-        <a
-          routerLink="/settings/warehouses"
-          routerLinkActive="!bg-slate-900 !text-white"
-          [routerLinkActiveOptions]="{exact: true}"
-          class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
-        >
-          <i class="pi pi-warehouse mr-2"></i>
-          Warehouses
-        </a>
-        <a
-          routerLink="/settings/item-codes"
-          routerLinkActive="!bg-slate-900 !text-white"
-          [routerLinkActiveOptions]="{exact: true}"
-          class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
-        >
-          <i class="pi pi-box mr-2"></i>
-          Items
-        </a>
-        <a
-          routerLink="/settings/transportation"
-          routerLinkActive="!bg-slate-900 !text-white"
-          [routerLinkActiveOptions]="{exact: true}"
-          class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
-        >
-          <i class="pi pi-truck mr-2"></i>
-          Transportation
-        </a>
-        <a
-          routerLink="/settings/exchange-rates"
-          routerLinkActive="!bg-slate-900 !text-white"
-          [routerLinkActiveOptions]="{exact: true}"
-          class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
-        >
-          <i class="pi pi-dollar mr-2"></i>
-          Exchange Rates
-        </a>
+        @if (canViewWarehouses()) {
+          <a routerLink="/settings/warehouses" routerLinkActive="!bg-slate-900 !text-white" [routerLinkActiveOptions]="{exact: true}" class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+            <i class="pi pi-warehouse mr-2"></i>Warehouses
+          </a>
+        }
+        @if (canViewItemCodes()) {
+          <a routerLink="/settings/item-codes" routerLinkActive="!bg-slate-900 !text-white" [routerLinkActiveOptions]="{exact: true}" class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+            <i class="pi pi-box mr-2"></i>Items
+          </a>
+        }
+        @if (canViewTransportation()) {
+          <a routerLink="/settings/transportation" routerLinkActive="!bg-slate-900 !text-white" [routerLinkActiveOptions]="{exact: true}" class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+            <i class="pi pi-truck mr-2"></i>Transportation
+          </a>
+        }
+        @if (canViewExchangeRates()) {
+          <a routerLink="/settings/exchange-rates" routerLinkActive="!bg-slate-900 !text-white" [routerLinkActiveOptions]="{exact: true}" class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+            <i class="pi pi-dollar mr-2"></i>Exchange Rates
+          </a>
+        }
       </div>
 
       <!-- Page Header -->
@@ -80,13 +66,15 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
           <h1 class="text-2xl font-bold text-slate-900">Warehouse Management</h1>
           <p class="text-slate-500 mt-1">Create, edit and manage storage locations</p>
         </div>
-        <button 
-          pButton 
-          label="Add Warehouse" 
-          icon="pi pi-plus" 
-          class="p-button-primary"
-          (click)="openAddDialog()">
-        </button>
+        @if (canEditWarehouses()) {
+          <button
+            pButton
+            label="Add Warehouse"
+            icon="pi pi-plus"
+            class="p-button-primary"
+            (click)="openAddDialog()">
+          </button>
+        }
       </div>
 
       <!-- Table Card -->
@@ -121,18 +109,20 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
               </td>
               <td class="py-4 text-right px-6">
                 <div class="flex justify-end gap-2">
-                  <button 
-                    pButton 
-                    icon="pi pi-pencil" 
-                    class="p-button-text p-button-sm p-button-info hover:bg-blue-50"
-                    (click)="openEditDialog(warehouse)">
-                  </button>
-                  <button 
-                    pButton 
-                    icon="pi pi-trash" 
-                    class="p-button-text p-button-sm p-button-danger hover:bg-red-50"
-                    (click)="confirmDelete(warehouse)">
-                  </button>
+                  @if (canEditWarehouses()) {
+                    <button
+                      pButton
+                      icon="pi pi-pencil"
+                      class="p-button-text p-button-sm p-button-info hover:bg-blue-50"
+                      (click)="openEditDialog(warehouse)">
+                    </button>
+                    <button
+                      pButton
+                      icon="pi pi-trash"
+                      class="p-button-text p-button-sm p-button-danger hover:bg-red-50"
+                      (click)="confirmDelete(warehouse)">
+                    </button>
+                  }
                 </div>
               </td>
             </tr>
@@ -242,6 +232,8 @@ export class WarehouseManagementComponent implements OnInit {
   private fb = inject(FormBuilder);
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
+  private authService = inject(AuthService);
+  private rbacService = inject(RbacService);
 
   warehouses = signal<Warehouse[]>([]);
   storekeepers = signal<WarehouseStorekeeperOption[]>([]);
@@ -264,6 +256,26 @@ export class WarehouseManagementComponent implements OnInit {
     { label: 'Active', value: 'Active' },
     { label: 'Inactive', value: 'Inactive' }
   ];
+
+  canEditWarehouses(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.warehouses.edit');
+  }
+
+  canViewWarehouses(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.warehouses.view');
+  }
+
+  canViewItemCodes(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.item_codes.view');
+  }
+
+  canViewTransportation(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.transportation.view');
+  }
+
+  canViewExchangeRates(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.exchange_rates.view');
+  }
 
   ngOnInit() {
     this.loadWarehouses();
@@ -296,12 +308,14 @@ export class WarehouseManagementComponent implements OnInit {
   }
 
   openAddDialog() {
+    if (!this.canEditWarehouses()) return;
     this.editingWarehouse.set(null);
     this.warehouseForm.reset({ status: 'Active', assignedStorekeepers: [] });
     this.displayDialog = true;
   }
 
   openEditDialog(warehouse: Warehouse) {
+    if (!this.canEditWarehouses()) return;
     this.editingWarehouse.set(warehouse);
     this.warehouseForm.patchValue({
       ...warehouse,
@@ -326,6 +340,7 @@ export class WarehouseManagementComponent implements OnInit {
   }
 
   saveWarehouse() {
+    if (!this.canEditWarehouses()) return;
     if (this.warehouseForm.invalid) return;
     
     this.saving.set(true);
@@ -362,6 +377,7 @@ export class WarehouseManagementComponent implements OnInit {
   }
 
   confirmDelete(warehouse: Warehouse) {
+    if (!this.canEditWarehouses()) return;
     this.confirmationService.confirm({
       message: `Are you sure you want to delete ${warehouse.name}?`,
       accept: () => {

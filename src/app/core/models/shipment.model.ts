@@ -45,6 +45,7 @@ export interface ShipmentReportExportChildRow {
   bags: number | string;
   pallet: number | string;
   month?: string;
+  monthFilterValues?: string[];
   weekWiseShipment?: string;
   shipmentStatus?: string;
   currentStage: string;
@@ -56,6 +57,7 @@ export interface ShipmentReportExportRow {
   year: number | string;
   shipmentNo: string;
   date: string;
+  dateFilterValue?: string;
   supplier: string;
   country: string;
   variant: string;
@@ -76,11 +78,13 @@ export interface ShipmentReportExportRow {
   bankName: string;
   paymentTerms: string;
   shipmentStatus?: string;
+  reportStatus?: string;
   currentStage: string;
   noOfShipments: number | string;
   portOfLoading: string;
   portOfDischarge: string;
   month?: string;
+  monthFilterValues?: string[];
   advanceAmount: number | string;
   bags: number | string;
   pallet: number | string;
@@ -158,15 +162,33 @@ export interface DashboardChartData {
   supplierYearlyQty: ChartMappingRow[];
 }
 
+export interface DashboardStatusPivotRow {
+  supplier: string;
+  values: Record<string, number>;
+  grandTotal: number;
+}
+
+export interface DashboardStatusPivot {
+  asOfDate: string;
+  valueLabel: string;
+  rowLabel: string;
+  columns: string[];
+  rows: DashboardStatusPivotRow[];
+  totals: Record<string, number>;
+  grandTotal: number;
+}
+
 export interface DashboardSummaryResponse {
   kpis: DashboardKpis;
   stageBreakdown: DashboardStageBreakdown[];
   monthlyTrend: DashboardMonthlyTrend[];
   arrivalSummary: DashboardArrivalSummary;
   paymentSummary: DashboardPaymentSummary;
+  rolePending?: { role: string; label: string; count: number };
   recentShipments: DashboardRecentShipment[];
   shippingStatus?: DashboardShippingStatus;
   chartData?: DashboardChartData;
+  statusPivot?: DashboardStatusPivot;
 }
 
 export interface DashboardShippingStatusOrder {
@@ -612,7 +634,7 @@ export interface ClearingAdvanceApprovalState {
   submittedAt?: string | null;
   submittedBy?: string | null;
   fasApprovedAt?: string | null;
-  fasApprovedBy?: string | null;
+  fasApprovedBy?: string | { _id?: string; name?: string; email?: string; role?: string } | null;
   fasManagerApprovedAt?: string | null;
   fasManagerApprovedBy?: string | null;
 }

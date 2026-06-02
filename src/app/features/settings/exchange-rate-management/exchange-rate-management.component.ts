@@ -12,6 +12,8 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { ExchangeRateService, ExchangeRate } from '../../../core/services/exchange-rate.service';
+import { AuthService } from '../../../core/services/auth.service';
+import { RbacService } from '../../../core/services/rbac.service';
 
 @Component({
   selector: 'app-exchange-rate-management',
@@ -37,26 +39,26 @@ import { ExchangeRateService, ExchangeRate } from '../../../core/services/exchan
 
       <!-- Tab Navigation -->
       <div class="mb-6 flex flex-wrap items-center gap-3">
-        <a routerLink="/settings/warehouses" routerLinkActive="!bg-slate-900 !text-white"
-          [routerLinkActiveOptions]="{exact: true}"
-          class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
-          <i class="pi pi-warehouse mr-2"></i>Warehouses
-        </a>
-        <a routerLink="/settings/item-codes" routerLinkActive="!bg-slate-900 !text-white"
-          [routerLinkActiveOptions]="{exact: true}"
-          class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
-          <i class="pi pi-box mr-2"></i>Items
-        </a>
-        <a routerLink="/settings/transportation" routerLinkActive="!bg-slate-900 !text-white"
-          [routerLinkActiveOptions]="{exact: true}"
-          class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
-          <i class="pi pi-truck mr-2"></i>Transportation
-        </a>
-        <a routerLink="/settings/exchange-rates" routerLinkActive="!bg-slate-900 !text-white"
-          [routerLinkActiveOptions]="{exact: true}"
-          class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
-          <i class="pi pi-dollar mr-2"></i>Exchange Rates
-        </a>
+        @if (canViewWarehouses()) {
+          <a routerLink="/settings/warehouses" routerLinkActive="!bg-slate-900 !text-white" [routerLinkActiveOptions]="{exact: true}" class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+            <i class="pi pi-warehouse mr-2"></i>Warehouses
+          </a>
+        }
+        @if (canViewItemCodes()) {
+          <a routerLink="/settings/item-codes" routerLinkActive="!bg-slate-900 !text-white" [routerLinkActiveOptions]="{exact: true}" class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+            <i class="pi pi-box mr-2"></i>Items
+          </a>
+        }
+        @if (canViewTransportation()) {
+          <a routerLink="/settings/transportation" routerLinkActive="!bg-slate-900 !text-white" [routerLinkActiveOptions]="{exact: true}" class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+            <i class="pi pi-truck mr-2"></i>Transportation
+          </a>
+        }
+        @if (canViewExchangeRates()) {
+          <a routerLink="/settings/exchange-rates" routerLinkActive="!bg-slate-900 !text-white" [routerLinkActiveOptions]="{exact: true}" class="px-5 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+            <i class="pi pi-dollar mr-2"></i>Exchange Rates
+          </a>
+        }
       </div>
 
       <!-- Page Header -->
@@ -67,7 +69,9 @@ import { ExchangeRateService, ExchangeRate } from '../../../core/services/exchan
             Manage AED/USD exchange rates per bank. The <strong>Direct</strong> rate is the default when no bank is selected.
           </p>
         </div>
-        <button pButton label="Add Rate" icon="pi pi-plus" class="p-button-primary" (click)="openAddDialog()"></button>
+        @if (canEditExchangeRates()) {
+          <button pButton label="Add Rate" icon="pi pi-plus" class="p-button-primary" (click)="openAddDialog()"></button>
+        }
       </div>
 
       <!-- Info banner -->
@@ -124,11 +128,13 @@ import { ExchangeRateService, ExchangeRate } from '../../../core/services/exchan
               </td>
               <td class="py-4 text-right px-6">
                 <div class="flex justify-end gap-2">
-                  <button pButton icon="pi pi-pencil"
-                    class="p-button-text p-button-sm p-button-info hover:bg-blue-50"
-                    (click)="openEditDialog(rate)">
-                  </button>
-                  @if (!rate.isDefault) {
+                  @if (canEditExchangeRates()) {
+                    <button pButton icon="pi pi-pencil"
+                      class="p-button-text p-button-sm p-button-info hover:bg-blue-50"
+                      (click)="openEditDialog(rate)">
+                    </button>
+                  }
+                  @if (canEditExchangeRates() && !rate.isDefault) {
                     <button pButton icon="pi pi-trash"
                       class="p-button-text p-button-sm p-button-danger hover:bg-red-50"
                       (click)="confirmDelete(rate)">
@@ -238,6 +244,8 @@ export class ExchangeRateManagementComponent implements OnInit {
   private fb = inject(FormBuilder);
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
+  private authService = inject(AuthService);
+  private rbacService = inject(RbacService);
 
   readonly rates = signal<ExchangeRate[]>([]);
   readonly loading = signal(false);
@@ -257,6 +265,26 @@ export class ExchangeRateManagementComponent implements OnInit {
     { label: 'Inactive', value: 'Inactive' },
   ];
 
+  canEditExchangeRates(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.exchange_rates.edit');
+  }
+
+  canViewWarehouses(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.warehouses.view');
+  }
+
+  canViewItemCodes(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.item_codes.view');
+  }
+
+  canViewTransportation(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.transportation.view');
+  }
+
+  canViewExchangeRates(): boolean {
+    return this.authService.isAdminLevelRole() || this.rbacService.hasPermission('settings.tab.exchange_rates.view');
+  }
+
   ngOnInit(): void {
     this.load();
   }
@@ -273,6 +301,7 @@ export class ExchangeRateManagementComponent implements OnInit {
   }
 
   openAddDialog(): void {
+    if (!this.canEditExchangeRates()) return;
     this.editing.set(null);
     this.form.reset({ status: 'Active' });
     this.form.get('bankName')?.enable();
@@ -280,6 +309,7 @@ export class ExchangeRateManagementComponent implements OnInit {
   }
 
   openEditDialog(rate: ExchangeRate): void {
+    if (!this.canEditExchangeRates()) return;
     this.editing.set(rate);
     this.form.patchValue({ bankName: rate.bankName, rate: rate.rate, status: rate.status });
     if (rate.isDefault) {
@@ -291,6 +321,7 @@ export class ExchangeRateManagementComponent implements OnInit {
   }
 
   save(): void {
+    if (!this.canEditExchangeRates()) return;
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     this.saving.set(true);
     const payload = this.form.getRawValue();
@@ -319,6 +350,7 @@ export class ExchangeRateManagementComponent implements OnInit {
   }
 
   confirmDelete(rate: ExchangeRate): void {
+    if (!this.canEditExchangeRates()) return;
     this.confirmationService.confirm({
       message: `Delete exchange rate for "${rate.bankName}"?`,
       accept: () => {
