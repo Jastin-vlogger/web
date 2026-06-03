@@ -173,23 +173,48 @@
         </label>
         <label class="flex flex-col gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
           Supplier
-          <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-slate-800" type="search" [ngModel]="filters().supplier || ''" (ngModelChange)="updateFilter('supplier', $event)" />
+          <select class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold normal-case tracking-normal text-slate-800" [ngModel]="filters().supplier || ''" (ngModelChange)="updateFilter('supplier', $event)">
+            <option value="">All suppliers</option>
+            @for (option of filterOptions().suppliers; track option) {
+              <option [value]="option">{{ option }}</option>
+            }
+          </select>
         </label>
         <label class="flex flex-col gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
           Status
-          <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-slate-800" type="search" [ngModel]="filters().status || ''" (ngModelChange)="updateFilter('status', $event)" />
+          <select class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold normal-case tracking-normal text-slate-800" [ngModel]="filters().status || ''" (ngModelChange)="updateFilter('status', $event)">
+            <option value="">All statuses</option>
+            @for (option of filterOptions().statuses; track option) {
+              <option [value]="option">{{ option }}</option>
+            }
+          </select>
         </label>
         <label class="flex flex-col gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
           Port of Discharge
-          <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-slate-800" type="search" [ngModel]="filters().portOfDischarge || ''" (ngModelChange)="updateFilter('portOfDischarge', $event)" />
+          <select class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold normal-case tracking-normal text-slate-800" [ngModel]="filters().portOfDischarge || ''" (ngModelChange)="updateFilter('portOfDischarge', $event)">
+            <option value="">All discharge ports</option>
+            @for (option of filterOptions().portsOfDischarge; track option) {
+              <option [value]="option">{{ option }}</option>
+            }
+          </select>
         </label>
         <label class="flex flex-col gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
           Port of Loading
-          <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-slate-800" type="search" [ngModel]="filters().portOfLoading || ''" (ngModelChange)="updateFilter('portOfLoading', $event)" />
+          <select class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold normal-case tracking-normal text-slate-800" [ngModel]="filters().portOfLoading || ''" (ngModelChange)="updateFilter('portOfLoading', $event)">
+            <option value="">All loading ports</option>
+            @for (option of filterOptions().portsOfLoading; track option) {
+              <option [value]="option">{{ option }}</option>
+            }
+          </select>
         </label>
         <label class="flex flex-col gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500 md:col-span-2">
           Item
-          <input class="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold normal-case tracking-normal text-slate-800" type="search" [ngModel]="filters().item || ''" (ngModelChange)="updateFilter('item', $event)" />
+          <select class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold normal-case tracking-normal text-slate-800" [ngModel]="filters().item || ''" (ngModelChange)="updateFilter('item', $event)">
+            <option value="">All items</option>
+            @for (option of filterOptions().items; track option) {
+              <option [value]="option">{{ option }}</option>
+            }
+          </select>
         </label>
       </div>
       <div class="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">

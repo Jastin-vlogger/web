@@ -34,6 +34,7 @@ export class ReportsLandingComponent implements OnInit {
   readonly exporting = signal<ExportType | null>(null);
   readonly error = signal<string | null>(null);
   readonly rows = signal<ShipmentReportExportRow[]>([]);
+  readonly filterOptionRows = signal<ShipmentReportExportRow[]>([]);
   readonly generatedAt = signal<string | null>(null);
   readonly expandedShipments = signal<Record<string, boolean>>({});
   readonly filters = signal<ShipmentReportFilters>({});
@@ -96,6 +97,22 @@ export class ReportsLandingComponent implements OnInit {
   readonly activeFilterCount = computed(() =>
     Object.values(this.filters()).filter((value) => String(value ?? '').trim().length > 0).length
   );
+  readonly filterOptions = computed(() => {
+    const sourceRows = this.filterOptionRows().length ? this.filterOptionRows() : this.rows();
+    return {
+      suppliers: this.uniqueOptions(sourceRows.map((row) => row.supplier)),
+      statuses: this.uniqueOptions(
+        sourceRows.flatMap((row) => [
+          row.shipmentStatus,
+          row.reportStatus,
+          ...(row.children || []).map((child) => child.shipmentStatus),
+        ])
+      ),
+      portsOfDischarge: this.uniqueOptions(sourceRows.map((row) => row.portOfDischarge)),
+      portsOfLoading: this.uniqueOptions(sourceRows.map((row) => row.portOfLoading)),
+      items: this.uniqueOptions(sourceRows.flatMap((row) => [row.itemDescription, row.riceName])),
+    };
+  });
 
   readonly reportCards = computed(() => [
     {
@@ -158,7 +175,11 @@ export class ReportsLandingComponent implements OnInit {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (response) => {
-          this.rows.set(response.rows ?? []);
+          const rows = response.rows ?? [];
+          this.rows.set(rows);
+          if (!Object.values(filters).some((value) => String(value ?? '').trim().length > 0)) {
+            this.filterOptionRows.set(rows);
+          }
           this.generatedAt.set(response.generatedAt ?? null);
           this.expandedShipments.set({});
         },
@@ -239,6 +260,19 @@ export class ReportsLandingComponent implements OnInit {
     anchor.download = filename;
     anchor.click();
     URL.revokeObjectURL(objectUrl);
+  }
+
+  private uniqueOptions(values: Array<unknown>): string[] {
+    const optionMap = new Map<string, string>();
+    values.forEach((value) => {
+      const label = String(value ?? '').trim();
+      if (!label) return;
+      const key = label.toLowerCase();
+      if (!optionMap.has(key)) {
+        optionMap.set(key, label);
+      }
+    });
+    return Array.from(optionMap.values()).sort((a, b) => a.localeCompare(b));
   }
 
   private formatDateTime(value: string | null): string {

@@ -1,4 +1,4 @@
-<div class="flex flex-col h-full gap-4 md:gap-6">
+<div class="flex flex-col gap-4 md:overflow-hidden md:gap-6">
   <!-- Header Section - Stacked on mobile, side-by-side on md+ -->
   <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
     <div class="w-full sm:w-auto">
@@ -34,7 +34,7 @@
   </header>
 
   <!-- Table Container -->
-  <div class="grow min-h-0 border border-slate-200 rounded-xl md:rounded-2xl bg-white shadow-sm flex flex-col overflow-hidden">
+  <div class="border border-slate-200 rounded-xl md:rounded-2xl bg-white shadow-sm flex flex-col overflow-hidden">
     <div class="md:hidden grow overflow-y-auto p-4 space-y-3 custom-scrollbar">
       @if (loading()) {
         @for (i of [1,2,3,4]; track i) {
@@ -122,8 +122,8 @@
     </div>
 
     <!-- Scrollable Body -->
-    <div class="hidden md:block grow overflow-auto relative custom-scrollbar" role="region" aria-label="Shipments table" tabindex="0">
-      <table class="w-full border-separate border-spacing-0" role="table">
+    <div class="shipment-table-viewport hidden md:block h-[520px] overflow-auto relative custom-scrollbar" role="region" aria-label="Shipments table" tabindex="0">
+      <table class="w-full min-w-[1500px] border-separate border-spacing-0" role="table">
         <thead class="sticky top-0 z-10 bg-slate-50">
           <tr role="row">
             <th scope="col" class="p-4 border-b border-slate-200 text-left font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">S No.</th>

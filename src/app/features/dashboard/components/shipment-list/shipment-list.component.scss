@@ -1,1 +1,8 @@
+:host {
+  display: block;
+}
 
+.shipment-table-viewport {
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
+}
