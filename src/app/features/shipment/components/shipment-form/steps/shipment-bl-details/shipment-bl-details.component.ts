@@ -1555,12 +1555,13 @@ export class ShipmentBlDetailsComponent {
     if (!row) return;
 
     const shipment = this.shipmentData()?.shipment as any;
+    const planned = this.shipmentData()?.planned?.[index] as any;
     const actual = this.shipmentData()?.actual?.[index] as any;
     const visibleCostRows = this.getCostSheetRows(row).controls.filter((entry) => this.canCurrentUserSeeBlRow(entry));
     const totalFC = Number(shipment?.totalFC) || 0;
     const amountAED = Number(shipment?.amountAED) || 0;
     const exchangeRate = totalFC > 0 && amountAED > 0 ? this.formatCurrency(amountAED / totalFC) : '3.67';
-    const arrivedAtPort = actual?.arrivalOn ? this.formatDateForReport(actual.arrivalOn) : '';
+    const eta = this.formatDateForReport(actual?.updatedETA || planned?.eta || actual?.eta);
     const clearedOn = actual?.clearedOn || actual?.clearance?.clearedOn;
     let noOfDaysAtPort = '';
     if (actual?.arrivalOn && clearedOn) {
@@ -1606,7 +1607,7 @@ export class ShipmentBlDetailsComponent {
       despatchPort: row.get('portOfDischarge')?.value || actual?.portOfDischarge || shipment?.portOfDischarge || '',
       incoTerms: shipment?.incoterms || '',
       supplierInvoiceNo: actual?.commercialInvoiceNo || shipment?.piNo || '',
-      eta: arrivedAtPort,
+      eta,
       item: shipment?.item || shipment?.itemDescription || '',
       planningToReleaseDate: this.formatDateForReport(actual?.documentsReleasedDate),
       noOfDaysAtPort,

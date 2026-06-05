@@ -9,7 +9,7 @@ import { AccessPermission, AccessPermissionGroup, AccessRole, AccessUser, BlRowD
 import { AuthService } from '../../../../core/services/auth.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 
-type AccessTabKey = 'roles' | 'menu' | 'permissions' | 'users';
+type AccessTabKey = 'roles' | 'menu' | 'dashboard' | 'permissions' | 'users';
 
 /** One row in the permission matrix — one screen/tab per row */
 interface PermissionMatrixRow {
@@ -199,6 +199,8 @@ export class AccessControlComponent {
         'shipment.tab.shipment_tracker_split.scheduled.edit',
         'shipment.tab.shipment_tracker_split.actual.view',
         'shipment.tab.shipment_tracker_split.actual.edit',
+        'shipment.tab.shipment_tracker_split.actual.upload_packing',
+        'shipment.tab.shipment_tracker_split.actual.upload_bl',
         'shipment.tab.shipment_tracker_split.history.view',
         'shipment.tab.shipment_tracker_split.history.edit',
         'shipment.tab.shipment_tracker_split.report.view',
@@ -224,6 +226,24 @@ export class AccessControlComponent {
           editPermissionKey: 'shipment.tab.shipment_tracker_split.actual.edit',
           viewActionKey: 'actual_view',
           editActionKey: 'actual_edit',
+        },
+        {
+          key: 'shipment_tracker_split_actual_upload_packing',
+          label: 'Actual Packing Upload',
+          description: 'Allows uploading or replacing the packing document in Actual arrivals.',
+          tabKey: 'shipment_tracker_split',
+          ownPermissionKeys: ['shipment.tab.shipment_tracker_split.actual.upload_packing'],
+          editPermissionKey: 'shipment.tab.shipment_tracker_split.actual.upload_packing',
+          editActionKey: 'actual_upload_packing',
+        },
+        {
+          key: 'shipment_tracker_split_actual_upload_bl',
+          label: 'Actual B/L Upload',
+          description: 'Allows uploading or replacing the B/L document in Actual arrivals.',
+          tabKey: 'shipment_tracker_split',
+          ownPermissionKeys: ['shipment.tab.shipment_tracker_split.actual.upload_bl'],
+          editPermissionKey: 'shipment.tab.shipment_tracker_split.actual.upload_bl',
+          editActionKey: 'actual_upload_bl',
         },
         {
           key: 'shipment_tracker_split_history',
@@ -641,6 +661,12 @@ export class AccessControlComponent {
   readonly menuPermissionGroups = computed(() =>
     this.permissionGroups().filter((g) =>
       g.permissions.some((p) => p.resource === 'menu')
+    )
+  );
+
+  readonly dashboardPermissionGroups = computed(() =>
+    this.permissionGroups().filter((g) =>
+      g.permissions.some((p) => p.resource === 'dashboard')
     )
   );
 

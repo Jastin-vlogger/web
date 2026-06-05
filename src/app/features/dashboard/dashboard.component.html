@@ -32,9 +32,11 @@
             </div>
         </header>
 
+        @if (canViewDashboardSection('dashboard.section.status_snapshot.view') || canViewDashboardSection('dashboard.section.shipment_status_chart.view')) {
         <section class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
             <!-- Left Side Column -->
-            <div class="flex flex-col gap-6 lg:col-span-1">
+            @if (canViewDashboardSection('dashboard.section.status_snapshot.view')) {
+            <div class="flex flex-col gap-6" [ngClass]="canViewDashboardSection('dashboard.section.shipment_status_chart.view') ? 'lg:col-span-1' : 'lg:col-span-4'">
                 <!-- Operational Snapshot Metrics -->
                 <article class="status-panel border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm flex flex-col flex-1">
                     <div class="status-panel-title bg-slate-50/50 py-3 px-6 border-b border-slate-100 font-bold text-slate-700">R-Status Snapshot</div>
@@ -48,9 +50,11 @@
                     </div>
                 </article>
             </div>
+            }
 
             <!-- Right Side: Shipment Status Report -->
-            <article class="sl-panel flex flex-col p-6 bg-white border border-slate-200 rounded-xl shadow-sm lg:col-span-3">
+            @if (canViewDashboardSection('dashboard.section.shipment_status_chart.view')) {
+            <article class="sl-panel flex flex-col p-6 bg-white border border-slate-200 rounded-xl shadow-sm" [ngClass]="canViewDashboardSection('dashboard.section.status_snapshot.view') ? 'lg:col-span-3' : 'lg:col-span-4'">
                 @if (statusPivot(); as pivot) {
                     <div class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
@@ -83,8 +87,11 @@
                     <div class="flex h-[320px] items-center justify-center text-slate-400">No shipment status data available.</div>
                 }
             </article>
+            }
         </section>
+        }
 
+        @if (canViewDashboardSection('dashboard.section.dynamic_metrics.view')) {
         <section class="sl-panel flex flex-col p-6 bg-white border border-slate-200 rounded-xl shadow-sm mb-6">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
                 <h3 class="font-bold text-slate-800 text-lg">Dynamic Metrics Explorer</h3>
@@ -113,7 +120,9 @@
                 }
             </div>
         </section>
+        }
 
+        @if (canViewDashboardSection('dashboard.section.average_fc.view')) {
         <!-- New Average FC per Unit Comparison Chart -->
         <section class="sl-panel p-6 bg-white border-slate-200 rounded-xl shadow-sm mb-6">
             <h3 class="font-bold text-slate-800 text-lg mb-6">Average FC per Unit by Supplier</h3>
@@ -128,6 +137,7 @@
                 }
             </div>
         </section>
+        }
 
         <!-- <section class="shipping-status-card mt-6">
             <div class="shipping-status-grid">

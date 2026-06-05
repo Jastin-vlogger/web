@@ -140,7 +140,14 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-[11px]">
                       <div class="flex flex-col py-1">
                         <span class="text-slate-400 font-medium">B/L No</span>
-                        <span class="text-slate-700 font-bold">{{ group.get('BLNo')?.value || 'N/A' }}</span>
+                        <div class="flex items-center gap-2">
+                          <span class="text-slate-700 font-bold">{{ getBlNo(i, group) || 'N/A' }}</span>
+                          @if (getBlDocumentUrl(i)) {
+                            <button type="button" (click)="openRemoteDocumentPreview(getBlDocumentUrl(i), getBlDocumentName(i))" class="icon-btn-secondary !h-8 !w-8 shrink-0" title="Preview B/L document" aria-label="Preview B/L document">
+                              <i class="pi pi-eye text-[11px]"></i>
+                            </button>
+                          }
+                        </div>
                       </div>
                       <div class="flex flex-col py-1">
                         <span class="text-slate-400 font-medium">Courier Track No</span>

@@ -34,4 +34,10 @@ export class RbacService {
   hasPermission(key: string): boolean {
     return this.permissionKeys.includes(key);
   }
+
+  hasPermissionDefinition(prefix: string): boolean {
+    return !!this.permissionsSubject.value?.permissionGroups?.some((group) =>
+      group.permissions.some((permission) => permission.key.startsWith(prefix))
+    );
+  }
 }

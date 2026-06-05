@@ -31,6 +31,13 @@ export class DashboardComponent implements OnInit {
     this.rbacService.hasPermission('shipment.screen.create_shipment.view')
   );
 
+  canViewDashboardSection(permissionKey: string): boolean {
+    if (!this.rbacService.hasPermissionDefinition('dashboard.section.')) {
+      return this.rbacService.hasPermission('menu.dashboard.view');
+    }
+    return this.rbacService.hasPermission(permissionKey);
+  }
+
   // New Chart Implementation Setup
   selectedChartType = signal('qtyMapping');
 
@@ -146,7 +153,7 @@ export class DashboardComponent implements OnInit {
     if (!dashboard) return [];
     return [
       { label: 'Total Shipments', value: dashboard.kpis.totalShipments },
-      { label: 'Total Shipments', value: dashboard.kpis.inProgressShipments },
+      { label: 'In Progress', value: dashboard.kpis.inProgressShipments },
       { label: dashboard.rolePending?.label || 'Pending For Your Role', value: dashboard.rolePending?.count || 0 },
       { label: 'Overdue Shipments', value: dashboard.arrivalSummary.overdueShipments },
       { label: 'Open POs', value: dashboard.kpis.totalShipments },

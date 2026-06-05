@@ -1163,8 +1163,11 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
   }
 
   getPlannedTotals() {
-    const splits = this.activeSplitTab() === 'actual' ? this.actualSplits : this.plannedSplits;
-    return splits.getRawValue().reduce(
+    const controls = this.activeSplitTab() === 'actual'
+      ? this.actualSplits.controls.filter((_, index) => this.submittedActualIndices().includes(index))
+      : this.plannedSplits.controls;
+
+    return controls.map((control) => control.getRawValue()).reduce(
       (acc, curr) => ({
         mt: acc.mt + (Number(curr['qtyMT']) || 0),
         fcl: acc.fcl + (Number(curr['FCL']) || 0),
@@ -1177,8 +1180,26 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     return this.submittedActualIndices().includes(index);
   }
 
+  canUploadActualPacking(): boolean {
+    return this.rbacService.hasPermission('shipment.tab.shipment_tracker_split.actual.upload_packing');
+  }
+
+  canUploadActualBl(): boolean {
+    return this.rbacService.hasPermission('shipment.tab.shipment_tracker_split.actual.upload_bl');
+  }
+
   onPackagingListFileSelected(event: Event, rowIndex: number): void {
     const input = event.target as HTMLInputElement;
+    if (!this.canUploadActualPacking()) {
+      input.value = '';
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Upload disabled',
+        detail: 'Packing upload is not enabled for your role.'
+      });
+      return;
+    }
+
     const file = input.files?.[0];
     if (!file) return;
 
@@ -1192,7 +1213,7 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
   }
 
   canExtractDetails(rowIndex: number): boolean {
-    return !!this.getBillDocumentFile(rowIndex) && !!this.getPackagingListFile(rowIndex);
+    return this.canUploadActualBl() && this.canUploadActualPacking() && !!this.getBillDocumentFile(rowIndex) && !!this.getPackagingListFile(rowIndex);
   }
 
   private normalizeContainerNumber(value: any): string {
@@ -1383,6 +1404,16 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
   /** Upload a document to extract bill number and autopopulate BL No for the given row. */
   onBillNoFileSelected(event: Event, rowIndex: number): void {
     const input = event.target as HTMLInputElement;
+    if (!this.canUploadActualBl()) {
+      input.value = '';
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Upload disabled',
+        detail: 'B/L upload is not enabled for your role.'
+      });
+      return;
+    }
+
     const file = input.files?.[0];
     if (!file) return;
 

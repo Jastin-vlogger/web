@@ -1415,18 +1415,21 @@ export class ShipmentFormComponent implements OnDestroy {
     );
     return this.fb.array(
       this.getActiveBlRowDefinitions().map((definition) =>
-        this.fb.group({
-          sn: [definition.sn],
-          description: [definition.description],
-          visibleTo: [normalizeBlVisibleTo([...definition.visibleTo])],
-          defaultQty: [definition.defaultQty ?? 1],
-          defaultRate: [definition.defaultRate ?? 0],
-          requestAmount: [existingMap.get(definition.sn)?.requestAmount ?? null],
-          // POINT 5: paidAmount removed, replaced with remarks
-          remarks: [existingMap.get(definition.sn)?.remarks ?? ''],
-          attachmentDocumentUrl: [existingMap.get(definition.sn)?.attachmentDocumentUrl ?? ''],
-          attachmentDocumentName: [existingMap.get(definition.sn)?.attachmentDocumentName ?? ''],
-        })
+        {
+          const existing = existingMap.get(definition.sn);
+          return this.fb.group({
+            sn: [existing?.sn ?? definition.sn],
+            description: [existing?.description || definition.description],
+            visibleTo: [normalizeBlVisibleTo(existing?.visibleTo ?? [...definition.visibleTo])],
+            defaultQty: [Number(existing?.defaultQty ?? definition.defaultQty ?? 1)],
+            defaultRate: [Number(existing?.defaultRate ?? definition.defaultRate ?? 0)],
+            requestAmount: [existing?.requestAmount ?? null],
+            // POINT 5: paidAmount removed, replaced with remarks
+            remarks: [existing?.remarks ?? ''],
+            attachmentDocumentUrl: [existing?.attachmentDocumentUrl ?? ''],
+            attachmentDocumentName: [existing?.attachmentDocumentName ?? ''],
+          });
+        }
       )
     );
   }

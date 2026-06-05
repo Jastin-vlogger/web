@@ -26,6 +26,48 @@ export function hasPortOfDischargeMilestone(actualRow: any): boolean {
   return hasMeaningfulValue(actualRow?.portOfDischarge);
 }
 
+function toDateOrNull(value: unknown): Date | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value as string);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function startOfLocalDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function isOnOrBeforeToday(date: Date | null): boolean {
+  if (!date) return false;
+  const today = startOfLocalDay(new Date());
+  return startOfLocalDay(date).getTime() <= today.getTime();
+}
+
+function isAfterToday(date: Date | null): boolean {
+  if (!date) return false;
+  const today = startOfLocalDay(new Date());
+  return startOfLocalDay(date).getTime() > today.getTime();
+}
+
+function getEtdDate(plannedRow: any, actualRow: any): Date | null {
+  return toDateOrNull(actualRow?.updatedETD || plannedRow?.etd);
+}
+
+function getEtaDate(plannedRow: any, actualRow: any): Date | null {
+  return toDateOrNull(actualRow?.updatedETA || plannedRow?.eta);
+}
+
+function hasArrivedAtPortOfDischarge(plannedRow: any, actualRow: any): boolean {
+  return hasPortOfDischargeMilestone(actualRow) && isOnOrBeforeToday(getEtaDate(plannedRow, actualRow));
+}
+
+function hasOnTransitStatus(plannedRow: any, actualRow: any): boolean {
+  const etd = getEtdDate(plannedRow, actualRow);
+  const eta = getEtaDate(plannedRow, actualRow);
+  if (isOnOrBeforeToday(etd) && isAfterToday(eta)) return true;
+  if (!hasTransitActualMilestone(actualRow)) return false;
+  return isOnOrBeforeToday(getEtdDate(plannedRow, actualRow)) && !hasArrivedAtPortOfDischarge(plannedRow, actualRow);
+}
+
 export function getComputedShipmentStatus(params: {
   shipmentCurrentStage?: string | null;
   plannedRow?: any;
@@ -36,11 +78,11 @@ export function getComputedShipmentStatus(params: {
   const actualRow = params.actualRow;
   const plannedRow = params.plannedRow;
 
-  if (hasPortOfDischargeMilestone(actualRow)) {
+  if (hasArrivedAtPortOfDischarge(plannedRow, actualRow)) {
     return 'At Port of Discharge';
   }
 
-  if (hasTransitActualMilestone(actualRow)) {
+  if (hasOnTransitStatus(plannedRow, actualRow)) {
     return 'On Transit';
   }
 

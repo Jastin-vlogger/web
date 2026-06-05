@@ -106,7 +106,7 @@
       </div>
       <div class="split-toolbar-totals flex flex-wrap gap-6 border-t xl:border-t-0 xl:border-l border-slate-700 pt-4 xl:pt-0 xl:pl-4 shrink-0" aria-label="Current Totals">
         <div class="flex flex-col">
-          <span class="text-[9px] text-slate-500 font-bold uppercase">Scheduled MT</span>
+          <span class="text-[9px] text-slate-500 font-bold uppercase">{{ activeSplitTab() === 'actual' ? 'Actual MT' : 'Scheduled MT' }}</span>
           <span class="text-sm font-black"
             [class.text-white]="getPlannedTotals().mt <= (shipmentData()?.shipment?.plannedQtyMT || 0)"
             [class.text-red-500]="getPlannedTotals().mt > (shipmentData()?.shipment?.plannedQtyMT || 0)">
@@ -120,7 +120,7 @@
           </span>
         </div>
         <div class="flex flex-col border-l border-slate-700 pl-6">
-          <span class="text-[9px] text-slate-500 font-bold uppercase">Scheduled FCL</span>
+          <span class="text-[9px] text-slate-500 font-bold uppercase">{{ activeSplitTab() === 'actual' ? 'Actual FCL' : 'Scheduled FCL' }}</span>
           <span class="text-sm font-black"
             [class.text-white]="getPlannedTotals().fcl <= (shipmentData()?.shipment?.fcl || 0)"
             [class.text-red-500]="getPlannedTotals().fcl > (shipmentData()?.shipment?.fcl || 0)">
@@ -484,7 +484,7 @@
             <th scope="col" class="actual-col-num">QTY(MT)</th>
             <th scope="col" class="actual-col-num">BAGS</th>
             <th scope="col" class="actual-col-num">PALLET</th>
-            <th scope="col" class="actual-col-bl">PACKAGING</th>
+            <th scope="col" class="actual-col-bl">PACKING</th>
             <th scope="col" class="actual-col-bl">BL NO</th>
             <th scope="col" class="actual-col-ci">COMMERCIAL INVOICE NO</th>
             <th scope="col" class="actual-col-date">SHIP ONBOARD DATE</th>
@@ -555,13 +555,16 @@
                     class="flex-shrink-0 w-8 h-8 rounded border border-slate-200 flex items-center justify-center cursor-pointer text-emerald-600 hover:text-emerald-700 transition-colors"
                     [class.bg-emerald-50]="!getPackagingListFile(i)"
                     [class.bg-emerald-100]="getPackagingListFile(i)"
-                    title="Upload Packaging List"
+                    [class.opacity-40]="!canUploadActualPacking()"
+                    [class.pointer-events-none]="!canUploadActualPacking()"
+                    [title]="canUploadActualPacking() ? 'Upload Packing List' : 'Packing upload is not enabled for your role'"
                   >
                     <i class="pi text-xs" [class.pi-plus-circle]="!getPackagingListFile(i)" [class.pi-check]="getPackagingListFile(i)" [class.text-emerald-800]="getPackagingListFile(i)" aria-hidden="true"></i>
                     <input
                       type="file"
                       class="hidden"
                       accept=".pdf,.jpg,.jpeg,.png,.gif,.webp"
+                      [disabled]="!canUploadActualPacking()"
                       (change)="onPackagingListFileSelected($event, i)"
                     />
                   </label>
@@ -612,9 +615,10 @@
                     class="flex-shrink-0 w-8 h-8 rounded border border-slate-200 flex items-center justify-center cursor-pointer text-slate-500 hover:text-blue-600 transition-colors"
                     [class.bg-slate-50]="!getBillDocumentFile(i)"
                     [class.bg-blue-50]="getBillDocumentFile(i)"
-                    [class.pointer-events-none]="extractingBillNoRowIndex() === i"
                     [class.opacity-70]="extractingBillNoRowIndex() === i"
-                    title="Upload BL document"
+                    [class.opacity-40]="!canUploadActualBl()"
+                    [class.pointer-events-none]="!canUploadActualBl() || extractingBillNoRowIndex() === i"
+                    [title]="canUploadActualBl() ? 'Upload BL document' : 'B/L upload is not enabled for your role'"
                   >
                     @if (extractingBillNoRowIndex() === i) {
                       <i class="pi pi-spin pi-spinner text-xs" aria-hidden="true"></i>
@@ -625,6 +629,7 @@
                       type="file"
                       class="hidden"
                       accept=".pdf,.jpg,.jpeg,.png,.gif,.webp"
+                      [disabled]="!canUploadActualBl()"
                       (change)="onBillNoFileSelected($event, i)"
                     />
                   </label>

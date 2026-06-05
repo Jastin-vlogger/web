@@ -599,7 +599,11 @@ export class ShipmentDocumentationComponent {
     effect(() => {
       const data = this.shipmentData();
       if (!data || !this.formArray) return;
-      this.formArray.controls.forEach((group) => {
+      this.formArray.controls.forEach((group, index) => {
+        const actual = data.actual?.[index] as any;
+        if (!group.get('BLNo')?.value && actual?.BLNo) {
+          group.get('BLNo')?.patchValue(actual.BLNo, { emitEvent: false });
+        }
         if (!group.get('bankName')?.value && data.shipment?.bankName) {
           group.get('bankName')?.patchValue(data.shipment.bankName, { emitEvent: false });
           if (!group.get('receiver')?.value) group.get('receiver')?.patchValue('Bank', { emitEvent: false });
@@ -651,6 +655,13 @@ export class ShipmentDocumentationComponent {
 
   getBlDocumentName(index: number): string {
     return this.shipmentData()?.actual?.[index]?.blDocumentName || 'B/L Document';
+  }
+
+  getBlNo(index: number, group?: AbstractControl | null): string {
+    return (
+      String(group?.get('BLNo')?.value || '').trim() ||
+      String(this.shipmentData()?.actual?.[index]?.BLNo || '').trim()
+    );
   }
 
   isMilestoneSaving(index: number, milestone: string): boolean {
