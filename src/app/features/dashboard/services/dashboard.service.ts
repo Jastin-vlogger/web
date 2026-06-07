@@ -73,7 +73,8 @@ export class DashboardService {
           monthlyKpis: Array.isArray(response?.shippingStatus?.monthlyKpis) ? response.shippingStatus.monthlyKpis : []
         },
         chartData: response?.chartData,
-        statusPivot: response?.statusPivot
+        statusPivot: response?.statusPivot,
+        statusPivotByItem: response?.statusPivotByItem
       };
   }
 

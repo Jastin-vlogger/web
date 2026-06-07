@@ -177,6 +177,21 @@
 }
 
 /*
+ * PrimeNG Accordion Width Guard
+ * -----------------------------
+ * Wide inner grids/tables must scroll inside their own viewport. Without this,
+ * PrimeNG's animation/content wrappers can expand to the width of a wide child,
+ * which makes the whole page wider and pushes/clips right-side form columns.
+ */
+.p-accordion,
+.p-accordionpanel,
+.p-accordioncontent,
+.p-accordioncontent-wrapper {
+  max-width: 100%;
+  min-width: 0;
+}
+
+/*
  * Quality Table Scroll Fix (Global)
  * -----------------------------------
  * DOM chain analysis revealed that PrimeNG's internal .p-accordioncontent-wrapper 
@@ -285,6 +300,28 @@
 .arrival-table-shell .arrival-scroll-table {
   min-width: 1320px;
   width: max-content;
+}
+
+/*
+ * BL Details Scroll Fix
+ * Keeps the responsive form fields constrained while allowing the wide row
+ * tables inside BL Details to scroll horizontally.
+ */
+.p-accordioncontent-wrapper:has(.bl-details-shell),
+.bl-details-shell {
+  max-width: 100%;
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.bl-details-shell .bl-horizontal-scroll {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* 4. Extraction Overlay (Royal AI) */

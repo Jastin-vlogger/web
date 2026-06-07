@@ -863,6 +863,7 @@ export class ShipmentFormComponent implements OnDestroy {
     actualContainers.forEach((actualData, shipmentIndex) => {
         const plannedContainer = data.planned?.find(p => p.containerId === actualData.containerId);
         if (!plannedContainer) return;
+        const murabahaProcessDate = actualData?.murabahaContractApprovedDate || actualData?.murabahaContractReleasedDate;
 
         this.documentationSplits.push(
           this.fb.group({
@@ -878,7 +879,7 @@ export class ShipmentFormComponent implements OnDestroy {
             inwardCollectionAdviceDocumentUrl: [actualData?.inwardCollectionAdviceDocumentUrl || ''],
             inwardCollectionAdviceDocumentName: [actualData?.inwardCollectionAdviceDocumentName || ''],
             murabahaContractReleasedDate: [actualData?.murabahaContractReleasedDate ? new Date(actualData.murabahaContractReleasedDate) : null],
-            murabahaContractApprovedDate: [actualData?.murabahaContractApprovedDate ? new Date(actualData.murabahaContractApprovedDate) : null],
+            murabahaContractApprovedDate: [murabahaProcessDate ? new Date(murabahaProcessDate) : null],
             murabahaContractSubmittedDate: [actualData?.murabahaContractSubmittedDate ? new Date(actualData.murabahaContractSubmittedDate) : null],
             murabahaContractSubmittedDocumentUrl: [actualData?.murabahaContractSubmittedDocumentUrl || ''],
             murabahaContractSubmittedDocumentName: [actualData?.murabahaContractSubmittedDocumentName || ''],
@@ -1353,6 +1354,8 @@ export class ShipmentFormComponent implements OnDestroy {
     return this.fb.group({
       containerId: [plannedContainer?.containerId ?? null],
       blNo: [actualData?.BLNo || ''],
+      commercialInvoiceNo: [actualData?.commercialInvoiceNo || ''],
+      blDetailsRemarks: [actualData?.blDetailsRemarks || ''],
       shippedOnBoard: [actualData?.shipOnBoardDate ? new Date(actualData.shipOnBoardDate) : null],
       portOfLoading: [actualData?.portOfLoading || ''],
       portOfDischarge: [actualData?.portOfDischarge || ''],
@@ -1424,6 +1427,8 @@ export class ShipmentFormComponent implements OnDestroy {
             defaultQty: [Number(existing?.defaultQty ?? definition.defaultQty ?? 1)],
             defaultRate: [Number(existing?.defaultRate ?? definition.defaultRate ?? 0)],
             requestAmount: [existing?.requestAmount ?? null],
+            paymentTo: [existing?.paymentTo ?? ''],
+            paymentTerm: [existing?.paymentTerm ?? ''],
             // POINT 5: paidAmount removed, replaced with remarks
             remarks: [existing?.remarks ?? ''],
             attachmentDocumentUrl: [existing?.attachmentDocumentUrl ?? ''],
@@ -1576,6 +1581,8 @@ export class ShipmentFormComponent implements OnDestroy {
         defaultRate: Number(existing?.defaultRate ?? definition.defaultRate ?? 0),
         requestAmount: existing?.requestAmount ?? null,
         paidAmount: existing?.paidAmount ?? null,
+        paymentTo: existing?.paymentTo ?? '',
+        paymentTerm: existing?.paymentTerm ?? '',
         reference: existing?.reference ?? '',
         attachmentDocumentUrl: existing?.attachmentDocumentUrl ?? '',
         attachmentDocumentName: existing?.attachmentDocumentName ?? '',
@@ -1591,6 +1598,8 @@ export class ShipmentFormComponent implements OnDestroy {
           defaultRate: [Number(row?.defaultRate ?? 0)],
           requestAmount: [row?.requestAmount ?? null],
           paidAmount: [row?.paidAmount ?? null],
+          paymentTo: [row?.paymentTo ?? ''],
+          paymentTerm: [row?.paymentTerm ?? ''],
           reference: [row?.reference ?? ''],
           attachmentDocumentUrl: [row?.attachmentDocumentUrl ?? ''],
           attachmentDocumentName: [row?.attachmentDocumentName ?? ''],
@@ -1938,7 +1947,6 @@ export class ShipmentFormComponent implements OnDestroy {
       const requiredFields = [
         'bankName',
         'inwardCollectionAdviceDate',
-        'murabahaContractReleasedDate',
         'murabahaContractApprovedDate',
         'murabahaContractSubmittedDate',
         'documentsReleasedDate',

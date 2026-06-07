@@ -189,6 +189,7 @@ export interface DashboardSummaryResponse {
   shippingStatus?: DashboardShippingStatus;
   chartData?: DashboardChartData;
   statusPivot?: DashboardStatusPivot;
+  statusPivotByItem?: DashboardStatusPivot;
 }
 
 export interface DashboardShippingStatusOrder {
@@ -201,6 +202,7 @@ export interface DashboardShippingStatusOrder {
 export interface DashboardShippingStatusMetric {
   label: string;
   value: number;
+  permissionKey?: string;
 }
 
 export interface DashboardShippingStatusInventoryRow {
@@ -671,6 +673,7 @@ export interface ActualContainer {
   // Step 2: Actual Split
   actualSerialNo?: string;
   commercialInvoiceNo?: string;
+  blDetailsRemarks?: string;
   shipOnBoardDate?: string;
   qtyMT?: number;
   bags?: number;
@@ -740,6 +743,8 @@ export interface ActualContainer {
     defaultRate?: number;
     requestAmount?: number;
     paidAmount?: number;
+    paymentTo?: string;
+    paymentTerm?: string;
     remarks?: string;
     attachmentDocumentUrl?: string;
     attachmentDocumentName?: string;
@@ -965,6 +970,8 @@ export interface ActualContainer {
     defaultRate?: number;
     requestAmount?: number;
     paidAmount?: number;
+    paymentTo?: string;
+    paymentTerm?: string;
     reference?: string;
     attachmentDocumentUrl?: string;
     attachmentDocumentName?: string;

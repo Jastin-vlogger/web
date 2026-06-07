@@ -44,10 +44,12 @@
           <table class="w-full table-fixed text-sm">
             <colgroup>
               <col class="w-[64px]" />
-              <col class="w-[42%]" />
-              <col class="w-[145px]" />
+              <col class="w-[28%]" />
+              <col class="w-[130px]" />
+              <col class="w-[130px]" />
               <col class="w-[150px]" />
-              <col class="w-[220px]" />
+              <col class="w-[120px]" />
+              <col class="w-[180px]" />
               <col class="w-[120px]" />
             </colgroup>
             <thead class="bg-white">
@@ -56,6 +58,8 @@
                 <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Description</th>
                 <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-slate-500">Request Amount</th>
                 <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Paid Amount</th>
+                <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Payment To</th>
+                <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Payment Term</th>
                 <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Reference</th>
                 <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-slate-500">Attachment</th>
               </tr>
@@ -74,6 +78,12 @@
                   </td>
                   <td class="px-4 py-4 align-middle">
                     <p-inputNumber formControlName="paidAmount" styleClass="w-full" inputStyleClass="table-input w-full" [minFractionDigits]="2" [maxFractionDigits]="2"></p-inputNumber>
+                  </td>
+                  <td class="px-4 py-4 align-middle">
+                    <p-select formControlName="paymentTo" [options]="paymentToOptions" optionLabel="label" optionValue="value" placeholder="Payment To" styleClass="w-full" appendTo="body" />
+                  </td>
+                  <td class="px-4 py-4 align-middle">
+                    <p-select formControlName="paymentTerm" [options]="paymentTermOptions" optionLabel="label" optionValue="value" placeholder="Term" styleClass="w-full" appendTo="body" />
                   </td>
                   <td class="px-4 py-4 align-middle">
                     <input pInputText formControlName="reference" class="table-input-text w-full" placeholder="Reference" />
@@ -350,10 +360,12 @@
                   <table class="w-full table-fixed text-sm">
                     <colgroup>
                       <col class="w-[64px]" />
-                      <col class="w-[42%]" />
-                      <col class="w-[145px]" />
+                      <col class="w-[28%]" />
+                      <col class="w-[130px]" />
+                      <col class="w-[130px]" />
                       <col class="w-[150px]" />
-                      <col class="w-[220px]" />
+                      <col class="w-[120px]" />
+                      <col class="w-[180px]" />
                       <col class="w-[120px]" />
                     </colgroup>
                     <thead class="bg-white">
@@ -362,6 +374,8 @@
                         <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Description</th>
                         <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-slate-500">Request Amount</th>
                         <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Paid Amount</th>
+                        <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Payment To</th>
+                        <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Payment Term</th>
                         <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Reference</th>
                         <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-slate-500">Attachment</th>
                       </tr>
@@ -380,6 +394,12 @@
                           </td>
                           <td class="px-4 py-4 align-middle">
                             <p-inputNumber formControlName="paidAmount" styleClass="w-full" inputStyleClass="table-input w-full" [minFractionDigits]="2" [maxFractionDigits]="2"></p-inputNumber>
+                          </td>
+                          <td class="px-4 py-4 align-middle">
+                            <p-select formControlName="paymentTo" [options]="paymentToOptions" optionLabel="label" optionValue="value" placeholder="Payment To" styleClass="w-full" appendTo="body" />
+                          </td>
+                          <td class="px-4 py-4 align-middle">
+                            <p-select formControlName="paymentTerm" [options]="paymentTermOptions" optionLabel="label" optionValue="value" placeholder="Term" styleClass="w-full" appendTo="body" />
                           </td>
                           <td class="px-4 py-4 align-middle">
                             <input pInputText formControlName="reference" class="table-input-text w-full" placeholder="Reference" />

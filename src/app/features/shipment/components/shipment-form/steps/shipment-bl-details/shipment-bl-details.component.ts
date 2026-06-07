@@ -94,6 +94,22 @@ export class ShipmentBlDetailsComponent {
   readonly storageValidationModalVisible = signal(false);
   readonly storageValidationMessage = signal('');
   readonly storageValidationDetails = signal<Array<{ storage: string; packaging: string }>>([]);
+  readonly paymentToOptions = [
+    { label: 'MOFA', value: 'MOFA' },
+    { label: 'Shipping line', value: 'Shipping line' },
+    { label: 'Dubai customs', value: 'Dubai customs' },
+    { label: 'Federal Tax Auth', value: 'Federal Tax Auth' },
+    { label: 'DP World', value: 'DP World' },
+    { label: 'Transporter', value: 'Transporter' },
+    { label: 'Outsourced', value: 'Outsourced' },
+    { label: 'Provider', value: 'Provider' },
+    { label: 'Bank', value: 'Bank' },
+  ];
+  readonly paymentTermOptions = [
+    { label: 'Cash', value: 'Cash' },
+    { label: 'Trans', value: 'Trans' },
+    { label: 'CHQ', value: 'CHQ' },
+  ];
 
   // POINT 8: Track open accordion panels so they stay open after save
   readonly activeAccordionValues = signal<string[]>([]);
@@ -221,6 +237,8 @@ export class ShipmentBlDetailsComponent {
         defaultQty: Number(saved.defaultQty ?? control.get('defaultQty')?.value ?? 1),
         defaultRate: Number(saved.defaultRate ?? control.get('defaultRate')?.value ?? 0),
         requestAmount: Number(saved.requestAmount ?? 0),
+        paymentTo: saved.paymentTo ?? '',
+        paymentTerm: saved.paymentTerm ?? '',
         remarks: saved.remarks ?? '',
         attachmentDocumentUrl: saved.attachmentDocumentUrl || '',
         attachmentDocumentName: saved.attachmentDocumentName || '',
@@ -786,6 +804,16 @@ export class ShipmentBlDetailsComponent {
     return group.get('blDocumentName')?.value || '';
   }
 
+  getCommercialInvoiceDocumentUrl(index: number): string {
+    const actual = this.getActualShipment(index);
+    return actual?.customsOriginalDocuments?.invoice?.documentUrl || actual?.customsOriginalDocuments?.invoiceDocumentUrl || '';
+  }
+
+  getCommercialInvoiceDocumentName(index: number): string {
+    const actual = this.getActualShipment(index);
+    return actual?.customsOriginalDocuments?.invoice?.documentName || actual?.customsOriginalDocuments?.invoiceDocumentName || 'Commercial Invoice Document';
+  }
+
   private formatCurrency(value: unknown): string {
     return Number(value ?? 0).toFixed(2);
   }
@@ -1285,6 +1313,8 @@ export class ShipmentBlDetailsComponent {
     this.savingKey.set(`bl-${index}`);
     const formData = new FormData();
     formData.append('blNo', row.get('blNo')?.value || '');
+    formData.append('commercialInvoiceNo', row.get('commercialInvoiceNo')?.value || '');
+    formData.append('blDetailsRemarks', row.get('blDetailsRemarks')?.value || '');
     formData.append('shippedOnBoard', toDate(row.get('shippedOnBoard')?.value));
     formData.append('portOfLoading', row.get('portOfLoading')?.value || '');
     formData.append('portOfDischarge', row.get('portOfDischarge')?.value || '');
@@ -1343,6 +1373,8 @@ export class ShipmentBlDetailsComponent {
       defaultQty: Number(entry.defaultQty ?? 0),
       defaultRate: Number(entry.defaultRate ?? 0),
       requestAmount: Number(entry.requestAmount ?? 0),
+      paymentTo: entry.paymentTo ?? '',
+      paymentTerm: entry.paymentTerm ?? '',
       // POINT 5: paidAmount removed, replaced with remarks
       remarks: entry.remarks ?? '',
       attachmentDocumentUrl: entry.attachmentDocumentUrl ?? '',
@@ -1374,6 +1406,7 @@ export class ShipmentBlDetailsComponent {
         this.editingCostSheet.update((current) => ({ ...current, [index]: false }));
         this.notificationService.success('Saved', 'Cost sheet booking saved successfully.');
         this.ensureAccordionOpen(index); // POINT 8: keep accordion open
+        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
       },
       error: (error) => {
         this.savingKey.set(null);
@@ -1621,7 +1654,11 @@ export class ShipmentBlDetailsComponent {
         qty: entry.get('defaultQty')?.value ?? 1,
         rate: entry.get('defaultRate')?.value ?? 0,
         amount: Number(entry.get('requestAmount')?.value) || 0,
-        paymentReference: entry.get('remarks')?.value ?? '',
+        paymentReference: [
+          entry.get('paymentTo')?.value ? `Payment To: ${entry.get('paymentTo')?.value}` : '',
+          entry.get('paymentTerm')?.value ? `Term: ${entry.get('paymentTerm')?.value}` : '',
+          entry.get('remarks')?.value ?? '',
+        ].filter(Boolean).join(' | '),
       })),
     });
   }

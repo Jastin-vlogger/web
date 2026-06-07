@@ -30,15 +30,24 @@
 
 .permission-table-shell {
   @apply overflow-x-auto rounded-[1.5rem] border border-slate-200 bg-white;
+  max-width: 100%;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
 }
 
 .permission-table {
-  @apply min-w-full border-collapse;
+  @apply border-collapse;
+  min-width: 980px;
+  width: 100%;
 
   .matrix-expand-col {
     width: 56px;
     min-width: 56px;
   }
+}
+
+.wide-permission-table {
+  min-width: 1180px;
 }
 
 .permission-table thead th {

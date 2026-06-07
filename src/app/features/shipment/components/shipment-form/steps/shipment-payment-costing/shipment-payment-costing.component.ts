@@ -10,6 +10,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
+import { SelectModule } from 'primeng/select';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -43,6 +44,7 @@ import { getComputedShipmentStatus, getShipmentStatusSeverity, type ShipmentStat
     DialogModule,
     InputNumberModule,
     InputTextModule,
+    SelectModule,
     TableModule,
   ],
   templateUrl: './shipment-payment-costing.component.html',
@@ -91,6 +93,22 @@ export class ShipmentPaymentCostingComponent {
   readonly paymentCostingFiles = signal<Record<number, File | null>>({});
   readonly statusModalVisible = signal(false);
   readonly statusModalShipmentIndex = signal<number | null>(null);
+  readonly paymentToOptions = [
+    { label: 'MOFA', value: 'MOFA' },
+    { label: 'Shipping line', value: 'Shipping line' },
+    { label: 'Dubai customs', value: 'Dubai customs' },
+    { label: 'Federal Tax Auth', value: 'Federal Tax Auth' },
+    { label: 'DP World', value: 'DP World' },
+    { label: 'Transporter', value: 'Transporter' },
+    { label: 'Outsourced', value: 'Outsourced' },
+    { label: 'Provider', value: 'Provider' },
+    { label: 'Bank', value: 'Bank' },
+  ];
+  readonly paymentTermOptions = [
+    { label: 'Cash', value: 'Cash' },
+    { label: 'Trans', value: 'Trans' },
+    { label: 'CHQ', value: 'CHQ' },
+  ];
 
   readonly shipmentStages = [
     'Shipment Entry',
@@ -765,7 +783,11 @@ export class ShipmentPaymentCostingComponent {
         amount: requestAmount,
         actualPaid: paidAmount,
         difference: paidAmount - requestAmount,
-        paymentReference: rowEntry.control.get('reference')?.value ?? '',
+        paymentReference: [
+          rowEntry.control.get('paymentTo')?.value ? `Payment To: ${rowEntry.control.get('paymentTo')?.value}` : '',
+          rowEntry.control.get('paymentTerm')?.value ? `Term: ${rowEntry.control.get('paymentTerm')?.value}` : '',
+          rowEntry.control.get('reference')?.value ?? '',
+        ].filter(Boolean).join(' | '),
       };
     });
 
@@ -1018,6 +1040,8 @@ export class ShipmentPaymentCostingComponent {
         defaultRate: [0],
         requestAmount: [null],
         paidAmount: [null],
+        paymentTo: [''],
+        paymentTerm: [''],
         reference: [''],
         attachmentDocumentUrl: [''],
         attachmentDocumentName: [''],
@@ -1326,6 +1350,8 @@ export class ShipmentPaymentCostingComponent {
       visibleTo: normalizeBlVisibleTo(row.get('visibleTo')?.value),
       requestAmount: Number(row.get('requestAmount')?.value) || 0,
       paidAmount: Number(row.get('paidAmount')?.value) || 0,
+      paymentTo: row.get('paymentTo')?.value || '',
+      paymentTerm: row.get('paymentTerm')?.value || '',
       reference: row.get('reference')?.value || '',
       attachmentDocumentUrl: row.get('attachmentDocumentUrl')?.value || '',
       attachmentDocumentName: row.get('attachmentDocumentName')?.value || '',

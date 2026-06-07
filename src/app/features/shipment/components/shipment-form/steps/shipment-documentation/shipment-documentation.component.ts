@@ -267,6 +267,10 @@ export class ShipmentDocumentationComponent {
 
     if (savedCount > 0) {
       this.notificationService.success('Bulk Save Complete', `${savedCount} milestone(s) saved successfully.`);
+      const shipmentId = this.shipmentData()?.shipment?._id;
+      if (shipmentId) {
+        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+      }
     }
   }
 
@@ -734,13 +738,9 @@ export class ShipmentDocumentationComponent {
         return true;
       }
       case 'murabaha_process': {
-        const releasedDate = group.get('murabahaContractReleasedDate')?.value;
         const approvedDate = group.get('murabahaContractApprovedDate')?.value;
-        const missingDates: string[] = [];
-        if (!releasedDate) missingDates.push('Murabaha Contract Released Date');
-        if (!approvedDate) missingDates.push('Murabaha Contract Approved Date');
-        if (missingDates.length > 0) {
-          this.notificationService.error('Required Fields Missing', `Please fill: ${missingDates.join(' and ')}.`);
+        if (!approvedDate) {
+          this.notificationService.error('Required Fields Missing', 'Please fill: Murabaha Released Date.');
           return false;
         }
         return true;
@@ -814,6 +814,10 @@ export class ShipmentDocumentationComponent {
       next: (response) => {
         this.applyDocumentationResponse(index, response?.container?.actual, milestone);
         this.notificationService.success('Saved', `${milestoneLabel[milestone] || milestone} saved successfully.`);
+        const shipmentId = this.shipmentData()?.shipment?._id;
+        if (shipmentId) {
+          this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+        }
       },
       error: (error) => {
         this.savingMilestone.set(null);
@@ -845,8 +849,9 @@ export class ShipmentDocumentationComponent {
     payload.append('receiver', formValue['receiver'] || '');
     payload.append('bankName', formValue['bankName'] || '');
     payload.append('inwardCollectionAdviceDate', toDate(formValue['inwardCollectionAdviceDate']));
-    payload.append('murabahaContractReleasedDate', toDate(formValue['murabahaContractReleasedDate']));
-    payload.append('murabahaContractApprovedDate', toDate(formValue['murabahaContractApprovedDate']));
+    const murabahaReleasedDate = toDate(formValue['murabahaContractApprovedDate']);
+    payload.append('murabahaContractReleasedDate', murabahaReleasedDate);
+    payload.append('murabahaContractApprovedDate', murabahaReleasedDate);
     payload.append('murabahaContractSubmittedDate', toDate(formValue['murabahaContractSubmittedDate']));
     payload.append('documentsReleasedDate', toDate(formValue['documentsReleasedDate']));
 
@@ -862,6 +867,10 @@ export class ShipmentDocumentationComponent {
       next: (response) => {
         this.applyDocumentationResponse(index, response?.container?.actual, 'all');
         this.notificationService.success('Saved', 'Documentation saved successfully.');
+        const shipmentId = this.shipmentData()?.shipment?._id;
+        if (shipmentId) {
+          this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+        }
       },
       error: (error) => {
         this.savingMilestone.set(null);
@@ -901,8 +910,11 @@ export class ShipmentDocumentationComponent {
         break;
       }
       case 'murabaha_process':
-        payload.append('murabahaContractReleasedDate', toDate(formValue['murabahaContractReleasedDate']));
-        payload.append('murabahaContractApprovedDate', toDate(formValue['murabahaContractApprovedDate']));
+        {
+          const murabahaReleasedDate = toDate(formValue['murabahaContractApprovedDate']);
+          payload.append('murabahaContractReleasedDate', murabahaReleasedDate);
+          payload.append('murabahaContractApprovedDate', murabahaReleasedDate);
+        }
         break;
       case 'murabaha_submit': {
         payload.append('murabahaContractSubmittedDate', toDate(formValue['murabahaContractSubmittedDate']));
@@ -940,7 +952,9 @@ export class ShipmentDocumentationComponent {
       inwardCollectionAdviceDocumentUrl: actual.inwardCollectionAdviceDocumentUrl || '',
       inwardCollectionAdviceDocumentName: actual.inwardCollectionAdviceDocumentName || '',
       murabahaContractReleasedDate: actual.murabahaContractReleasedDate ? new Date(actual.murabahaContractReleasedDate) : null,
-      murabahaContractApprovedDate: actual.murabahaContractApprovedDate ? new Date(actual.murabahaContractApprovedDate) : null,
+      murabahaContractApprovedDate: actual.murabahaContractApprovedDate || actual.murabahaContractReleasedDate
+        ? new Date(actual.murabahaContractApprovedDate || actual.murabahaContractReleasedDate)
+        : null,
       murabahaContractSubmittedDate: actual.murabahaContractSubmittedDate ? new Date(actual.murabahaContractSubmittedDate) : null,
       murabahaContractSubmittedDocumentUrl: actual.murabahaContractSubmittedDocumentUrl || '',
       murabahaContractSubmittedDocumentName: actual.murabahaContractSubmittedDocumentName || '',

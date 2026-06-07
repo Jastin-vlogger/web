@@ -7,6 +7,7 @@ import {
   DashboardArrivalSummary,
   DashboardMonthlyTrend,
   DashboardStageBreakdown,
+  DashboardStatusPivot,
   DashboardSummaryResponse,
 } from '../../core/models/shipment.model';
 import { DashboardService } from './services/dashboard.service';
@@ -33,6 +34,14 @@ export class DashboardComponent implements OnInit {
 
   canViewDashboardSection(permissionKey: string): boolean {
     if (!this.rbacService.hasPermissionDefinition('dashboard.section.')) {
+      return this.rbacService.hasPermission('menu.dashboard.view');
+    }
+    return this.rbacService.hasPermission(permissionKey);
+  }
+
+  canViewDashboardPermission(permissionKey: string | null | undefined): boolean {
+    if (!permissionKey) return true;
+    if (!this.rbacService.hasPermissionDefinition('dashboard.')) {
       return this.rbacService.hasPermission('menu.dashboard.view');
     }
     return this.rbacService.hasPermission(permissionKey);
@@ -148,17 +157,11 @@ export class DashboardComponent implements OnInit {
 
   readonly volumeTodayStats = computed(() => {
     const summary = this.dashboard()?.shippingStatus?.volumeToday ?? [];
-    if (summary.length) return summary;
+    if (summary.length) return summary.filter((metric) => this.canViewDashboardPermission(metric.permissionKey));
     const dashboard = this.dashboard();
     if (!dashboard) return [];
-    return [
-      { label: 'Total Shipments', value: dashboard.kpis.totalShipments },
-      { label: 'In Progress', value: dashboard.kpis.inProgressShipments },
-      { label: dashboard.rolePending?.label || 'Pending For Your Role', value: dashboard.rolePending?.count || 0 },
-      { label: 'Overdue Shipments', value: dashboard.arrivalSummary.overdueShipments },
-      { label: 'Open POs', value: dashboard.kpis.totalShipments },
-      { label: 'Late Vendor Shipments', value: dashboard.arrivalSummary.pendingArrivalContainers },
-    ];
+    return [{ label: 'Total Shipments', value: dashboard.kpis.totalShipments, permissionKey: 'dashboard.snapshot.total_shipments.view' }]
+      .filter((metric) => this.canViewDashboardPermission(metric.permissionKey));
   });
 
   readonly inventoryRows = computed(() => {
@@ -213,9 +216,9 @@ export class DashboardComponent implements OnInit {
   });
 
   readonly statusPivot = computed(() => this.dashboard()?.statusPivot ?? null);
+  readonly statusPivotByItem = computed(() => this.dashboard()?.statusPivotByItem ?? null);
 
-  readonly statusPivotChartConfig = computed<ChartData<'bar'>>(() => {
-    const pivot = this.statusPivot();
+  private buildStatusPivotChartConfig(pivot: DashboardStatusPivot | null): ChartData<'bar'> {
     if (!pivot || !pivot.rows.length || !pivot.columns.length) {
       return { labels: [], datasets: [] };
     }
@@ -231,7 +234,10 @@ export class DashboardComponent implements OnInit {
         borderWidth: 1,
       })),
     };
-  });
+  }
+
+  readonly statusPivotChartConfig = computed<ChartData<'bar'>>(() => this.buildStatusPivotChartConfig(this.statusPivot()));
+  readonly statusPivotByItemChartConfig = computed<ChartData<'bar'>>(() => this.buildStatusPivotChartConfig(this.statusPivotByItem()));
 
   formatPivotNumber(value: number | null | undefined): string {
     return Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });

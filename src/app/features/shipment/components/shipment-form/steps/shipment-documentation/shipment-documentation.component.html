@@ -313,13 +313,9 @@
                     </div>
 
                     @if (isMilestoneEditing(i, 'murabaha_process')) {
-                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div class="grid grid-cols-1 gap-4">
                         <div class="flex flex-col gap-1.5">
                           <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Murabaha Released Date</label>
-                          <p-datepicker formControlName="murabahaContractReleasedDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [showIcon]="true" />
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Murabaha Approved Date</label>
                           <p-datepicker formControlName="murabahaContractApprovedDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [showIcon]="true" />
                         </div>
                       </div>
@@ -329,13 +325,9 @@
                         </button>
                       </div>
                     } @else {
-                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-[11px]">
+                      <div class="grid grid-cols-1 gap-4 text-[11px]">
                         <div class="flex flex-col py-1">
-                          <span class="text-slate-400 font-medium">Contract Released</span>
-                          <span class="text-slate-700 font-bold">{{ (group.get('murabahaContractReleasedDate')?.value | date:'dd/MM/yyyy') || 'N/A' }}</span>
-                        </div>
-                        <div class="flex flex-col py-1">
-                          <span class="text-slate-400 font-medium">Contract Approved</span>
+                          <span class="text-slate-400 font-medium">Murabaha Released Date</span>
                           <span class="text-slate-700 font-bold">{{ (group.get('murabahaContractApprovedDate')?.value | date:'dd/MM/yyyy') || 'N/A' }}</span>
                         </div>
                       </div>
