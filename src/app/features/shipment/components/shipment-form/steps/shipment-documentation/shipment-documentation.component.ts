@@ -1052,12 +1052,12 @@ export class ShipmentDocumentationComponent {
     const shipment = this.shipmentData()?.shipment as any;
     const actual = this.shipmentData()?.actual?.[index] as any;
     const planned = this.shipmentData()?.planned?.[index] as any;
-    return actual?.shipmentStatus || planned?.shipmentStatus || shipment?.shipmentStatus || getComputedShipmentStatus({
+    return getComputedShipmentStatus({
       shipmentCurrentStage: shipment?.currentStage,
       plannedRow: planned,
       actualRow: actual,
       fallbackStageLabel: this.getShipmentReachedStage(index),
-    });
+    }) || actual?.shipmentStatus || planned?.shipmentStatus || shipment?.shipmentStatus || 'Shipment Entry';
   }
 
   getStatusBadgeClass(status: string): string {

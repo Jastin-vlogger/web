@@ -805,13 +805,19 @@ export class ShipmentBlDetailsComponent {
   }
 
   getCommercialInvoiceDocumentUrl(index: number): string {
+    const row = this.formArray.at(index);
+    const directUrl = row?.get('commercialInvoiceDocumentUrl')?.value;
+    if (directUrl) return directUrl;
     const actual = this.getActualShipment(index);
-    return actual?.customsOriginalDocuments?.invoice?.documentUrl || actual?.customsOriginalDocuments?.invoiceDocumentUrl || '';
+    return actual?.commercialInvoiceDocumentUrl || actual?.customsOriginalDocuments?.invoice?.documentUrl || actual?.customsOriginalDocuments?.invoiceDocumentUrl || '';
   }
 
   getCommercialInvoiceDocumentName(index: number): string {
+    const row = this.formArray.at(index);
+    const directName = row?.get('commercialInvoiceDocumentName')?.value;
+    if (directName) return directName;
     const actual = this.getActualShipment(index);
-    return actual?.customsOriginalDocuments?.invoice?.documentName || actual?.customsOriginalDocuments?.invoiceDocumentName || 'Commercial Invoice Document';
+    return actual?.commercialInvoiceDocumentName || actual?.customsOriginalDocuments?.invoice?.documentName || actual?.customsOriginalDocuments?.invoiceDocumentName || 'Commercial Invoice Document';
   }
 
   private formatCurrency(value: unknown): string {
@@ -1318,6 +1324,7 @@ export class ShipmentBlDetailsComponent {
     formData.append('shippedOnBoard', toDate(row.get('shippedOnBoard')?.value));
     formData.append('portOfLoading', row.get('portOfLoading')?.value || '');
     formData.append('portOfDischarge', row.get('portOfDischarge')?.value || '');
+    formData.append('shipmentArrived', row.get('shipmentArrived')?.value || 'No');
     formData.append('noOfContainers', String(Number(row.get('noOfContainers')?.value) || 0));
     formData.append('noOfBags', String(Number(row.get('noOfBags')?.value) || 0));
     formData.append('quantityByMt', String(Number(row.get('quantityByMt')?.value) || 0));
@@ -1607,7 +1614,7 @@ export class ShipmentBlDetailsComponent {
       ? `${currentUser.name} (${currentUser.role}) — ${new Date().toLocaleDateString('en-GB')} ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
       : 'Unknown';
 
-    const preparedBy = currentUser ? `${currentUser.name} (${currentUser.role})` : 'Unknown';
+    const preparedBy = 'Prasanna';
     const approval = actual?.clearingAdvanceApproval;
     const approvedBy = this.formatClearingAdvanceApprover(approval);
 
@@ -1654,11 +1661,9 @@ export class ShipmentBlDetailsComponent {
         qty: entry.get('defaultQty')?.value ?? 1,
         rate: entry.get('defaultRate')?.value ?? 0,
         amount: Number(entry.get('requestAmount')?.value) || 0,
-        paymentReference: [
-          entry.get('paymentTo')?.value ? `Payment To: ${entry.get('paymentTo')?.value}` : '',
-          entry.get('paymentTerm')?.value ? `Term: ${entry.get('paymentTerm')?.value}` : '',
-          entry.get('remarks')?.value ?? '',
-        ].filter(Boolean).join(' | '),
+        paymentTo: entry.get('paymentTo')?.value ?? '',
+        paymentTerm: entry.get('paymentTerm')?.value ?? '',
+        paymentReference: entry.get('remarks')?.value ?? '',
       })),
     });
   }
@@ -1689,14 +1694,14 @@ export class ShipmentBlDetailsComponent {
 
   getShipmentStatus(index: number): string {
     const shipment = this.shipmentData()?.shipment as any;
-    const actual = this.shipmentData()?.actual?.[index] as any;
+    const actual = this.getActualShipment(index);
     const planned = this.shipmentData()?.planned?.[index] as any;
-    return actual?.shipmentStatus || planned?.shipmentStatus || shipment?.shipmentStatus || getComputedShipmentStatus({
+    return getComputedShipmentStatus({
       shipmentCurrentStage: shipment?.currentStage,
       plannedRow: planned,
       actualRow: actual,
       fallbackStageLabel: this.getShipmentReachedStage(index),
-    });
+    }) || actual?.shipmentStatus || planned?.shipmentStatus || shipment?.shipmentStatus || 'Shipment Entry';
   }
 
   getStatusBadgeClass(status: string): string {

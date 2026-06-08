@@ -713,6 +713,8 @@ export interface ActualContainer {
   netWeight?: string;
   blDocumentUrl?: string;
   blDocumentName?: string;
+  commercialInvoiceDocumentUrl?: string;
+  commercialInvoiceDocumentName?: string;
   packagingListDocumentUrl?: string;
   packagingListDocumentName?: string;
   costSheetBookingDocumentUrl?: string;
@@ -880,6 +882,7 @@ export interface ActualContainer {
   
   // Step 4 legacy
   clearExpectedOn?: string;
+  shipmentArrived?: 'Yes' | 'No' | string;
   shipmentArrivedOn?: string;
   // Step 4: Arrival — Warehouse (legacy single fields)
   warehouseReceivedOn?: string;

@@ -668,13 +668,53 @@
               </div>
             </td>
             <td class="actual-col-ci">
-              <input
-                pInputText
-                formControlName="commercialInvoiceNo"
-                class="table-input-text w-full"
-                aria-label="Commercial Invoice Number"
-                placeholder="CI-001"
-              />
+              <div class="flex items-center gap-1.5 w-full">
+                <input
+                  pInputText
+                  formControlName="commercialInvoiceNo"
+                  class="table-input-text flex-1 min-w-0"
+                  aria-label="Commercial Invoice Number"
+                  placeholder="CI-001"
+                />
+                @if (!isRowSubmitted(i)) {
+                  <label
+                    class="flex-shrink-0 w-8 h-8 rounded border border-slate-200 flex items-center justify-center cursor-pointer text-slate-500 hover:text-blue-600 transition-colors"
+                    [class.bg-slate-50]="!getCommercialInvoiceDocumentFile(i)"
+                    [class.bg-blue-50]="getCommercialInvoiceDocumentFile(i)"
+                    [class.opacity-40]="!canUploadActualCommercialInvoice()"
+                    [class.pointer-events-none]="!canUploadActualCommercialInvoice()"
+                    [title]="canUploadActualCommercialInvoice() ? 'Upload commercial invoice document' : 'Commercial invoice upload is not enabled for your role'"
+                  >
+                    <i class="pi text-xs" [class.pi-upload]="!getCommercialInvoiceDocumentFile(i)" [class.pi-check]="getCommercialInvoiceDocumentFile(i)" [class.text-blue-600]="getCommercialInvoiceDocumentFile(i)" aria-hidden="true"></i>
+                    <input
+                      type="file"
+                      class="hidden"
+                      accept=".pdf,.jpg,.jpeg,.png,.gif,.webp"
+                      [disabled]="!canUploadActualCommercialInvoice()"
+                      (change)="onCommercialInvoiceDocumentSelected($event, i)"
+                    />
+                  </label>
+                }
+                @if (getCommercialInvoiceDocumentFile(i)) {
+                  <button
+                    type="button"
+                    (click)="openLocalCommercialInvoiceDocumentPreview(i)"
+                    class="flex-shrink-0 w-8 h-8 rounded border border-slate-200 bg-white hover:bg-blue-50 flex items-center justify-center text-slate-500 hover:text-blue-600 transition-colors"
+                    title="Preview Commercial Invoice document"
+                  >
+                    <i class="pi pi-eye text-xs" aria-hidden="true"></i>
+                  </button>
+                } @else if (getSavedCommercialInvoiceDocumentUrl(i)) {
+                  <button
+                    type="button"
+                    (click)="openSavedCommercialInvoiceDocumentPreview(i)"
+                    class="flex-shrink-0 w-8 h-8 rounded border border-slate-200 bg-white hover:bg-blue-50 flex items-center justify-center text-slate-500 hover:text-blue-600 transition-colors"
+                    title="Preview saved Commercial Invoice document"
+                  >
+                    <i class="pi pi-eye text-xs" aria-hidden="true"></i>
+                  </button>
+                }
+              </div>
             </td>
             <td class="actual-col-date">
               <p-datepicker formControlName="shipOnBoardDate" appendTo="body"

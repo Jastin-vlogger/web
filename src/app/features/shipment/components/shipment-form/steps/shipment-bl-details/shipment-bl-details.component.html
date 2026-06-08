@@ -145,7 +145,23 @@
                     </span>
                   </div>
                 </div>
-                <div class="flex flex-col gap-1.5 md:col-span-2 xl:col-span-3">
+                <div class="flex flex-col gap-1.5 md:col-span-2 xl:col-span-1">
+                  <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Shipment Arrived</label>
+                  <div class="flex items-center gap-3 h-10">
+                    <p-toggleswitch
+                      formControlName="shipmentArrived"
+                      trueValue="Yes"
+                      falseValue="No">
+                    </p-toggleswitch>
+                    <span
+                      class="text-xs font-bold"
+                      [class.text-green-600]="group.get('shipmentArrived')?.value === 'Yes'"
+                      [class.text-slate-500]="group.get('shipmentArrived')?.value !== 'Yes'">
+                      {{ group.get('shipmentArrived')?.value || 'No' }}
+                    </span>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-1.5 md:col-span-2 xl:col-span-2">
                   <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Remarks</label>
                   <input pInputText formControlName="blDetailsRemarks" class="table-input-text w-full min-w-0" placeholder="Remarks..." />
                 </div>
@@ -252,7 +268,7 @@
               </div>
 
               @if (getActiveTab(i) === 'cost') {
-                <div class="bl-horizontal-scroll rounded-2xl border border-slate-200 overflow-x-auto overflow-y-hidden" [class.rbac-readonly-shell]="!canEditClearingAdvance()">
+                <div class="rounded-2xl border border-slate-200 overflow-hidden" [class.rbac-readonly-shell]="!canEditClearingAdvance()">
                   <div class="flex flex-col gap-3 px-4 py-3 bg-slate-50 border-b border-slate-100 xl:flex-row xl:items-center xl:justify-between">
                     <div class="flex flex-wrap items-center gap-2 min-w-0">
                       <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Clearing Advance</span>
@@ -354,22 +370,23 @@
                     </div>
                   }
 
-                  <div class="hidden min-w-[1340px] md:grid md:grid-cols-[56px_minmax(220px,1.8fr)_110px_110px_140px_150px_120px_150px_110px] gap-3 px-4 py-2.5 bg-slate-50/70 border-b border-slate-100">
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">SN</span>
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Description</span>
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Quantity</span>
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Rate</span>
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Request Amount</span>
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Payment To</span>
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Payment Term</span>
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Remarks</span>
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider text-center">Attachment</span>
-                  </div>
+                  <div class="bl-horizontal-scroll overflow-x-auto overflow-y-hidden">
+                    <div class="hidden min-w-[1420px] md:grid md:grid-cols-[56px_minmax(220px,1.8fr)_110px_110px_140px_170px_150px_150px_110px] gap-3 px-4 py-2.5 bg-slate-50/70 border-b border-slate-100">
+                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">SN</span>
+                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Description</span>
+                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Quantity</span>
+                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Rate</span>
+                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Request Amount</span>
+                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Payment To</span>
+                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Payment Term</span>
+                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Remarks</span>
+                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider text-center">Attachment</span>
+                    </div>
 
-                  <div class="flex flex-col">
-                    @for (rowEntry of getVisibleCostSheetRows(group, i); track rowEntry.index; let visibleIndex = $index) {
-                        <div [formGroup]="$any(rowEntry.control)" class="border-b last:border-b-0 border-slate-100 p-4">
-                        <div class="hidden min-w-[1340px] md:grid md:grid-cols-[56px_minmax(220px,1.8fr)_110px_110px_140px_150px_120px_150px_110px] gap-3 items-start">
+                    <div class="flex flex-col">
+                      @for (rowEntry of getVisibleCostSheetRows(group, i); track rowEntry.index; let visibleIndex = $index) {
+                          <div [formGroup]="$any(rowEntry.control)" class="border-b last:border-b-0 border-slate-100 p-4">
+                          <div class="hidden min-w-[1420px] md:grid md:grid-cols-[56px_minmax(220px,1.8fr)_110px_110px_140px_170px_150px_150px_110px] gap-3 items-start">
                           <div class="flex items-center min-h-10 text-sm font-bold text-slate-700">{{ visibleIndex + 1 }}</div>
                           <div class="flex items-center min-h-10 text-sm font-semibold text-slate-700">{{ rowEntry.control.get('description')?.value }}</div>
                           <p-inputNumber formControlName="defaultQty" styleClass="w-full" inputStyleClass="table-input w-full" placeholder="0.00" [minFractionDigits]="2" [maxFractionDigits]="2" [useGrouping]="true" [readonly]="!isCostSheetEditing(i)" (onInput)="recalculateCostSheetRequestAmount(rowEntry.control)" (onBlur)="recalculateCostSheetRequestAmount(rowEntry.control)" />
@@ -479,26 +496,27 @@
                       </div>
                     }
                   </div>
-                  <div class="border-t border-slate-100 bg-slate-50/70 px-4 py-3">
-                    <div class="hidden min-w-[1340px] md:grid md:grid-cols-[56px_minmax(220px,1.8fr)_110px_110px_140px_150px_120px_150px_110px] gap-3 items-center">
-                      <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">Total</span>
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                      <span class="text-sm font-black text-slate-800">{{ getCostSheetTotal(group, 'requestAmount') }}</span>
-                      <span></span>
-                      <span></span>
-                      <span class="text-[10px] text-slate-400 italic">—</span>
-                      <span></span>
-                    </div>
-                    <div class="md:hidden grid grid-cols-2 gap-3">
-                      <div class="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                        <div class="text-[10px] font-black uppercase tracking-wider text-slate-500">Total Request</div>
-                        <div class="mt-1 text-sm font-black text-slate-800">{{ getCostSheetTotal(group, 'requestAmount') }}</div>
+                    <div class="border-t border-slate-100 bg-slate-50/70 px-4 py-3">
+                      <div class="hidden min-w-[1420px] md:grid md:grid-cols-[56px_minmax(220px,1.8fr)_110px_110px_140px_170px_150px_150px_110px] gap-3 items-center">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">Total</span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span class="text-sm font-black text-slate-800">{{ getCostSheetTotal(group, 'requestAmount') }}</span>
+                        <span></span>
+                        <span></span>
+                        <span class="text-[10px] text-slate-400 italic">—</span>
+                        <span></span>
                       </div>
-                      <div class="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                        <div class="text-[10px] font-black uppercase tracking-wider text-slate-500">Total Paid</div>
-                        <div class="mt-1 text-sm font-black text-slate-800">{{ getCostSheetTotal(group, 'paidAmount') }}</div>
+                      <div class="md:hidden grid grid-cols-2 gap-3">
+                        <div class="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                          <div class="text-[10px] font-black uppercase tracking-wider text-slate-500">Total Request</div>
+                          <div class="mt-1 text-sm font-black text-slate-800">{{ getCostSheetTotal(group, 'requestAmount') }}</div>
+                        </div>
+                        <div class="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                          <div class="text-[10px] font-black uppercase tracking-wider text-slate-500">Total Paid</div>
+                          <div class="mt-1 text-sm font-black text-slate-800">{{ getCostSheetTotal(group, 'paidAmount') }}</div>
+                        </div>
                       </div>
                     </div>
                   </div>

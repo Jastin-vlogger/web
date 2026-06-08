@@ -26,6 +26,10 @@ export function hasPortOfDischargeMilestone(actualRow: any): boolean {
   return hasMeaningfulValue(actualRow?.portOfDischarge);
 }
 
+export function hasExplicitShipmentArrival(actualRow: any): boolean {
+  return String(actualRow?.shipmentArrived || '').trim().toLowerCase() === 'yes' || hasMeaningfulValue(actualRow?.shipmentArrivedOn);
+}
+
 function toDateOrNull(value: unknown): Date | null {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(value as string);
@@ -57,15 +61,16 @@ function getEtaDate(plannedRow: any, actualRow: any): Date | null {
 }
 
 function hasArrivedAtPortOfDischarge(plannedRow: any, actualRow: any): boolean {
-  return hasPortOfDischargeMilestone(actualRow) && isOnOrBeforeToday(getEtaDate(plannedRow, actualRow));
+  return hasExplicitShipmentArrival(actualRow) || (hasPortOfDischargeMilestone(actualRow) && isOnOrBeforeToday(getEtaDate(plannedRow, actualRow)));
 }
 
 function hasOnTransitStatus(plannedRow: any, actualRow: any): boolean {
+  if (hasArrivedAtPortOfDischarge(plannedRow, actualRow)) return false;
   const etd = getEtdDate(plannedRow, actualRow);
   const eta = getEtaDate(plannedRow, actualRow);
   if (isOnOrBeforeToday(etd) && isAfterToday(eta)) return true;
   if (!hasTransitActualMilestone(actualRow)) return false;
-  return isOnOrBeforeToday(getEtdDate(plannedRow, actualRow)) && !hasArrivedAtPortOfDischarge(plannedRow, actualRow);
+  return isOnOrBeforeToday(getEtdDate(plannedRow, actualRow));
 }
 
 export function getComputedShipmentStatus(params: {

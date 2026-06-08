@@ -9,6 +9,8 @@ export interface AdvanceRequestReportLineItem {
   amount: number | string;
   actualPaid?: number | string;
   difference?: number | string;
+  paymentTo?: string;
+  paymentTerm?: string;
   paymentReference?: string;
 }
 
@@ -115,6 +117,8 @@ export function downloadAdvanceRequestReportPdf(config: AdvanceRequestReportConf
     formatNumber(line.amount, ''),
     formatNumber(line.actualPaid, ''),
     formatNumber(line.difference, ''),
+    safe(line.paymentTo, ''),
+    safe(line.paymentTerm, ''),
     safe(line.paymentReference, ''),
   ]);
 
@@ -136,11 +140,13 @@ export function downloadAdvanceRequestReportPdf(config: AdvanceRequestReportConf
     formatNumber(totals.actualPaid),
     formatNumber(totals.difference),
     '',
+    '',
+    '',
   ]);
 
   autoTable(doc, {
     startY: (doc as any).lastAutoTable.finalY + 10,
-    head: [['S. No.', 'Description', 'Qty', 'Rate', 'Amount', 'Actual Paid', 'Different', 'Payment Ref./Remarks']],
+    head: [['S. No.', 'Description', 'Qty', 'Rate', 'Amount', 'Actual Paid', 'Different', 'Payment To', 'Payment Term', 'Remarks']],
     body: tableRows,
     theme: 'grid',
     styles: {
@@ -165,7 +171,9 @@ export function downloadAdvanceRequestReportPdf(config: AdvanceRequestReportConf
       4: { cellWidth: 72, halign: 'right' },
       5: { cellWidth: 72, halign: 'right' },
       6: { cellWidth: 72, halign: 'right' },
-      7: { cellWidth: 'auto' },
+      7: { cellWidth: 82 },
+      8: { cellWidth: 82 },
+      9: { cellWidth: 'auto' },
     },
     didParseCell: (data: any) => {
       if (data.row.index === tableRows.length - 1) {
@@ -214,7 +222,7 @@ export function downloadAdvanceRequestReportPdf(config: AdvanceRequestReportConf
   });
 
   y = (doc as any).lastAutoTable.finalY + 24;
-  const signatureLabels = ['PREPARED BY', 'APPROVED BY', 'A/C APPROVAL'];
+  const signatureLabels = ['PREPARED BY', 'VERIFIED BY', 'A/C APPROVAL'];
   const signatureWidth = contentWidth / signatureLabels.length;
   signatureLabels.forEach((label, index) => {
     const x = margin + index * signatureWidth;

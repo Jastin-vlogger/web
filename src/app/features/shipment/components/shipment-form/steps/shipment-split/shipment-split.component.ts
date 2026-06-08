@@ -111,6 +111,7 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
   /** Row index for which bill-no extraction is in progress (show spinner). */
   readonly extractingBillNoRowIndex = signal<number | null>(null);
   readonly billDocumentFiles = signal<Record<number, File | null>>({});
+  readonly commercialInvoiceDocumentFiles = signal<Record<number, File | null>>({});
   readonly splitTabOrder: SplitTab[] = ['planned', 'actual', 'history', 'report'];
 
   // ─── Track Order Modal ────────────────────────────────────────────────────
@@ -1068,6 +1069,8 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
         billExtractionData: actual.billExtractionData || null,
         extractedContainers: actual.extractedContainers || [],
         packagingList: actual.packagingList || null,
+        commercialInvoiceDocumentUrl: actual.commercialInvoiceDocumentUrl || '',
+        commercialInvoiceDocumentName: actual.commercialInvoiceDocumentName || '',
         packagingListDocumentUrl: actual.packagingListDocumentUrl || '',
         packagingListDocumentName: actual.packagingListDocumentName || '',
         updatedETD: actual.updatedETD ? new Date(actual.updatedETD) : row.get('updatedETD')?.value,
@@ -1186,6 +1189,10 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
 
   canUploadActualBl(): boolean {
     return this.rbacService.hasPermission('shipment.tab.shipment_tracker_split.actual.upload_bl');
+  }
+
+  canUploadActualCommercialInvoice(): boolean {
+    return this.canUploadActualBl();
   }
 
   onPackagingListFileSelected(event: Event, rowIndex: number): void {
@@ -1442,9 +1449,48 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     return this.packagingListFiles()[rowIndex] ?? null;
   }
 
+  onCommercialInvoiceDocumentSelected(event: Event, rowIndex: number): void {
+    const input = event.target as HTMLInputElement;
+    if (!this.canUploadActualCommercialInvoice()) {
+      input.value = '';
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Upload disabled',
+        detail: 'Commercial invoice upload is not enabled for your role.'
+      });
+      return;
+    }
+
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    const allowedExt = /\.(pdf|jpg|jpeg|png|gif|webp)$/i;
+    if (!allowedTypes.includes(file.type) && !allowedExt.test(file.name)) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Invalid file',
+        detail: 'Only PDF and image files (e.g. JPG, PNG) are allowed.'
+      });
+      input.value = '';
+      return;
+    }
+
+    this.commercialInvoiceDocumentFiles.update((current) => ({ ...current, [rowIndex]: file }));
+    input.value = '';
+  }
+
+  getCommercialInvoiceDocumentFile(rowIndex: number): File | null {
+    return this.commercialInvoiceDocumentFiles()[rowIndex] ?? null;
+  }
+
   clearBillDocumentFile(rowIndex: number): void {
     this.billDocumentFiles.update((current) => ({ ...current, [rowIndex]: null }));
     this.setActualExtractionError(rowIndex, null);
+  }
+
+  clearCommercialInvoiceDocumentFile(rowIndex: number): void {
+    this.commercialInvoiceDocumentFiles.update((current) => ({ ...current, [rowIndex]: null }));
   }
 
   clearPackagingListFile(rowIndex: number): void {
@@ -1472,6 +1518,44 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
 
   getSavedBillDocumentName(index: number): string {
     return this.shipmentData()?.actual?.[index]?.blDocumentName || '';
+  }
+
+  openLocalCommercialInvoiceDocumentPreview(rowIndex: number): void {
+    const file = this.getCommercialInvoiceDocumentFile(rowIndex);
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    window.open(url, '_blank', 'noopener');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+  openSavedCommercialInvoiceDocumentPreview(rowIndex: number): void {
+    const url = this.getSavedCommercialInvoiceDocumentUrl(rowIndex);
+    if (!url) return;
+    window.open(url, '_blank', 'noopener');
+  }
+
+  private getActualDataForRow(index: number): any {
+    const row = this.actualSplits.at(index) as FormGroup | null;
+    const containerId = row?.get('containerId')?.value;
+    const actualRows = this.shipmentData()?.actual || [];
+    return actualRows.find((actual: any) => String(actual?.containerId || '') === String(containerId || '')) || actualRows[index] || null;
+  }
+
+  private getPlannedDataForRow(index: number): any {
+    const row = this.actualSplits.at(index) as FormGroup | null;
+    const containerId = row?.get('containerId')?.value;
+    const plannedRows = this.shipmentData()?.planned || [];
+    return plannedRows.find((planned: any) => String(planned?.containerId || '') === String(containerId || '')) || plannedRows[index] || null;
+  }
+
+  getSavedCommercialInvoiceDocumentUrl(index: number): string {
+    const row = this.actualSplits.at(index) as FormGroup | null;
+    return row?.get('commercialInvoiceDocumentUrl')?.value || this.getActualDataForRow(index)?.commercialInvoiceDocumentUrl || '';
+  }
+
+  getSavedCommercialInvoiceDocumentName(index: number): string {
+    const row = this.actualSplits.at(index) as FormGroup | null;
+    return row?.get('commercialInvoiceDocumentName')?.value || this.getActualDataForRow(index)?.commercialInvoiceDocumentName || '';
   }
 
   openLocalPackagingListPreview(rowIndex: number): void {
@@ -1743,6 +1827,11 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
       payload.append('packaging_list_document', packagingListDocument, packagingListDocument.name);
     }
 
+    const commercialInvoiceDocument = this.getCommercialInvoiceDocumentFile(index);
+    if (commercialInvoiceDocument) {
+      payload.append('commercialInvoiceDocument', commercialInvoiceDocument, commercialInvoiceDocument.name);
+    }
+
     const packagingList = row.get('packagingList')?.value;
     if (packagingList) {
       payload.append('packagingList', JSON.stringify(packagingList));
@@ -1775,6 +1864,7 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
         this.patchActualRowAfterSave(index, response);
         this.clearBillDocumentFile(index);
         this.clearPackagingListFile(index);
+        this.clearCommercialInvoiceDocumentFile(index);
         this.setActualExtractionError(index, null);
         this.store.dispatch(ShipmentActions.submitActualSuccess({ index }));
         this.messageService.add({
@@ -1809,8 +1899,8 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
 
   openTrackOrderModal(rowIndex: number, group: FormGroup): void {
     const shipment = this.shipmentData()?.shipment as any;
-    const actual = this.shipmentData()?.actual?.[rowIndex] as any;
-    const planned = this.shipmentData()?.planned?.[rowIndex] as any;
+    const actual = this.getActualDataForRow(rowIndex) as any;
+    const planned = this.getPlannedDataForRow(rowIndex) as any;
 
     const formatDate = (value: unknown): string => {
       if (!value) return '—';
@@ -1842,14 +1932,22 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
 
   getShipmentStatus(index: number): string {
     const shipment = this.shipmentData()?.shipment as any;
-    const actual = this.shipmentData()?.actual?.[index] as any;
-    const planned = this.shipmentData()?.planned?.[index] as any;
-    return actual?.shipmentStatus || planned?.shipmentStatus || shipment?.shipmentStatus || getComputedShipmentStatus({
+    const row = this.actualSplits.at(index) as FormGroup | null;
+    const actual = {
+      ...(this.getActualDataForRow(index) || {}),
+      BLNo: row?.get('BLNo')?.value || this.getActualDataForRow(index)?.BLNo,
+      commercialInvoiceNo: row?.get('commercialInvoiceNo')?.value || this.getActualDataForRow(index)?.commercialInvoiceNo,
+      shipOnBoardDate: row?.get('shipOnBoardDate')?.value || this.getActualDataForRow(index)?.shipOnBoardDate,
+      updatedETD: row?.get('updatedETD')?.value || this.getActualDataForRow(index)?.updatedETD,
+      updatedETA: row?.get('updatedETA')?.value || this.getActualDataForRow(index)?.updatedETA,
+    };
+    const planned = this.getPlannedDataForRow(index) as any;
+    return getComputedShipmentStatus({
       shipmentCurrentStage: shipment?.currentStage,
       plannedRow: planned,
       actualRow: actual,
       fallbackStageLabel: this.getDisplayStageName(shipment?.currentStage || 'Shipment Entry'),
-    });
+    }) || actual?.shipmentStatus || planned?.shipmentStatus || shipment?.shipmentStatus || 'Shipment Entry';
   }
 
   getStatusBadgeClass(status: string): string {

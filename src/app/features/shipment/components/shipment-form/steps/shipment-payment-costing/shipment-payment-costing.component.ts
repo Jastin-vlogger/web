@@ -783,11 +783,9 @@ export class ShipmentPaymentCostingComponent {
         amount: requestAmount,
         actualPaid: paidAmount,
         difference: paidAmount - requestAmount,
-        paymentReference: [
-          rowEntry.control.get('paymentTo')?.value ? `Payment To: ${rowEntry.control.get('paymentTo')?.value}` : '',
-          rowEntry.control.get('paymentTerm')?.value ? `Term: ${rowEntry.control.get('paymentTerm')?.value}` : '',
-          rowEntry.control.get('reference')?.value ?? '',
-        ].filter(Boolean).join(' | '),
+        paymentTo: rowEntry.control.get('paymentTo')?.value ?? '',
+        paymentTerm: rowEntry.control.get('paymentTerm')?.value ?? '',
+        paymentReference: rowEntry.control.get('reference')?.value ?? '',
       };
     });
 
@@ -815,6 +813,7 @@ export class ShipmentPaymentCostingComponent {
       noOfDaysAtPort: meta.noOfDaysAtPort,
       storage: meta.storage,
       downloadedBy: meta.downloadedBy,
+      preparedBy: 'Prasanna',
       lines,
     });
   }
@@ -921,12 +920,12 @@ export class ShipmentPaymentCostingComponent {
     const shipment = this.shipmentData()?.shipment as any;
     const actual = this.shipmentData()?.actual?.[index] as any;
     const planned = this.shipmentData()?.planned?.[index] as any;
-    return actual?.shipmentStatus || planned?.shipmentStatus || shipment?.shipmentStatus || getComputedShipmentStatus({
+    return getComputedShipmentStatus({
       shipmentCurrentStage: shipment?.currentStage,
       plannedRow: planned,
       actualRow: actual,
       fallbackStageLabel: this.getShipmentReachedStage(index),
-    });
+    }) || actual?.shipmentStatus || planned?.shipmentStatus || shipment?.shipmentStatus || 'Shipment Entry';
   }
 
   getStatusBadgeClass(status: string): string {
