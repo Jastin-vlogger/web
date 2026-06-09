@@ -15,7 +15,15 @@
     @if (initialTab === 'allocation' && hasAllocationRequestAmount(group)) {
       <div class="rounded-2xl border border-slate-200 overflow-hidden">
         <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-slate-50 border-b border-slate-100">
-          <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Payment Allocation</span>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Payment Allocation</span>
+            <span
+              class="inline-flex items-center rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wider"
+              [ngClass]="getPaymentApprovalBadgeClasses(singleShipmentIndex!)"
+            >
+              {{ getPaymentApprovalLabel(singleShipmentIndex!) }}
+            </span>
+          </div>
           <div class="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -25,19 +33,30 @@
               <i class="pi pi-file-export"></i>
               Generate Report
             </button>
-            <button
-              type="button"
-              (click)="saveAllocation(singleShipmentIndex!)"
-              class="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-bold uppercase text-emerald-600 hover:bg-emerald-100"
-            >
-              @if (savingRowIndex() === singleShipmentIndex) {
-                <i class="pi pi-spin pi-spinner"></i>
-                Saving...
-              } @else {
-                <i class="pi pi-check"></i>
-                Save
-              }
-            </button>
+            @if (isAllocationReadOnly(singleShipmentIndex!) && !isAllocationApproved(singleShipmentIndex!)) {
+              <button
+                type="button"
+                (click)="startEditingAllocation(singleShipmentIndex!)"
+                class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-3 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-50"
+              >
+                <i class="pi pi-pencil"></i>
+                Edit
+              </button>
+            } @else if (!isAllocationReadOnly(singleShipmentIndex!)) {
+              <button
+                type="button"
+                (click)="saveAllocation(singleShipmentIndex!)"
+                class="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-bold uppercase text-emerald-600 hover:bg-emerald-100"
+              >
+                @if (savingRowIndex() === singleShipmentIndex) {
+                  <i class="pi pi-spin pi-spinner"></i>
+                  Saving...
+                } @else {
+                  <i class="pi pi-check"></i>
+                  Save
+                }
+              </button>
+            }
           </div>
         </div>
         <div class="w-full overflow-x-auto overflow-y-hidden" formArrayName="paymentAllocations">
@@ -77,20 +96,20 @@
                     <div class="table-input-text w-full bg-slate-50 min-h-[52px] flex items-center justify-center">{{ rowEntry.control.get('requestAmount')?.value ?? 0 }}</div>
                   </td>
                   <td class="px-4 py-4 align-middle">
-                    <p-inputNumber formControlName="paidAmount" styleClass="w-full" inputStyleClass="table-input w-full" [minFractionDigits]="2" [maxFractionDigits]="2"></p-inputNumber>
+                    <p-inputNumber formControlName="paidAmount" styleClass="w-full" inputStyleClass="table-input w-full" [readonly]="isAllocationReadOnly(singleShipmentIndex!)" [minFractionDigits]="2" [maxFractionDigits]="2"></p-inputNumber>
                   </td>
                   <td class="px-4 py-4 align-middle">
-                    <p-select formControlName="paymentTo" [options]="paymentToOptions" optionLabel="label" optionValue="value" placeholder="Payment To" styleClass="w-full" appendTo="body" />
+                    <p-select formControlName="paymentTo" [options]="paymentToOptions" optionLabel="label" optionValue="value" placeholder="Payment To" styleClass="w-full" appendTo="body" [disabled]="isAllocationReadOnly(singleShipmentIndex!)" />
                   </td>
                   <td class="px-4 py-4 align-middle">
-                    <p-select formControlName="paymentTerm" [options]="paymentTermOptions" optionLabel="label" optionValue="value" placeholder="Term" styleClass="w-full" appendTo="body" />
+                    <p-select formControlName="paymentTerm" [options]="paymentTermOptions" optionLabel="label" optionValue="value" placeholder="Term" styleClass="w-full" appendTo="body" [disabled]="isAllocationReadOnly(singleShipmentIndex!)" />
                   </td>
                   <td class="px-4 py-4 align-middle">
-                    <input pInputText formControlName="reference" class="table-input-text w-full" placeholder="Reference" />
+                    <input pInputText formControlName="reference" class="table-input-text w-full" placeholder="Reference" [readonly]="isAllocationReadOnly(singleShipmentIndex!)" />
                   </td>
                   <td class="px-4 py-4 align-middle text-center">
                     <div class="flex justify-center gap-2">
-                      <button type="button" (click)="clickAllocationAttachmentUpload(singleShipmentIndex!, rowEntry.index)" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-upload"></i></button>
+                      <button type="button" (click)="clickAllocationAttachmentUpload(singleShipmentIndex!, rowEntry.index)" [disabled]="isAllocationReadOnly(singleShipmentIndex!)" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"><i class="pi pi-upload"></i></button>
                       @if (getAllocationAttachmentFile(singleShipmentIndex!, rowEntry.index)) {
                         <button type="button" (click)="openDocumentPreview(getAllocationAttachmentFile(singleShipmentIndex!, rowEntry.index)!, 'Payment Allocation Attachment')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
                         <button type="button" (click)="clearAllocationAttachmentFile(singleShipmentIndex!, rowEntry.index)" class="w-9 h-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"><i class="pi pi-trash"></i></button>
@@ -331,7 +350,15 @@
             @if (getActiveTab(i) === 'allocation' && hasAllocationRequestAmount(group)) {
               <div class="rounded-2xl border border-slate-200 overflow-hidden">
                 <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-slate-50 border-b border-slate-100">
-                  <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Payment Allocation</span>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Payment Allocation</span>
+                    <span
+                      class="inline-flex items-center rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wider"
+                      [ngClass]="getPaymentApprovalBadgeClasses(i)"
+                    >
+                      {{ getPaymentApprovalLabel(i) }}
+                    </span>
+                  </div>
                   <div class="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
@@ -341,19 +368,30 @@
                       <i class="pi pi-file-export"></i>
                       Generate Report
                     </button>
-                    <button
-                      type="button"
-                      (click)="saveAllocation(i)"
-                      class="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-bold uppercase text-emerald-600 hover:bg-emerald-100"
-                    >
-                      @if (savingRowIndex() === i) {
-                        <i class="pi pi-spin pi-spinner"></i>
-                        Saving...
-                      } @else {
-                        <i class="pi pi-check"></i>
-                        Save
-                      }
-                    </button>
+                    @if (isAllocationReadOnly(i) && !isAllocationApproved(i)) {
+                      <button
+                        type="button"
+                        (click)="startEditingAllocation(i)"
+                        class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-3 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-50"
+                      >
+                        <i class="pi pi-pencil"></i>
+                        Edit
+                      </button>
+                    } @else if (!isAllocationReadOnly(i)) {
+                      <button
+                        type="button"
+                        (click)="saveAllocation(i)"
+                        class="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-bold uppercase text-emerald-600 hover:bg-emerald-100"
+                      >
+                        @if (savingRowIndex() === i) {
+                          <i class="pi pi-spin pi-spinner"></i>
+                          Saving...
+                        } @else {
+                          <i class="pi pi-check"></i>
+                          Save
+                        }
+                      </button>
+                    }
                   </div>
                 </div>
                 <div class="w-full overflow-x-auto overflow-y-hidden" formArrayName="paymentAllocations">
@@ -393,20 +431,20 @@
                             <div class="table-input-text w-full bg-slate-50 min-h-[52px] flex items-center justify-center">{{ rowEntry.control.get('requestAmount')?.value ?? 0 }}</div>
                           </td>
                           <td class="px-4 py-4 align-middle">
-                            <p-inputNumber formControlName="paidAmount" styleClass="w-full" inputStyleClass="table-input w-full" [minFractionDigits]="2" [maxFractionDigits]="2"></p-inputNumber>
+                            <p-inputNumber formControlName="paidAmount" styleClass="w-full" inputStyleClass="table-input w-full" [readonly]="isAllocationReadOnly(i)" [minFractionDigits]="2" [maxFractionDigits]="2"></p-inputNumber>
                           </td>
                           <td class="px-4 py-4 align-middle">
-                            <p-select formControlName="paymentTo" [options]="paymentToOptions" optionLabel="label" optionValue="value" placeholder="Payment To" styleClass="w-full" appendTo="body" />
+                            <p-select formControlName="paymentTo" [options]="paymentToOptions" optionLabel="label" optionValue="value" placeholder="Payment To" styleClass="w-full" appendTo="body" [disabled]="isAllocationReadOnly(i)" />
                           </td>
                           <td class="px-4 py-4 align-middle">
-                            <p-select formControlName="paymentTerm" [options]="paymentTermOptions" optionLabel="label" optionValue="value" placeholder="Term" styleClass="w-full" appendTo="body" />
+                            <p-select formControlName="paymentTerm" [options]="paymentTermOptions" optionLabel="label" optionValue="value" placeholder="Term" styleClass="w-full" appendTo="body" [disabled]="isAllocationReadOnly(i)" />
                           </td>
                           <td class="px-4 py-4 align-middle">
-                            <input pInputText formControlName="reference" class="table-input-text w-full" placeholder="Reference" />
+                            <input pInputText formControlName="reference" class="table-input-text w-full" placeholder="Reference" [readonly]="isAllocationReadOnly(i)" />
                           </td>
                           <td class="px-4 py-4 align-middle text-center">
                             <div class="flex justify-center gap-2">
-                              <button type="button" (click)="clickAllocationAttachmentUpload(i, rowEntry.index)" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-upload"></i></button>
+                              <button type="button" (click)="clickAllocationAttachmentUpload(i, rowEntry.index)" [disabled]="isAllocationReadOnly(i)" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"><i class="pi pi-upload"></i></button>
                               @if (getAllocationAttachmentFile(i, rowEntry.index)) {
                                 <button type="button" (click)="openDocumentPreview(getAllocationAttachmentFile(i, rowEntry.index)!, 'Payment Allocation Attachment')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
                                 <button type="button" (click)="clearAllocationAttachmentFile(i, rowEntry.index)" class="w-9 h-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"><i class="pi pi-trash"></i></button>

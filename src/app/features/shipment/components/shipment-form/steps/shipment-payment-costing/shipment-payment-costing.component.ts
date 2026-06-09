@@ -81,6 +81,7 @@ export class ShipmentPaymentCostingComponent {
   readonly submittedStep7Indices = toSignal(this.store.select(selectSubmittedStep7Indices), { initialValue: [] });
   readonly expandedAllocations = signal<Record<number, boolean>>({});
   readonly expandedCostings = signal<Record<number, boolean>>({});
+  readonly editingAllocations = signal<Record<number, boolean>>({});
   readonly savingRowIndex = signal<number | null>(null);
   readonly generatingCostingReportIndex = signal<number | null>(null);
   readonly packagingModalVisible = signal(false);
@@ -219,6 +220,7 @@ export class ShipmentPaymentCostingComponent {
     noOfDaysAtPort: string;
     storage: string;
     downloadedBy: string;
+    preparedBy: string;
   } {
     const shipment = this.shipmentData()?.shipment as any;
     const actual = this.shipmentData()?.actual?.[index] as any;
@@ -243,6 +245,7 @@ export class ShipmentPaymentCostingComponent {
       noOfDaysAtPort,
       storage: this.getStorageSummary(actual),
       downloadedBy: this.getDownloadedByLabel(),
+      preparedBy: actual?.logisticPreparedBy || '',
     };
   }
 
@@ -813,7 +816,7 @@ export class ShipmentPaymentCostingComponent {
       noOfDaysAtPort: meta.noOfDaysAtPort,
       storage: meta.storage,
       downloadedBy: meta.downloadedBy,
-      preparedBy: 'Prasanna',
+      preparedBy: meta.preparedBy,
       lines,
     });
   }
@@ -970,6 +973,44 @@ export class ShipmentPaymentCostingComponent {
     const shipment = this.shipmentData()?.actual?.[index];
     const rows = shipment?.paymentAllocations || [];
     return rows.some((entry: any) => Number(entry?.requestAmount || 0) > 0 || Number(entry?.paidAmount || 0) > 0);
+  }
+
+  private getPaymentApprovalStatus(index: number): 'draft' | 'pending_fas_manager' | 'approved' {
+    const shipment = this.shipmentData()?.actual?.[index];
+    const rawStatus = shipment?.paymentCostingApproval?.status || 'draft';
+    if (rawStatus === 'pending_fas_manager' || rawStatus === 'approved') return rawStatus;
+    return this.isAllocationSaved(index) ? 'pending_fas_manager' : 'draft';
+  }
+
+  getPaymentApprovalLabel(index: number): string {
+    const status = this.getPaymentApprovalStatus(index);
+    if (status === 'pending_fas_manager') return 'Pending FAS Manager Approval';
+    if (status === 'approved') return 'Approved';
+    return 'Draft';
+  }
+
+  getPaymentApprovalBadgeClasses(index: number): string {
+    const status = this.getPaymentApprovalStatus(index);
+    if (status === 'approved') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+    if (status === 'pending_fas_manager') return 'border-amber-200 bg-amber-50 text-amber-700';
+    return 'border-slate-200 bg-slate-50 text-slate-600';
+  }
+
+  isAllocationApproved(index: number): boolean {
+    return this.getPaymentApprovalStatus(index) === 'approved';
+  }
+
+  isAllocationEditing(index: number): boolean {
+    return !!this.editingAllocations()[index];
+  }
+
+  isAllocationReadOnly(index: number): boolean {
+    return this.isAllocationApproved(index) || (this.isAllocationSaved(index) && !this.isAllocationEditing(index));
+  }
+
+  startEditingAllocation(index: number): void {
+    if (this.isAllocationApproved(index)) return;
+    this.editingAllocations.update((current) => ({ ...current, [index]: true }));
   }
 
   isCostingSaved(index: number): boolean {
@@ -1370,7 +1411,7 @@ export class ShipmentPaymentCostingComponent {
       next: () => {
         this.savingRowIndex.set(null);
         this.notificationService.success('Saved', 'Payment allocation saved successfully.');
-        this.setActiveTab(index, 'costing');
+        this.editingAllocations.update((current) => ({ ...current, [index]: false }));
         this.getPaymentAllocations(group).controls.forEach((_, rowIndex) => this.clearAllocationAttachmentFile(index, rowIndex));
         this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
       },

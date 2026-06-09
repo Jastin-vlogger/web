@@ -1614,7 +1614,7 @@ export class ShipmentBlDetailsComponent {
       ? `${currentUser.name} (${currentUser.role}) — ${new Date().toLocaleDateString('en-GB')} ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
       : 'Unknown';
 
-    const preparedBy = 'Prasanna';
+    const preparedBy = actual?.logisticPreparedBy || '';
     const approval = actual?.clearingAdvanceApproval;
     const approvedBy = this.formatClearingAdvanceApprover(approval);
 

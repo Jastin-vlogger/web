@@ -634,7 +634,7 @@ export interface WarehouseSchedule extends DeliverySchedule {
 export interface ClearingAdvanceApprovalState {
   status?: 'draft' | 'pending_fas' | 'pending_fas_manager' | 'approved';
   submittedAt?: string | null;
-  submittedBy?: string | null;
+  submittedBy?: string | { _id?: string; name?: string; email?: string; role?: string } | null;
   fasApprovedAt?: string | null;
   fasApprovedBy?: string | { _id?: string; name?: string; email?: string; role?: string } | null;
   fasManagerApprovedAt?: string | null;
@@ -751,6 +751,13 @@ export interface ActualContainer {
     attachmentDocumentUrl?: string;
     attachmentDocumentName?: string;
   }[];
+  logisticPreparedBy?: string;
+  logisticPreparedByUser?: {
+    name?: string;
+    role?: string;
+    label?: string;
+    submittedAt?: string;
+  } | null;
   clearingAdvanceApproval?: ClearingAdvanceApprovalState;
   storageAllocations?: {
     sn?: number;

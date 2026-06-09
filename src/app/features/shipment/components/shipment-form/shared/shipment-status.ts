@@ -12,6 +12,17 @@ export function hasAssignedWarehouse(actualRow: any): boolean {
   return storageRows.some((row) => hasMeaningfulValue(row?.warehouse));
 }
 
+export function hasWarehouseReceipt(actualRow: any): boolean {
+  const storageRows = Array.isArray(actualRow?.storageSplits) ? actualRow.storageSplits : [];
+  return storageRows.some((row: any) =>
+    hasMeaningfulValue(row?.receivedOnDate) ||
+    hasMeaningfulValue(row?.receivedOnTime) ||
+    hasMeaningfulValue(row?.grn) ||
+    hasMeaningfulValue(row?.batch) ||
+    hasMeaningfulValue(row?.documentUrl)
+  );
+}
+
 export function hasTransitActualMilestone(actualRow: any): boolean {
   return [
     actualRow?.BLNo,
@@ -46,31 +57,19 @@ function isOnOrBeforeToday(date: Date | null): boolean {
   return startOfLocalDay(date).getTime() <= today.getTime();
 }
 
-function isAfterToday(date: Date | null): boolean {
-  if (!date) return false;
-  const today = startOfLocalDay(new Date());
-  return startOfLocalDay(date).getTime() > today.getTime();
-}
-
 function getEtdDate(plannedRow: any, actualRow: any): Date | null {
   return toDateOrNull(actualRow?.updatedETD || plannedRow?.etd);
 }
 
-function getEtaDate(plannedRow: any, actualRow: any): Date | null {
-  return toDateOrNull(actualRow?.updatedETA || plannedRow?.eta);
-}
-
-function hasArrivedAtPortOfDischarge(plannedRow: any, actualRow: any): boolean {
-  return hasExplicitShipmentArrival(actualRow) || (hasPortOfDischargeMilestone(actualRow) && isOnOrBeforeToday(getEtaDate(plannedRow, actualRow)));
+function hasArrivedAtPortOfDischarge(actualRow: any): boolean {
+  return hasExplicitShipmentArrival(actualRow);
 }
 
 function hasOnTransitStatus(plannedRow: any, actualRow: any): boolean {
-  if (hasArrivedAtPortOfDischarge(plannedRow, actualRow)) return false;
+  if (hasArrivedAtPortOfDischarge(actualRow)) return false;
   const etd = getEtdDate(plannedRow, actualRow);
-  const eta = getEtaDate(plannedRow, actualRow);
-  if (isOnOrBeforeToday(etd) && isAfterToday(eta)) return true;
   if (!hasTransitActualMilestone(actualRow)) return false;
-  return isOnOrBeforeToday(getEtdDate(plannedRow, actualRow));
+  return isOnOrBeforeToday(etd);
 }
 
 export function getComputedShipmentStatus(params: {
@@ -83,7 +82,11 @@ export function getComputedShipmentStatus(params: {
   const actualRow = params.actualRow;
   const plannedRow = params.plannedRow;
 
-  if (hasArrivedAtPortOfDischarge(plannedRow, actualRow)) {
+  if (hasWarehouseReceipt(actualRow)) {
+    return 'Delivered WH';
+  }
+
+  if (hasArrivedAtPortOfDischarge(actualRow)) {
     return 'At Port of Discharge';
   }
 
@@ -93,18 +96,19 @@ export function getComputedShipmentStatus(params: {
 
   const plannedEtd = plannedRow?.etd ? new Date(plannedRow.etd) : null;
   if (plannedEtd && !Number.isNaN(plannedEtd.getTime())) {
-    return 'ETD yet to due';
+    return 'ETA yet to due';
   }
 
-  return String(params.fallbackStageLabel || params.shipmentCurrentStage || 'Shipment Entry').trim();
+  const fallback = String(params.fallbackStageLabel || params.shipmentCurrentStage || 'Shipment Entry').trim();
+  return fallback === 'Shipment Entry' ? 'ETD yet to be confirmed' : fallback;
 }
 
 export function getShipmentStatusSeverity(status: string): ShipmentStatusSeverity {
   const normalized = String(status || '').trim().toLowerCase();
-  if (normalized === 'reached wh') return 'success';
+  if (normalized === 'reached wh' || normalized === 'delivered wh') return 'success';
   if (normalized === 'at port of discharge') return 'warn';
   if (normalized === 'on transit') return 'info';
-  if (normalized === 'etd yet to due') return 'secondary';
+  if (normalized === 'eta yet to due' || normalized === 'etd yet to due' || normalized === 'etd yet to be confirmed') return 'secondary';
   if (normalized === 'payment & costing' || normalized === 'quality') return 'success';
   if (normalized === 'shipment tracker' || normalized === 'shipment split') return 'info';
   return 'warn';
