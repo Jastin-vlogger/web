@@ -95,7 +95,10 @@ export class ShipmentListComponent implements OnInit {
     }
 
     getDisplayStageName(status: string | null | undefined): string {
-        return String(status || '').trim() === 'Planned Split' ? 'Shipment Split' : String(status || '');
+        const normalized = String(status || '').trim();
+        if (normalized === 'Planned Split') return 'Shipment Split';
+        if (normalized === 'Shipment Entry') return 'ETD yet to be confirmed';
+        return normalized;
     }
 
     getSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
@@ -105,7 +108,7 @@ export class ShipmentListComponent implements OnInit {
         if (s.includes('reached wh')) return 'success';
         if (s.includes('at port of discharge')) return 'warn';
         if (s.includes('on transit')) return 'info';
-        if (s.includes('etd yet to due')) return 'secondary';
+        if (s.includes('etd yet to due') || s.includes('etd yet to be confirmed') || s.includes('eta yet to due')) return 'secondary';
         if (s.includes('completed') || s === 'payment costing') return 'success';
         if (s.includes('quality')) return 'success';
         if (s.includes('storage')) return 'info';
