@@ -26,6 +26,7 @@ import {
   selectSubmittingRowIndex,
 } from '../../../../../../store/shipment/shipment.selectors';
 import * as ShipmentActions from '../../../../../../store/shipment/shipment.actions';
+import { isDocumentationCompleteForCurrentFlow } from '../../shared/document-tracker-milestones';
 
 type Step5DocKind =
   | 'arrivalNotice'
@@ -650,31 +651,7 @@ export class ShipmentArrivalComponent {
     const shipment = this.shipmentData()?.actual?.[index];
     if (!shipment) return false;
 
-    const isBankReceiver = String(shipment.receiver || '').trim().toLowerCase() === 'bank';
-    const milestones = isBankReceiver
-      ? ['courier', 'receiving', 'inward', 'murabaha_process', 'murabaha_submit', 'release']
-      : ['courier', 'receiving', 'release'];
-
-    return milestones.every((milestone) => this.isDocumentTrackerMilestoneSaved(shipment, milestone));
-  }
-
-  private isDocumentTrackerMilestoneSaved(shipment: any, milestone: string): boolean {
-    switch (milestone) {
-      case 'courier':
-        return !!(shipment.courierTrackNo || shipment.courierServiceProvider || shipment.docArrivalNotes);
-      case 'receiving':
-        return !!(shipment.expectedDocDate || (shipment.receiver && shipment.bankName));
-      case 'inward':
-        return !!(shipment.inwardCollectionAdviceDate || shipment.inwardCollectionAdviceDocumentUrl);
-      case 'murabaha_process':
-        return !!(shipment.murabahaContractReleasedDate || shipment.murabahaContractApprovedDate);
-      case 'murabaha_submit':
-        return !!(shipment.murabahaContractSubmittedDate || shipment.murabahaContractSubmittedDocumentUrl);
-      case 'release':
-        return !!(shipment.documentsReleasedDate || shipment.documentsReleasedDocumentUrl);
-      default:
-        return false;
-    }
+    return isDocumentationCompleteForCurrentFlow(shipment);
   }
 
   getTransportationRows(group: AbstractControl): FormArray {

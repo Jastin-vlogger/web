@@ -37,6 +37,7 @@ import { RbacService } from '../../../../core/services/rbac.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { ShipmentService } from '../../../../core/services/shipment.service';
 import { BL_ROW_DEFINITIONS, normalizeBlVisibleTo, type BlRowDefinition } from './shared/bl-row-definitions';
+import { isDocumentationCompleteForCurrentFlow } from './shared/document-tracker-milestones';
 
 type ShipmentTabKey =
   | 'shipment_entry'
@@ -372,9 +373,9 @@ export class ShipmentFormComponent implements OnDestroy {
   }
 
   /**
-   * Returns true only when every actual shipment row has all 6 Document Tracker
-   * milestones saved (courier, receiving, inward, murabaha_process, murabaha_submit, release).
-   * Step 4 (Port & Customs) is gated behind this check.
+   * For now, Document Tracker completes at milestone 4 for Bank receivers
+   * and milestone 2 for Direct receivers. Milestones 5/6 remain in the data
+   * model for compatibility but are paused in the active workflow.
    */
   isStep3AllMilestonesCompleted(): boolean {
     if (this.documentationSplits.length > 0) {
@@ -391,21 +392,18 @@ export class ShipmentFormComponent implements OnDestroy {
     const getValue = (field: string) =>
       row instanceof AbstractControl ? row.get(field)?.value : row?.[field];
 
-    const hasCourier = !!(getValue('courierTrackNo') || getValue('courierServiceProvider') || getValue('docArrivalNotes'));
-    const hasReceiving = !!(getValue('expectedDocDate') || (getValue('receiver') && getValue('bankName')));
-    const hasRelease = !!(getValue('documentsReleasedDate') || getValue('documentsReleasedDocumentUrl'));
-
-    const receiver = String(getValue('receiver') || '').trim().toLowerCase();
-    const isDirect = receiver === 'direct';
-    if (isDirect) {
-      return hasCourier && hasReceiving && hasRelease;
-    }
-
-    const hasInward = !!(getValue('inwardCollectionAdviceDate') || getValue('inwardCollectionAdviceDocumentUrl'));
-    const hasMurabahaProcess = !!(getValue('murabahaContractReleasedDate') || getValue('murabahaContractApprovedDate'));
-    const hasMurabahaSubmit = !!(getValue('murabahaContractSubmittedDate') || getValue('murabahaContractSubmittedDocumentUrl'));
-
-    return hasCourier && hasReceiving && hasInward && hasMurabahaProcess && hasMurabahaSubmit && hasRelease;
+    return isDocumentationCompleteForCurrentFlow({
+      courierTrackNo: getValue('courierTrackNo'),
+      courierServiceProvider: getValue('courierServiceProvider'),
+      docArrivalNotes: getValue('docArrivalNotes'),
+      expectedDocDate: getValue('expectedDocDate'),
+      receiver: getValue('receiver'),
+      bankName: getValue('bankName'),
+      inwardCollectionAdviceDate: getValue('inwardCollectionAdviceDate'),
+      inwardCollectionAdviceDocumentUrl: getValue('inwardCollectionAdviceDocumentUrl'),
+      murabahaContractReleasedDate: getValue('murabahaContractReleasedDate'),
+      murabahaContractApprovedDate: getValue('murabahaContractApprovedDate'),
+    });
   }
 
   isStep5Completed(): boolean {
@@ -1955,8 +1953,6 @@ export class ShipmentFormComponent implements OnDestroy {
         'bankName',
         'inwardCollectionAdviceDate',
         'murabahaContractApprovedDate',
-        'murabahaContractSubmittedDate',
-        'documentsReleasedDate',
       ];
 
       const missing = requiredFields.some((field) => !control.get(field)?.value);

@@ -7,6 +7,7 @@ import { ShipmentService } from '../../core/services/shipment.service';
 import { NotificationService } from '../../core/services/notification.service';
 import * as ShipmentActions from './shipment.actions';
 import { selectShipmentId } from './shipment.selectors';
+import { isDocumentationCompleteForCurrentFlow } from '../../features/shipment/components/shipment-form/shared/document-tracker-milestones';
 
 @Injectable()
 export class ShipmentEffects {
@@ -34,14 +35,7 @@ export class ShipmentEffects {
             planned.forEach((container, index) => {
               const actualData = actual.find((a) => a.containerId === container.containerId);
               if (actualData?.BLNo) submittedActualIndices.push(index);
-              if (
-                actualData?.receiver ||
-                actualData?.expectedDocDate ||
-                actualData?.courierTrackNo ||
-                actualData?.inwardCollectionAdviceDocumentUrl ||
-                actualData?.murabahaContractSubmittedDocumentUrl ||
-                actualData?.documentsReleasedDocumentUrl
-              ) submittedStep3Indices.push(index);
+              if (actualData && isDocumentationCompleteForCurrentFlow(actualData)) submittedStep3Indices.push(index);
               
               // Step 4 (Port & Customs) — mark as started when at least one logistics
               // section has been saved (locked). Previously required ALL 7 sections.

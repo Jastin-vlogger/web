@@ -22,6 +22,14 @@ import {
 } from '../../../../../../store/shipment/shipment.selectors';
 import * as ShipmentActions from '../../../../../../store/shipment/shipment.actions';
 import { getComputedShipmentStatus, getShipmentStatusSeverity, type ShipmentStatusSeverity } from '../../shared/shipment-status';
+import {
+  DOCUMENT_MILESTONE_LABELS,
+  type DocumentMilestoneKey,
+  getActiveDocumentMilestones,
+  isDocumentationCompleteForCurrentFlow,
+  isDocumentationMilestoneComplete,
+  isPausedDocumentMilestone,
+} from '../../shared/document-tracker-milestones';
 
 @Component({
   selector: 'app-shipment-documentation',
@@ -138,6 +146,7 @@ export class ShipmentDocumentationComponent {
   private sanitizer = inject(DomSanitizer);
   private rbacService = inject(RbacService);
   private shipmentService = inject(ShipmentService);
+  readonly documentMilestoneLabels = DOCUMENT_MILESTONE_LABELS;
 
   private readonly DOCUMENT_MILESTONE_VIEW_KEYS: Record<string, string> = {
     courier: 'shipment.tab.document_tracker.milestone_1.view',
@@ -236,11 +245,10 @@ export class ShipmentDocumentationComponent {
   }
 
   async executeBulkSave(index: number): Promise<void> {
-    const milestones = ['courier', 'receiving', 'inward', 'murabaha_process', 'murabaha_submit', 'release'];
     const group = this.formArray.at(index) as FormGroup;
     if (!group) return;
 
-    const editableMilestones = milestones.filter(m =>
+    const editableMilestones = this.getActiveMilestonesForGroup(group).filter(m =>
       this.isMilestoneVisible(index, m, group) &&
       this.canEditMilestone(m) &&
       !this.isMilestoneSaved(index, m)
@@ -297,31 +305,18 @@ export class ShipmentDocumentationComponent {
 
   /** Checks if a specific milestone has data saved from the server (Source of Truth). */
   isMilestoneSaved(index: number, milestone: string): boolean {
+    if (isPausedDocumentMilestone(milestone)) return false;
     if (this.savedMilestoneOverrides()[index]?.[milestone]) {
       return true;
     }
     const shipment = this.shipmentData()?.actual?.[index];
     if (!shipment) return false;
 
-    switch (milestone) {
-      case 'courier':
-        return !!(shipment.courierTrackNo || shipment.courierServiceProvider || shipment.docArrivalNotes);
-      case 'receiving':
-        return !!(shipment.expectedDocDate || (shipment.receiver && shipment.bankName));
-      case 'inward':
-        return !!(shipment.inwardCollectionAdviceDate || shipment.inwardCollectionAdviceDocumentUrl);
-      case 'murabaha_process':
-        return !!(shipment.murabahaContractReleasedDate || shipment.murabahaContractApprovedDate);
-      case 'murabaha_submit':
-        return !!(shipment.murabahaContractSubmittedDate || shipment.murabahaContractSubmittedDocumentUrl);
-      case 'release':
-        return !!(shipment.documentsReleasedDate || shipment.documentsReleasedDocumentUrl);
-      default:
-        return false;
-    }
+    return isDocumentationMilestoneComplete(shipment, milestone as DocumentMilestoneKey);
   }
 
   isMilestoneEditing(index: number, milestone: string): boolean {
+    if (isPausedDocumentMilestone(milestone)) return false;
     if (!this.canEditMilestone(milestone)) return false;
     const rowEditing = this.editingMilestones()[index];
     if (rowEditing?.[milestone]) return true;
@@ -329,6 +324,7 @@ export class ShipmentDocumentationComponent {
   }
 
   isMilestoneVisible(index: number, milestone: string, group: FormGroup): boolean {
+    if (isPausedDocumentMilestone(milestone)) return false;
     if (!this.canViewMilestone(milestone)) return false;
     const hasMilestone1 =
       String(group.get('BLNo')?.value || '').trim().length > 0 &&
@@ -337,8 +333,8 @@ export class ShipmentDocumentationComponent {
     const hasMilestone2 = this.isMilestoneFilled(group, 'receiving');
     const isBank = this.isBankReceiver(group);
 
-    // For Direct receiver: skip milestones 3, 4, 5 — go straight to 6 after M2
-    // For Bank receiver: full chain M1 → M2 → M3 → M4 → M5 → M6
+    // Milestones 5 and 6 are intentionally paused for now.
+    // Current completion point: Bank receivers finish at M4, Direct receivers finish at M2.
 
     if (milestone === 'receiving') return hasMilestone1;
 
@@ -352,44 +348,30 @@ export class ShipmentDocumentationComponent {
       return isBank && this.isMilestoneFilled(group, 'inward');
     }
 
-    if (milestone === 'murabaha_submit') {
-      // Only show for Bank receiver, after murabaha_process is filled
-      return isBank && this.isMilestoneFilled(group, 'murabaha_process');
-    }
-
-    if (milestone === 'release') {
-      if (!hasMilestone2) return false;
-      if (isBank) {
-        // Bank: require murabaha_submit to be filled before release
-        return this.isMilestoneFilled(group, 'murabaha_submit');
-      }
-      // Direct: show release directly after M2 is filled
-      return true;
-    }
-
     return true;
   }
 
   hasEditableVisibleMilestones(index: number, group: FormGroup): boolean {
-    const milestones = ['courier', 'receiving', 'inward', 'murabaha_process', 'murabaha_submit', 'release'];
-    return milestones.some((milestone) =>
+    return this.getActiveMilestonesForGroup(group).some((milestone) =>
       this.isMilestoneVisible(index, milestone, group) &&
       this.canEditMilestone(milestone)
     );
   }
 
   private isMilestoneFilled(group: FormGroup, milestone: string): boolean {
+    if (milestone === 'receiving') {
+      return isDocumentationMilestoneComplete({
+        receiver: group.get('receiver')?.value,
+        bankName: group.get('bankName')?.value,
+        expectedDocDate: group.get('expectedDocDate')?.value,
+      }, 'receiving');
+    }
+
     switch (milestone) {
-      case 'receiving':
-        return String(group.get('receiver')?.value || '').trim().length > 0;
       case 'inward':
         return !!group.get('inwardCollectionAdviceDate')?.value || !!this.getSavedFileUrl(group, 'inwardAdvice');
       case 'murabaha_process':
         return !!group.get('murabahaContractReleasedDate')?.value || !!group.get('murabahaContractApprovedDate')?.value;
-      case 'murabaha_submit':
-        return !!group.get('murabahaContractSubmittedDate')?.value || !!this.getSavedFileUrl(group, 'murabahaSubmitted');
-      case 'release':
-        return !!group.get('documentsReleasedDate')?.value || !!this.getSavedFileUrl(group, 'documentsReleased');
       default:
         return false;
     }
@@ -653,6 +635,10 @@ export class ShipmentDocumentationComponent {
     return receiver.trim().toLowerCase() === 'bank';
   }
 
+  getActiveMilestonesForGroup(group: FormGroup): readonly DocumentMilestoneKey[] {
+    return getActiveDocumentMilestones(this.isBankReceiver(group));
+  }
+
   getBlDocumentUrl(index: number): string {
     return this.shipmentData()?.actual?.[index]?.blDocumentUrl || '';
   }
@@ -668,6 +654,18 @@ export class ShipmentDocumentationComponent {
     );
   }
 
+  getCommercialInvoiceNo(index: number): string {
+    return String(this.shipmentData()?.actual?.[index]?.commercialInvoiceNo || '').trim();
+  }
+
+  getCommercialInvoiceDocumentUrl(index: number): string {
+    return this.shipmentData()?.actual?.[index]?.commercialInvoiceDocumentUrl || '';
+  }
+
+  getCommercialInvoiceDocumentName(index: number): string {
+    return this.shipmentData()?.actual?.[index]?.commercialInvoiceDocumentName || 'Commercial Invoice Document';
+  }
+
   isMilestoneSaving(index: number, milestone: string): boolean {
     const s = this.savingMilestone();
     return s?.row === index && s?.milestone === milestone;
@@ -675,7 +673,8 @@ export class ShipmentDocumentationComponent {
 
   /** Header shortcut: Saves the currently active/editing milestone. */
   saveActivePhase(index: number): void {
-    const milestones = ['courier', 'receiving', 'inward', 'murabaha_process', 'murabaha_submit', 'release'];
+    const group = this.formArray.at(index) as FormGroup | null;
+    const milestones = group ? this.getActiveMilestonesForGroup(group) : [];
     const activeMilestone = milestones.find(m => this.isMilestoneEditing(index, m));
     if (activeMilestone) {
       this.saveMilestone(index, activeMilestone);
@@ -787,17 +786,8 @@ export class ShipmentDocumentationComponent {
 
     if (!this.isMilestoneSectionValid(index, milestone)) return;
 
-    const milestoneLabel: Record<string, string> = {
-      courier: 'Courier Logistics',
-      receiving: 'Receiver & Bank Setup',
-      inward: 'Inward Collection Advice',
-      murabaha_process: 'Murabaha Contract Phase',
-      murabaha_submit: 'Contract Submission',
-      release: 'Final Documents Release',
-    };
-
     const confirmed = await this.confirmDialog.ask({
-      message: `Save ${milestoneLabel[milestone] || milestone} for Shipment #${index + 1}?`,
+      message: `Save ${this.documentMilestoneLabels[milestone as DocumentMilestoneKey] || milestone} for Shipment #${index + 1}?`,
       header: 'Save Milestone',
       acceptLabel: 'Yes, Save',
     });
@@ -813,7 +803,7 @@ export class ShipmentDocumentationComponent {
     this.shipmentService.submitDocumentationPayment(request.containerId, request.payload).subscribe({
       next: (response) => {
         this.applyDocumentationResponse(index, response?.container?.actual, milestone);
-        this.notificationService.success('Saved', `${milestoneLabel[milestone] || milestone} saved successfully.`);
+        this.notificationService.success('Saved', `${this.documentMilestoneLabels[milestone as DocumentMilestoneKey] || milestone} saved successfully.`);
         const shipmentId = this.shipmentData()?.shipment?._id;
         if (shipmentId) {
           this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
@@ -964,7 +954,7 @@ export class ShipmentDocumentationComponent {
     }, { emitEvent: false });
 
     const milestoneKeys = milestone === 'all'
-      ? ['courier', 'receiving', 'inward', 'murabaha_process', 'murabaha_submit', 'release']
+      ? this.getActiveMilestonesForGroup(row)
       : [milestone];
 
     this.savedMilestoneOverrides.update((current) => {
@@ -989,17 +979,7 @@ export class ShipmentDocumentationComponent {
   }
 
   private isDocumentationCompleteFromActual(actual: any): boolean {
-    const receiver = String(actual?.receiver || '').trim().toLowerCase();
-    const isDirect = receiver === 'direct';
-    const hasCourier = !!(actual?.courierTrackNo || actual?.courierServiceProvider || actual?.docArrivalNotes);
-    const hasReceiving = !!(actual?.expectedDocDate || (actual?.receiver && actual?.bankName));
-    const hasRelease = !!(actual?.documentsReleasedDate || actual?.documentsReleasedDocumentUrl);
-    if (isDirect) return hasCourier && hasReceiving && hasRelease;
-
-    const hasInward = !!(actual?.inwardCollectionAdviceDate || actual?.inwardCollectionAdviceDocumentUrl);
-    const hasMurabahaProcess = !!(actual?.murabahaContractReleasedDate || actual?.murabahaContractApprovedDate);
-    const hasMurabahaSubmit = !!(actual?.murabahaContractSubmittedDate || actual?.murabahaContractSubmittedDocumentUrl);
-    return hasCourier && hasReceiving && hasInward && hasMurabahaProcess && hasMurabahaSubmit && hasRelease;
+    return isDocumentationCompleteForCurrentFlow(actual);
   }
 
   openStatusModal(index: number): void {
@@ -1014,26 +994,17 @@ export class ShipmentDocumentationComponent {
 
   /**
    * Returns 0–100 progress for the courier animation.
-   * For Direct receiver: 4 milestones (courier, receiving, release + courier delivery).
-   * For Bank receiver: all 6 milestones.
+   * Milestones 5 and 6 are paused for now. Bank receivers complete at M4;
+   * Direct receivers complete at M2.
    */
   getCourierProgressPercent(index: number): number {
     const group = this.formArray?.at(index) as FormGroup | null;
-    const isBank = group ? this.isBankReceiver(group) : true;
-
-    if (isBank) {
-      const milestones = ['courier', 'receiving', 'inward', 'murabaha_process', 'murabaha_submit', 'release'];
-      const completed = milestones.filter((m) => this.isMilestoneSaved(index, m)).length;
-      return Math.round((completed / milestones.length) * 100);
-    } else {
-      // Direct path: courier, receiving, release
-      const milestones = ['courier', 'receiving', 'release'];
-      const completed = milestones.filter((m) => this.isMilestoneSaved(index, m)).length;
-      return Math.round((completed / milestones.length) * 100);
-    }
+    const milestones = group ? this.getActiveMilestonesForGroup(group) : getActiveDocumentMilestones(true);
+    const completed = milestones.filter((m) => this.isMilestoneSaved(index, m)).length;
+    return Math.round((completed / milestones.length) * 100);
   }
 
-  /** Returns true when all 6 milestones are saved (documents fully released). */
+  /** Returns true when all currently active document milestones are saved. */
   isCourierDelivered(index: number): boolean {
     return this.getCourierProgressPercent(index) === 100;
   }

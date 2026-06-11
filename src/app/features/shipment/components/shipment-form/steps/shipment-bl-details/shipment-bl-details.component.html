@@ -81,7 +81,16 @@
                   <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Commercial Invoice No</label>
                   <div class="flex items-center gap-2 min-w-0">
                     <input pInputText formControlName="commercialInvoiceNo" class="table-input-text w-full min-w-0" placeholder="Commercial Invoice No" />
-                    @if (getCommercialInvoiceDocumentUrl(i)) {
+                    @if (getCommercialInvoiceFile(i)) {
+                      <button
+                        type="button"
+                        (click)="openDocumentPreview(getCommercialInvoiceFile(i)!, 'Commercial Invoice Document')"
+                        class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600"
+                        title="Preview selected commercial invoice document"
+                      >
+                        <i class="pi pi-eye"></i>
+                      </button>
+                    } @else if (getCommercialInvoiceDocumentUrl(i)) {
                       <button
                         type="button"
                         (click)="openRemoteDocumentPreview(getCommercialInvoiceDocumentUrl(i), getCommercialInvoiceDocumentName(i))"
@@ -90,6 +99,14 @@
                       >
                         <i class="pi pi-eye"></i>
                       </button>
+                    } @else if (canEditBlDetails()) {
+                      <label
+                        class="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600"
+                        title="Upload commercial invoice document"
+                      >
+                        <i class="pi pi-upload"></i>
+                        <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp" (change)="onCommercialInvoiceFileSelected($event, i)" />
+                      </label>
                     }
                   </div>
                 </div>
@@ -220,7 +237,7 @@
                     [class.bg-slate-100]="getActiveTab(i) !== 'storage'"
                     [class.text-slate-500]="getActiveTab(i) !== 'storage'"
                   >
-                    Storage Allocations
+                    Storage Allocation
                   </button>
                 }
                 @if (canViewPackagingList()) {
@@ -233,7 +250,7 @@
                     [class.bg-slate-100]="getActiveTab(i) !== 'packaging'"
                     [class.text-slate-500]="getActiveTab(i) !== 'packaging'"
                   >
-                    Packaging List
+                    Packing List
                   </button>
                 }
                 <!-- POINT 7: Payment Allocation and Payment Costing moved from Step 8 -->
@@ -536,7 +553,7 @@
               } @else if (getActiveTab(i) === 'packaging') {
                 <div class="rounded-2xl border border-slate-200 overflow-hidden" [class.rbac-readonly-shell]="!canEditStorageAllocations(i)">
                   <div class="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between gap-3">
-                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Packaging List</span>
+                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Packing List</span>
                   </div>
                   <div class="hidden md:grid md:grid-cols-[60px_minmax(0,1.5fr)_140px_minmax(0,1.5fr)] gap-3 px-4 py-2.5 bg-slate-50/70 border-b border-slate-100">
                     <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">SN</span>
@@ -579,7 +596,7 @@
                 <div class="rounded-2xl border border-slate-200 overflow-hidden" [class.rbac-readonly-shell]="!canEditStorageAllocations()">
                   <div class="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between gap-3">
                     <div class="flex items-center gap-2">
-                      <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Storage Allocations</span>
+                      <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Storage Allocation</span>
                       <span class="inline-flex h-10 items-center rounded-lg border px-3 text-[9px] font-black uppercase tracking-wider whitespace-nowrap"
                         [ngClass]="getApprovalBadgeClasses(getStorageAllocationApprovalLabel(i))">
                         {{ getStorageAllocationApprovalLabel(i) }}

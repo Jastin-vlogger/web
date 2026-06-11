@@ -86,6 +86,7 @@ export class ShipmentBlDetailsComponent {
   readonly activeTabs = signal<Record<number, 'cost' | 'storage' | 'packaging' | 'payment_allocation' | 'payment_costing'>>({});
   readonly expandedCostSheet = signal<Record<number, boolean>>({});
   readonly bookingFiles = signal<Record<number, File | null>>({});
+  readonly commercialInvoiceFiles = signal<Record<number, File | null>>({});
   readonly costSheetAttachmentFiles = signal<Record<string, File | null>>({});
   readonly statusModalVisible = signal(false);
   readonly statusModalShipmentIndex = signal<number | null>(null);
@@ -631,7 +632,7 @@ export class ShipmentBlDetailsComponent {
     if (!packagingEntries.length || !storageEntries.length) {
       return {
         valid: false,
-        message: 'Container names are required in both Packaging List and Storage Allocations before saving.',
+        message: 'Container names are required in both Packing List and Storage Allocation before saving.',
         mismatches: [],
         warnings: [],
       };
@@ -640,7 +641,7 @@ export class ShipmentBlDetailsComponent {
     if (packagingEntries.length !== storageEntries.length) {
       return {
         valid: false,
-        message: `Container count mismatch: Packaging List has ${packagingEntries.length}, while Storage Allocations has ${storageEntries.length}. Please update the container rows before saving.`,
+        message: `Container count mismatch: Packing List has ${packagingEntries.length}, while Storage Allocation has ${storageEntries.length}. Please update the container rows before saving.`,
         mismatches: [],
         warnings: [],
       };
@@ -675,7 +676,7 @@ export class ShipmentBlDetailsComponent {
 
     return {
       valid: false,
-      message: 'Storage Allocation container names do not match the Packaging List. Please update the container names before saving.',
+      message: 'Storage Allocation container names do not match the Packing List. Please update the container names before saving.',
       mismatches,
       warnings,
     };
@@ -759,6 +760,31 @@ export class ShipmentBlDetailsComponent {
 
   clearBookingFile(shipmentIndex: number): void {
     this.bookingFiles.update((current) => ({ ...current, [shipmentIndex]: null }));
+  }
+
+  onCommercialInvoiceFileSelected(event: Event, shipmentIndex: number): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    if (!file) return;
+
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const allowedExt = /\.(pdf|jpg|jpeg|png|gif|webp)$/i;
+    if (!allowedTypes.includes(file.type) && !allowedExt.test(file.name)) {
+      this.notificationService.warn('Invalid file', 'Only PDF and image files are allowed.');
+      input.value = '';
+      return;
+    }
+
+    this.commercialInvoiceFiles.update((current) => ({ ...current, [shipmentIndex]: file }));
+    input.value = '';
+  }
+
+  getCommercialInvoiceFile(shipmentIndex: number): File | null {
+    return this.commercialInvoiceFiles()[shipmentIndex] ?? null;
+  }
+
+  clearCommercialInvoiceFile(shipmentIndex: number): void {
+    this.commercialInvoiceFiles.update((current) => ({ ...current, [shipmentIndex]: null }));
   }
 
   private costSheetAttachmentKey(shipmentIndex: number, rowIndex: number): string {
@@ -1339,11 +1365,16 @@ export class ShipmentBlDetailsComponent {
     formData.append('packagingDate', toDate(row.get('packagingDate')?.value));
     formData.append('grossWeight', row.get('grossWeight')?.value || '');
     formData.append('netWeight', row.get('netWeight')?.value || '');
+    const commercialInvoiceDocument = this.getCommercialInvoiceFile(index);
+    if (commercialInvoiceDocument) {
+      formData.append('commercialInvoiceDocument', commercialInvoiceDocument, commercialInvoiceDocument.name);
+    }
 
     this.shipmentService.submitBLDetails(containerId, formData).subscribe({
       next: (response) => {
         this.savingKey.set(null);
         this.applyActualOverride(index, response?.container?.actual);
+        this.clearCommercialInvoiceFile(index);
         this.notificationService.success('Saved', 'B/L details saved successfully.');
         this.ensureAccordionOpen(index); // POINT 8: keep accordion open
       },
@@ -1444,7 +1475,7 @@ export class ShipmentBlDetailsComponent {
 
     const confirmed = await this.confirmDialog.ask({
       message: `Save storage allocations for Shipment ${index + 1}?`,
-      header: 'Save Storage Allocations',
+      header: 'Save Storage Allocation',
       acceptLabel: 'Yes, Save',
     });
     if (!confirmed) return;
@@ -1536,7 +1567,7 @@ export class ShipmentBlDetailsComponent {
 
     const confirmed = await this.confirmDialog.ask({
       message: `Approve storage allocations for Shipment ${index + 1}?`,
-      header: 'Approve Storage Allocations',
+      header: 'Approve Storage Allocation',
       acceptLabel: 'Yes, Approve',
     });
     if (!confirmed) return;

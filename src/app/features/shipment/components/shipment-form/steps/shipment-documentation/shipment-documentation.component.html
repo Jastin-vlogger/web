@@ -117,6 +117,15 @@
                         </div>
                       </div>
                       <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Commercial Invoice No</label>
+                        <div class="flex items-center gap-2">
+                          <input pInputText [value]="getCommercialInvoiceNo(i)" class="table-input-text w-full bg-slate-50" placeholder="Commercial Invoice No" readonly />
+                          @if (getCommercialInvoiceDocumentUrl(i)) {
+                            <button type="button" (click)="openRemoteDocumentPreview(getCommercialInvoiceDocumentUrl(i), getCommercialInvoiceDocumentName(i))" class="icon-btn-secondary shrink-0" title="Preview commercial invoice document" aria-label="Preview commercial invoice document"><i class="pi pi-eye"></i></button>
+                          }
+                        </div>
+                      </div>
+                      <div class="flex flex-col gap-1.5">
                         <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Courier Track No<span class="text-red-500 ml-0.5">*</span></label>
                         <input pInputText formControlName="courierTrackNo" class="table-input-text w-full" placeholder="Enter tracking no" />
                       </div>
@@ -144,6 +153,17 @@
                           <span class="text-slate-700 font-bold">{{ getBlNo(i, group) || 'N/A' }}</span>
                           @if (getBlDocumentUrl(i)) {
                             <button type="button" (click)="openRemoteDocumentPreview(getBlDocumentUrl(i), getBlDocumentName(i))" class="icon-btn-secondary !h-8 !w-8 shrink-0" title="Preview B/L document" aria-label="Preview B/L document">
+                              <i class="pi pi-eye text-[11px]"></i>
+                            </button>
+                          }
+                        </div>
+                      </div>
+                      <div class="flex flex-col py-1">
+                        <span class="text-slate-400 font-medium">Commercial Invoice No</span>
+                        <div class="flex items-center gap-2">
+                          <span class="text-slate-700 font-bold">{{ getCommercialInvoiceNo(i) || 'N/A' }}</span>
+                          @if (getCommercialInvoiceDocumentUrl(i)) {
+                            <button type="button" (click)="openRemoteDocumentPreview(getCommercialInvoiceDocumentUrl(i), getCommercialInvoiceDocumentName(i))" class="icon-btn-secondary !h-8 !w-8 shrink-0" title="Preview commercial invoice document" aria-label="Preview commercial invoice document">
                               <i class="pi pi-eye text-[11px]"></i>
                             </button>
                           }
@@ -321,7 +341,7 @@
                       </div>
                       <div class="mt-4 flex justify-end">
                         <button (click)="saveMilestone(i, 'murabaha_process')" class="primary-milestone-btn">
-                          <i class="pi pi-check mr-2"></i> Save Stage
+                          <i class="pi pi-check mr-2"></i> Complete Stage
                         </button>
                       </div>
                     } @else {
@@ -336,6 +356,7 @@
                 </div>
                 }
 
+                <!-- Milestones 5 and 6 are paused for now; milestone 4 is the current completion point. -->
                 <!-- Milestone 5: Contract Submission -->
                 @if (isMilestoneVisible(i, 'murabaha_submit', $any(group))) {
                 <div class="relative group">
@@ -578,7 +599,7 @@
 
       <!-- Milestone rows preview -->
       <div class="flex flex-col gap-2">
-        @for (milestone of ['courier', 'receiving', 'inward', 'murabaha_process', 'murabaha_submit', 'release']; track milestone) {
+        @for (milestone of getActiveMilestonesForGroup(group); track milestone) {
           @if (isMilestoneVisible(idx, milestone, group)) {
             <div class="flex items-center justify-between rounded-xl border px-4 py-3"
               [class.border-emerald-200]="isMilestoneSaved(idx, milestone)"
@@ -592,12 +613,7 @@
                   [class.pi-circle]="!isMilestoneSaved(idx, milestone)"
                   [class.text-slate-300]="!isMilestoneSaved(idx, milestone)"></i>
                 <span class="text-xs font-semibold text-slate-700">
-                  {{ milestone === 'courier' ? 'Courier Logistics' :
-                     milestone === 'receiving' ? 'Receiver & Bank Setup' :
-                     milestone === 'inward' ? 'Inward Collection Advice' :
-                     milestone === 'murabaha_process' ? 'Murabaha Contract Phase' :
-                     milestone === 'murabaha_submit' ? 'Contract Submission' :
-                     'Final Documents Release' }}
+                  {{ documentMilestoneLabels[milestone] }}
                 </span>
               </div>
               <div class="flex items-center gap-2">
