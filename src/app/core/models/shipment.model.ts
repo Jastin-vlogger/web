@@ -165,17 +165,39 @@ export interface DashboardChartData {
 export interface DashboardStatusPivotRow {
   supplier: string;
   values: Record<string, number>;
+  valuesFCL?: Record<string, number>;
   grandTotal: number;
+  grandTotalFCL?: number;
 }
 
 export interface DashboardStatusPivot {
   asOfDate: string;
   valueLabel: string;
+  fclLabel?: string;
   rowLabel: string;
   columns: string[];
   rows: DashboardStatusPivotRow[];
   totals: Record<string, number>;
+  totalsFCL?: Record<string, number>;
   grandTotal: number;
+  grandTotalFCL?: number;
+}
+
+export interface DpwCargoExtractionContainer {
+  container?: string | null;
+  from?: string | null;
+  to?: string | null;
+}
+
+export interface ExtractDpwCargoResponse {
+  date?: string | null;
+  receiptNo?: string | null;
+  pagesProcessed?: number | null;
+  totalContainers?: number | null;
+  containers?: DpwCargoExtractionContainer[];
+  metadata?: unknown;
+  error?: string | null;
+  message?: string;
 }
 
 export interface DashboardSummaryResponse {
@@ -820,11 +842,15 @@ export interface ActualContainer {
   boePassingDocumentName?: string;
   boePassingRemarks?: string;
   dmBarcode?: string;
+  dpInvoiceDocumentUrl?: string;
+  dpInvoiceDocumentName?: string;
+  dpwCargoExtraction?: ExtractDpwCargoResponse | null;
 
   customsClearanceDocumentUrl?: string;
   customsClearanceDocumentName?: string;
   customsClearanceDate?: string;
   customsClearanceRemarks?: string;
+  customClearanceRequired?: boolean;
 
   tokenDocumentUrl?: string;
   tokenDate?: string;
@@ -833,6 +859,10 @@ export interface ActualContainer {
   municipalityDocumentName?: string;
   municipalityDate?: string;
   municipalityRemarks?: string;
+  municipalityStatus?: 'open' | 'closed' | string;
+  municipalityStatusComment?: string;
+  municipalityClearanceCertificateUrl?: string;
+  municipalityClearanceCertificateName?: string;
   municipalityClearanceDocumentUrl?: string;
   municipalityClearanceDate?: string;
   municipalityClearanceRemarks?: string;
@@ -862,6 +892,9 @@ export interface ActualContainer {
     transportDate?: string;
     transportTime?: string;
     delayHours?: number;
+    storageStartDate?: string;
+    storageEndDate?: string;
+    tokenReceivedDate?: string;
   }>;
   lockedLogisticsSections?: string[];
   

@@ -72,12 +72,14 @@
                             @for (column of pivot.columns; track column) {
                                 <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
                                     <div class="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">{{ column }}</div>
-                                    <div class="mt-1 text-xl font-black tabular-nums text-slate-900">{{ formatPivotNumber(pivot.totals[column]) }}</div>
+                                    <div class="mt-1 text-xl font-black tabular-nums text-slate-900">{{ formatPivotNumber(pivot.totals[column]) }} MT</div>
+                                    <div class="mt-1 text-xs font-bold tabular-nums text-slate-500">{{ formatPivotNumber(getPivotFclTotal(pivot, column)) }} FCL</div>
                                 </div>
                             }
                             <div class="rounded-xl border border-slate-900 bg-slate-950 px-4 py-3 text-white">
                                 <div class="text-[11px] font-black uppercase tracking-[0.14em] text-slate-300">Grand Total</div>
-                                <div class="mt-1 text-xl font-black tabular-nums">{{ formatPivotNumber(pivot.grandTotal) }}</div>
+                                <div class="mt-1 text-xl font-black tabular-nums">{{ formatPivotNumber(pivot.grandTotal) }} MT</div>
+                                <div class="mt-1 text-xs font-bold tabular-nums text-slate-300">{{ formatPivotNumber(pivot.grandTotalFCL) }} FCL</div>
                             </div>
                         </div>
                     } @else {

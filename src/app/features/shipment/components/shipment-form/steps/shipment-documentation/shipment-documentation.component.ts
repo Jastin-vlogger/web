@@ -200,7 +200,7 @@ export class ShipmentDocumentationComponent {
     'Shipment Tracker',
     'BL Details',
     'Document Tracker',
-    'Port and Customs Clearance Tracker',
+    'Port and Clearance',
     'Storage Allocation & Arrival',
     'Quality',
     'Payment & Costing',
@@ -1014,7 +1014,7 @@ export class ShipmentDocumentationComponent {
     if (shipment?.paymentCostingDocumentUrl || shipment?.paymentAllocations?.length || shipment?.paymentCostings?.length) return 'Payment & Costing';
     if (shipment?.qualityRows?.length || shipment?.qualityReports?.length) return 'Quality';
     if (shipment?.storageSplits?.length) return 'Storage Allocation & Arrival';
-    if (shipment?.arrivalOn || shipment?.arrivalNoticeDate || shipment?.arrivalNoticeDocumentUrl) return 'Port and Customs Clearance Tracker';
+    if (shipment?.arrivalOn || shipment?.arrivalNoticeDate || shipment?.arrivalNoticeDocumentUrl) return 'Port and Clearance';
     if (this.submittedIndices().includes(index)) return 'Document Tracker';
     return 'Shipment Tracker';
   }

@@ -226,7 +226,7 @@ export class ShipmentSummaryComponent {
                 : row?.storageSplits?.length
                   ? 'Storage Allocation & Arrival'
                   : row?.transportationBooked?.length || row?.arrivalNoticeDate || row?.customsClearanceDate
-                    ? 'Port & Customs Clearance'
+                    ? 'Port and Clearance'
                     : row?.documentsReleasedDate || row?.receiver
                       ? 'Document Tracker'
                       : row?.BLNo

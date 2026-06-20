@@ -12,6 +12,7 @@ import {
   ExtractShipmentFromDocumentsResponse,
   ExtractBillNoResponse,
   ExtractArrivalNoticeResponse,
+  ExtractDpwCargoResponse,
   DashboardSummaryResponse
   ,
   ShipmentReportExportResponse,
@@ -149,6 +150,12 @@ export interface LogisticsPayload {
   customsClearanceDocumentUrl: string;
   customsClearanceRemarks: string;
   tokenReceivedDate: string;
+  customClearanceRequired?: boolean;
+  dpInvoiceDocumentUrl?: string;
+  dpInvoiceDocumentName?: string;
+  dpwCargoExtraction?: ExtractDpwCargoResponse | null;
+  municipalityClearanceCertificateUrl?: string;
+  municipalityClearanceCertificateName?: string;
   municipalityDate: string;
   municipalityDocumentUrl: string;
   municipalityRemarks: string;
@@ -161,6 +168,9 @@ export interface LogisticsPayload {
     transportDate: string;
     transportTime: string;
     delayHours: number | null;
+    storageStartDate?: string;
+    storageEndDate?: string;
+    tokenReceivedDate?: string;
   }>;
 }
 
@@ -302,6 +312,10 @@ export class ShipmentService {
 
   extractArrivalNoticeFromDocument(formData: FormData): Observable<ExtractArrivalNoticeResponse> {
     return this.http.post<ExtractArrivalNoticeResponse>(`${this.apiUrl}/extract-arrival-notice`, formData);
+  }
+
+  extractDpwCargo(formData: FormData): Observable<ExtractDpwCargoResponse> {
+    return this.http.post<ExtractDpwCargoResponse>(`${this.apiUrl}/extract-dpw-cargo`, formData);
   }
 
   updateShipment(id: string, shipment: Partial<ShipmentDetail>): Observable<ShipmentDetail> {

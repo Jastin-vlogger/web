@@ -164,7 +164,7 @@ export class ShipmentFormComponent implements OnDestroy {
         tabKey: 'port_customs',
         viewPermissionKey: 'shipment.tab.port_customs.view',
         editPermissionKey: 'shipment.tab.port_customs.edit',
-        label: 'Port and Customs Clearance Tracker',
+        label: 'Port and Clearance',
         subLabel: 'Logistics',
         completed: this.isStep3AllMilestonesCompleted() && this.submittedActualIndices().length > 0 && this.allSubmitted(this.submittedActualIndices().length, this.submittedStep4Indices()),
       },
@@ -218,9 +218,9 @@ export class ShipmentFormComponent implements OnDestroy {
    * independent of RBAC view permissions (RBAC is enforced separately).
    */
   readonly maxEnabledStep = computed<number>(() => {
-    // Always allow navigating up to Port & Customs (index 4).
+    // Always allow navigating up to Port and Clearance (index 4).
     let max = 4;
-    // Storage unlocks as soon as at least one shipment has completed Port & Customs
+    // Storage unlocks as soon as at least one shipment has completed Port and Clearance
     if (this.hasAnyStep4CompletedRow()) {
       max = 5;
     }
@@ -465,11 +465,11 @@ export class ShipmentFormComponent implements OnDestroy {
   }
 
   private getBlockedByStep(targetStepIndex: number): number | null {
-    // Step 5+ (Port & Customs and beyond) requires Document Tracker milestone completion
+    // Step 5+ (Port and Clearance and beyond) requires Document Tracker milestone completion
     if (targetStepIndex >= 4 && !this.hasAnyStep3CompletedRow()) {
       return 3;
     }
-    // Step 6+ (Storage and beyond) requires Port & Customs (index 4) completion
+    // Step 6+ (Storage and beyond) requires Port and Clearance (index 4) completion
     if (targetStepIndex >= 5 && !this.hasAnyStep4CompletedRow()) {
       return 4;
     }
@@ -491,15 +491,24 @@ export class ShipmentFormComponent implements OnDestroy {
 
     const actualRow = this.shipmentData()?.actual?.[index];
     const lockedSections = new Set(actualRow?.lockedLogisticsSections || []);
-    return [
+    return this.getRequiredStep4Sections(actualRow).every((section) => lockedSections.has(section));
+  }
+
+  private getRequiredStep4Sections(actualRow: any): string[] {
+    const sections = [
       'arrivalNotice',
       'advanceRequest',
       'doReleased',
       'boePassingDate',
-      'customsClearance',
       'municipality',
       'transportation',
-    ].every((section) => lockedSections.has(section));
+    ];
+
+    if (actualRow?.customClearanceRequired === true) {
+      sections.push('customsClearance');
+    }
+
+    return sections;
   }
 
   private isStep5RowComplete(index: number): boolean {
@@ -929,6 +938,10 @@ export class ShipmentFormComponent implements OnDestroy {
             boePassingDocumentUrl: [actualData?.boePassingDocumentUrl || ''],
             boePassingDocumentName: [actualData?.boePassingDocumentName || ''],
             boePassingRemarks: [actualData?.boePassingRemarks || ''],
+            dpInvoiceDocumentUrl: [(actualData as any)?.dpInvoiceDocumentUrl || ''],
+            dpInvoiceDocumentName: [(actualData as any)?.dpInvoiceDocumentName || ''],
+            dpwCargoExtraction: [(actualData as any)?.dpwCargoExtraction || null],
+            customClearanceRequired: [(actualData as any)?.customClearanceRequired === true],
             customsClearanceDate: [actualData?.customsClearanceDate ? new Date(actualData.customsClearanceDate) : null],
             customsClearanceDocumentUrl: [actualData?.customsClearanceDocumentUrl || ''],
             customsClearanceDocumentName: [actualData?.customsClearanceDocumentName || ''],
@@ -956,6 +969,8 @@ export class ShipmentFormComponent implements OnDestroy {
             ],
             municipalityStatus: [(actualData as any)?.municipalityStatus || 'open'],
             municipalityStatusComment: [(actualData as any)?.municipalityStatusComment || ''],
+            municipalityClearanceCertificateUrl: [(actualData as any)?.municipalityClearanceCertificateUrl || ''],
+            municipalityClearanceCertificateName: [(actualData as any)?.municipalityClearanceCertificateName || ''],
             dmBarcode: [(actualData as any)?.dmBarcode || ''],
             // Customs Original Documents
             customsDocBoeSubmissionDate: [(actualData as any)?.customsOriginalDocuments?.boe?.submissionDate ? new Date((actualData as any).customsOriginalDocuments.boe.submissionDate) : null],
@@ -980,7 +995,8 @@ export class ShipmentFormComponent implements OnDestroy {
               containerCount,
               this.actualSplits.length - 1,
               existingTransportationBooked,
-              extractedContainerSource
+              extractedContainerSource,
+              (actualData as any)?.tokenReceivedDate || actualData?.tokenDate
             ),
           })
         );
@@ -1247,6 +1263,10 @@ export class ShipmentFormComponent implements OnDestroy {
           boePassingDocumentUrl: [''],
           boePassingDocumentName: [''],
           boePassingRemarks: [''],
+          dpInvoiceDocumentUrl: [''],
+          dpInvoiceDocumentName: [''],
+          dpwCargoExtraction: [null],
+          customClearanceRequired: [false],
           customsClearanceDate: [null],
           customsClearanceDocumentUrl: [''],
           customsClearanceDocumentName: [''],
@@ -1258,6 +1278,8 @@ export class ShipmentFormComponent implements OnDestroy {
           municipalityRemarks: [''],
           municipalityStatus: ['open'],
           municipalityStatusComment: [''],
+          municipalityClearanceCertificateUrl: [''],
+          municipalityClearanceCertificateName: [''],
           dmBarcode: [''],
           // Customs Original Documents
           customsDocBoeSubmissionDate: [null],
@@ -1473,7 +1495,8 @@ export class ShipmentFormComponent implements OnDestroy {
     count: number,
     shipmentIndex: number,
     existingRows: any[] = [],
-    extractedContainers?: any[]
+    extractedContainers?: any[],
+    fallbackTokenReceivedDate?: string | Date | null
   ): FormArray {
     const rows = new FormArray<FormGroup>([]);
     const safeCount = Math.max(1, extractedContainers?.length || count || 1);
@@ -1494,10 +1517,20 @@ export class ShipmentFormComponent implements OnDestroy {
 	          ],
 	          transportCompanyName: [existing?.transportCompanyName || ''],
 	          bookedDate: [existing?.bookedDate ? new Date(existing.bookedDate) : defaultDate],
-	          bookingTime: [this.parseTimeValue(existing?.bookingTime) || defaultTime],
+          bookingTime: [this.parseTimeValue(existing?.bookingTime) || defaultTime],
           transportDate: [existing?.transportDate ? new Date(existing.transportDate) : defaultDate],
           transportTime: [this.parseTimeValue(existing?.transportTime) || defaultTime],
           delayHours: [existing?.delayHours ?? null],
+          storageStartDate: [existing?.storageStartDate ? new Date(existing.storageStartDate) : null],
+          storageEndDate: [existing?.storageEndDate ? new Date(existing.storageEndDate) : null],
+          tokenReceivedDate: [
+            existing?.tokenReceivedDate
+              ? new Date(existing.tokenReceivedDate)
+              : fallbackTokenReceivedDate
+                ? new Date(fallbackTokenReceivedDate)
+                : null,
+          ],
+          checked: [false],
         }, { validators: this.transportationDateOrderValidator() })
       );
     }

@@ -100,6 +100,8 @@ export function getComputedShipmentStatus(params: {
   }
 
   const fallback = String(params.fallbackStageLabel || params.shipmentCurrentStage || 'Shipment Entry').trim();
+  if (fallback === 'Port & Customs') return 'Port and Clearance';
+  if (fallback === 'Planned Split') return 'Shipment Split';
   return fallback === 'Shipment Entry' ? 'ETD yet to be confirmed' : fallback;
 }
 

@@ -131,7 +131,7 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     'Shipment Tracker',
     'BL Details',
     'Document Tracker',
-    'Port and Customs Clearance Tracker',
+    'Port and Clearance',
     'Storage Allocation & Arrival',
     'Quality',
     'Payment & Costing',
@@ -1891,7 +1891,7 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     'Shipment Tracker',
     'BL Details',
     'Document Tracker',
-    'Port and Customs Clearance Tracker',
+    'Port and Clearance',
     'Storage Allocation & Arrival',
     'Quality',
     'Payment & Costing',
@@ -1927,7 +1927,10 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
   }
 
   getDisplayStageName(stage: string): string {
-    return String(stage || '').trim() === 'Planned Split' ? 'Shipment Split' : String(stage || '');
+    const normalizedStage = String(stage || '').trim();
+    if (normalizedStage === 'Planned Split') return 'Shipment Split';
+    if (normalizedStage === 'Port & Customs') return 'Port and Clearance';
+    return normalizedStage;
   }
 
   getShipmentStatus(index: number): string {

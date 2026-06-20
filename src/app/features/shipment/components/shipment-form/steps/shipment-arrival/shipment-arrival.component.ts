@@ -1,6 +1,6 @@
 import { Component, Input, inject, effect, signal, computed, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormArray, AbstractControl } from '@angular/forms';
+import { ReactiveFormsModule, FormArray, AbstractControl, FormControl, FormGroup } from '@angular/forms';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Store } from '@ngrx/store';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -12,7 +12,9 @@ import { AccordionModule } from 'primeng/accordion';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { SelectModule } from 'primeng/select';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { ShipmentService } from '../../../../../../core/services/shipment.service';
+import { ExtractDpwCargoResponse } from '../../../../../../core/models/shipment.model';
 import { NotificationService } from '../../../../../../core/services/notification.service';
 import { ConfirmDialogService } from '../../../../../../core/services/confirm-dialog.service';
 import { TransportationCompanyService } from '../../../../../../core/services/transportation-company.service';
@@ -55,9 +57,9 @@ const STEP5_DOC_CONFIG: {
   { kind: 'arrivalNotice', label: 'Arrival Notice Date', dateControl: 'arrivalNoticeDate' },
   { kind: 'advanceRequest', label: 'Advance Received', dateControl: 'advanceRequestDate' },
   { kind: 'doReleased', label: 'DO Released Date', dateControl: 'doReleasedDate', remarksControl: 'doReleasedRemarks' },
-  { kind: 'boePassingDate', label: 'BOE Passing Date', dateControl: 'boePassingDate', remarksControl: 'boePassingRemarks' },
+  { kind: 'boePassingDate', label: 'BOE Passing / DP Invoice', dateControl: 'boePassingDate', remarksControl: 'boePassingRemarks' },
+  { kind: 'municipality', label: 'Municipality Clearance Application Date', dateControl: 'municipalityDate', remarksControl: 'municipalityRemarks' },
   { kind: 'customsClearance', label: 'Customs Clearance Date', dateControl: 'customsClearanceDate', remarksControl: 'customsClearanceRemarks' },
-  { kind: 'municipality', label: 'Municipality Check Date', dateControl: 'municipalityDate', remarksControl: 'municipalityRemarks' },
 ];
 
 @Component({
@@ -73,6 +75,7 @@ const STEP5_DOC_CONFIG: {
     ConfirmDialogModule,
     DialogModule,
     SelectModule,
+    ToggleSwitchModule,
   ],
   providers: [ConfirmationService],
   templateUrl: './shipment-arrival.component.html',
@@ -97,15 +100,21 @@ export class ShipmentArrivalComponent {
       'advanceRequest',
       'doReleased',
       'boePassingDate',
-      'customsClearance',
       'municipality',
       'transportation',
+      'customsClearance',
     ] as LogisticsSectionKey[]).filter((section) => this.canViewLogisticsSection(section))
   );
 
   hasPendingEditableBulkSections(index: number): boolean {
-    return this.visibleBulkSections().some(
+    return this.getVisibleBulkSectionsForRow(index).some(
       (section) => this.canEditLogisticsSection(section) && !this.isLogisticsSectionLocked(index, section)
+    );
+  }
+
+  getVisibleBulkSectionsForRow(index: number): LogisticsSectionKey[] {
+    return this.visibleBulkSections().filter((section) =>
+      section !== 'customsClearance' || this.isCustomClearanceRequired(index)
     );
   }
 
@@ -115,6 +124,8 @@ export class ShipmentArrivalComponent {
   @ViewChild('boePassingDateInput') boePassingDateInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('customsClearanceInput') customsClearanceInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('municipalityInput') municipalityInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('dpInvoiceInput') dpInvoiceInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('municipalityCertificateInput') municipalityCertificateInputRef?: ElementRef<HTMLInputElement>;
 
   // Customs Documents ViewChild references
   @ViewChild('customsDocBoeInput') customsDocBoeInputRef?: ElementRef<HTMLInputElement>;
@@ -136,6 +147,8 @@ export class ShipmentArrivalComponent {
   readonly boePassingDateFile = signal<Record<number, File | null>>({});
   readonly customsClearanceFile = signal<Record<number, File | null>>({});
   readonly municipalityFile = signal<Record<number, File | null>>({});
+  readonly dpInvoiceFile = signal<Record<number, File | null>>({});
+  readonly municipalityCertificateFile = signal<Record<number, File | null>>({});
 
   // Customs Documents file signals
   readonly customsDocBoeFile = signal<Record<number, File | null>>({});
@@ -147,8 +160,25 @@ export class ShipmentArrivalComponent {
 
   readonly expandedTransportation = signal<Record<number, boolean>>({});
   readonly extractingArrivalNoticeRowIndex = signal<number | null>(null);
+  readonly extractingDpwCargoRowIndex = signal<number | null>(null);
   readonly sectionSavingKey = signal<string | null>(null);
   readonly lockedSections = signal<Record<string, boolean>>({});
+  readonly dpwExtractionDialogVisible = signal(false);
+  readonly activeDpwExtractionRowIndex = signal<number | null>(null);
+  readonly activeDpwExtraction = signal<ExtractDpwCargoResponse | null>(null);
+  readonly bulkDateModalVisible = signal(false);
+  readonly bulkDateRowIndex = signal<number | null>(null);
+  readonly bulkTransportationSaving = signal(false);
+  readonly bulkDateForm = new FormGroup({
+    transportCompanyName: new FormControl<string | null>(null),
+    bookedDate: new FormControl<Date | null>(null),
+    bookingTime: new FormControl<Date | null>(null),
+    transportDate: new FormControl<Date | null>(null),
+    transportTime: new FormControl<Date | null>(null),
+    storageStartDate: new FormControl<Date | null>(null),
+    storageEndDate: new FormControl<Date | null>(null),
+    tokenReceivedDate: new FormControl<Date | null>(null),
+  });
 
   hasVisibleShipments(): boolean {
     return this.visibleShipmentIndices.length > 0;
@@ -233,7 +263,7 @@ export class ShipmentArrivalComponent {
   }
 
   async executeBulkSave(index: number): Promise<void> {
-    const pendingSections = this.visibleBulkSections().filter(
+    const pendingSections = this.getVisibleBulkSectionsForRow(index).filter(
       (section) => this.canEditLogisticsSection(section) && !this.isLogisticsSectionLocked(index, section)
     );
 
@@ -303,6 +333,19 @@ export class ShipmentArrivalComponent {
       }
     }
 
+    if (pendingSections.includes('boePassingDate')) {
+      const missingFields = this.validateBoePassingSection(index, group);
+      if (missingFields.length) {
+        this.bulkSaving.set(false);
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Required Fields Missing',
+          detail: `Please complete: ${missingFields.join(', ')}`,
+        });
+        return;
+      }
+    }
+
     if (pendingSections.includes('municipality')) {
       const missingFields = this.validateMunicipalitySection(group);
       if (missingFields.length) {
@@ -342,7 +385,7 @@ export class ShipmentArrivalComponent {
         this.messageService.add({
           severity: 'error',
           summary: 'Bulk Save Failed',
-          detail: error?.error?.message || 'Unable to save all Port & Customs sections in one request.',
+          detail: error?.error?.message || 'Unable to save all Port and Clearance sections in one request.',
         });
       }
     });
@@ -355,12 +398,12 @@ export class ShipmentArrivalComponent {
 
     payload.append('sectionKey', 'bulk');
     payload.append('bulkSectionKeys', JSON.stringify(sections));
+    payload.append('customClearanceRequired', String(this.isCustomClearanceRequired(index)));
 
     if (sections.includes('arrivalNotice')) {
       this.updateDerivedDates(index);
       payload.append('arrivalOn', toDate(group.get('arrivalOn')?.value));
       payload.append('shipmentFreeRetentionDate', toDate(group.get('shipmentFreeRetentionDate')?.value));
-      payload.append('portRetentionWithPenaltyDate', toDate(group.get('portRetentionWithPenaltyDate')?.value));
       payload.append('maximumRetentionDate', toDate(group.get('maximumRetentionDate')?.value));
       payload.append('arrivalNoticeDate', toDate(group.get('arrivalNoticeDate')?.value));
       payload.append('arrivalNoticeFreeRetentionDays', String(group.get('arrivalNoticeFreeRetentionDays')?.value ?? ''));
@@ -385,13 +428,20 @@ export class ShipmentArrivalComponent {
       }
       if (section === 'boePassingDate') {
         payload.append('dmBarcode', group.get('dmBarcode')?.value || '');
+        payload.append('dpwCargoExtraction', JSON.stringify(group.get('dpwCargoExtraction')?.value || null));
+        const dpInvoice = this.getDpInvoiceFile(index);
+        if (dpInvoice) payload.append('dpInvoiceDocument', dpInvoice, dpInvoice.name);
       }
       if (section === 'customsClearance') {
-        this.appendCustomsSubmissionDocuments(index, payload);
+        if (this.isCustomClearanceRequired(index)) {
+          this.appendCustomsSubmissionDocuments(index, payload);
+        }
       }
       if (section === 'municipality') {
         payload.append('municipalityStatus', group.get('municipalityStatus')?.value || 'open');
         payload.append('municipalityStatusComment', group.get('municipalityStatusComment')?.value || '');
+        const certificate = this.getMunicipalityCertificateFile(index);
+        if (certificate) payload.append('municipalityClearanceCertificate', certificate, certificate.name);
       }
       const file = this.getFile(index, section);
       if (file) payload.append(config.file, file, file.name);
@@ -401,20 +451,29 @@ export class ShipmentArrivalComponent {
       const transportationRows = this.getTransportationRows(group);
       transportationRows.markAllAsTouched();
       this.updateDelayHours(index);
-      const transportationBooked = transportationRows.getRawValue().map((tb: any) => ({
-        containerSerialNo: tb.containerSerialNo || '',
-        transportCompanyName: tb.transportCompanyName || '',
-        bookedDate: toDate(tb.bookedDate),
-        bookingTime: this.toTimeString(tb.bookingTime),
-        transportDate: toDate(tb.transportDate),
-        transportTime: this.toTimeString(tb.transportTime),
-        delayHours: tb.delayHours ?? null,
-      }));
+      const transportationBooked = this.buildTransportationBookedPayload(group);
       payload.append('transportationBooked', JSON.stringify(transportationBooked));
-      payload.append('tokenReceivedDate', toDate(group.get('tokenReceivedDate')?.value));
     }
 
     return payload;
+  }
+
+  private buildTransportationBookedPayload(group: AbstractControl): Array<Record<string, unknown>> {
+    const toDate = (val: unknown) => (val ? new Date(val as Date).toISOString().split('T')[0] : '');
+    return this.getTransportationRows(group).getRawValue().map((tb: any) => ({
+      sn: Number(tb.sn) || 0,
+      containerSerialNo: tb.containerSerialNo || '',
+      transportCompanyName: tb.transportCompanyName || '',
+      bulkSelected: tb.checked === true,
+      bookedDate: toDate(tb.bookedDate),
+      bookingTime: this.toTimeString(tb.bookingTime),
+      transportDate: toDate(tb.transportDate),
+      transportTime: this.toTimeString(tb.transportTime),
+      delayHours: tb.delayHours ?? null,
+      storageStartDate: toDate(tb.storageStartDate),
+      storageEndDate: toDate(tb.storageEndDate),
+      tokenReceivedDate: toDate(tb.tokenReceivedDate),
+    }));
   }
 
   readonly extractionMessages = [
@@ -426,6 +485,14 @@ export class ShipmentArrivalComponent {
   readonly extractionMessageIndex = signal(0);
   readonly extractionProgress = signal(18);
   readonly currentExtractionMessage = computed(() => this.extractionMessages[this.extractionMessageIndex()] || this.extractionMessages[0]);
+  readonly isExtractingDocument = computed(() =>
+    this.extractingArrivalNoticeRowIndex() !== null || this.extractingDpwCargoRowIndex() !== null
+  );
+  readonly extractionTitle = computed(() =>
+    this.extractingDpwCargoRowIndex() !== null
+      ? 'Royal AI is extracting DP Invoice details'
+      : 'Royal AI is extracting Arrival details'
+  );
   private extractionTicker: any = null;
 
   showPreviewModal = signal(false);
@@ -466,7 +533,7 @@ export class ShipmentArrivalComponent {
   /**
    * A row is considered "fully submitted" (locked for editing) only when
    * Storage Allocation & Arrival (step 5) has been completed for that row.
-   * Until then, Port & Customs sections remain editable.
+   * Until then, Port and Clearance sections remain editable.
    */
   readonly submittedIndices = toSignal(this.store.select(selectSubmittedStep5Indices), { initialValue: [] });
   readonly submittedLogisticsIndices = toSignal(this.store.select(selectSubmittedStep4Indices), { initialValue: [] });
@@ -615,18 +682,35 @@ export class ShipmentArrivalComponent {
 
   getLogisticsSectionLabel(section: LogisticsSectionKey): string {
     return section === 'arrivalNotice'
-      ? 'Port & Customs Clearance'
+      ? 'Port and Clearance'
       : section === 'advanceRequest'
         ? 'Advance Received'
         : section === 'doReleased'
           ? 'DO Released'
           : section === 'boePassingDate'
-            ? 'BOE Passing Date'
+            ? 'BOE Passing / DP Invoice'
             : section === 'customsClearance'
               ? 'Customs Clearance'
               : section === 'municipality'
-                ? 'Municipality Check'
+                ? 'Municipality Clearance Application'
                 : 'Transportation Arranged';
+  }
+
+  getLogisticsSectionOrder(section: LogisticsSectionKey): number {
+    const order: Record<LogisticsSectionKey, number> = {
+      arrivalNotice: 1,
+      advanceRequest: 2,
+      doReleased: 3,
+      boePassingDate: 4,
+      transportation: 5,
+      municipality: 6,
+      customsClearance: 7,
+    };
+    return order[section] || 99;
+  }
+
+  getLogisticsMilestoneNumber(section: LogisticsSectionKey): number {
+    return this.getLogisticsSectionOrder(section);
   }
 
   isRowEditLocked(index: number): boolean {
@@ -725,6 +809,60 @@ export class ShipmentArrivalComponent {
     this.pendingFileRow = null;
     this.pendingDocKind = null;
     input.value = '';
+  }
+
+  clickDpInvoiceFileInput(index: number): void {
+    if (this.isRowEditLocked(index) || this.isLogisticsSectionLocked(index, 'boePassingDate')) return;
+    this.pendingFileRow = index;
+    this.dpInvoiceInputRef?.nativeElement?.click();
+  }
+
+  onDpInvoiceInputChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    const row = this.pendingFileRow;
+    if (row !== null && file) {
+      this.dpInvoiceFile.update((cur) => ({ ...cur, [row]: file }));
+      this.extractDpwCargo(row, file);
+    }
+    this.pendingFileRow = null;
+    input.value = '';
+  }
+
+  getDpInvoiceFile(containerIndex: number): File | null {
+    return this.dpInvoiceFile()?.[containerIndex] ?? null;
+  }
+
+  clearDpInvoiceFile(containerIndex: number): void {
+    this.dpInvoiceFile.update((cur) => ({ ...cur, [containerIndex]: null }));
+    this.formArray.at(containerIndex)?.patchValue({
+      dpwCargoExtraction: null,
+    }, { emitEvent: false });
+  }
+
+  clickMunicipalityCertificateFileInput(index: number): void {
+    if (this.isRowEditLocked(index) || this.isLogisticsSectionLocked(index, 'municipality')) return;
+    this.pendingFileRow = index;
+    this.municipalityCertificateInputRef?.nativeElement?.click();
+  }
+
+  onMunicipalityCertificateInputChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    const row = this.pendingFileRow;
+    if (row !== null && file) {
+      this.municipalityCertificateFile.update((cur) => ({ ...cur, [row]: file }));
+    }
+    this.pendingFileRow = null;
+    input.value = '';
+  }
+
+  getMunicipalityCertificateFile(containerIndex: number): File | null {
+    return this.municipalityCertificateFile()?.[containerIndex] ?? null;
+  }
+
+  clearMunicipalityCertificateFile(containerIndex: number): void {
+    this.municipalityCertificateFile.update((cur) => ({ ...cur, [containerIndex]: null }));
   }
 
   clearFile(containerIndex: number, kind: Step5DocKind): void {
@@ -852,7 +990,7 @@ export class ShipmentArrivalComponent {
     if (row.invalid || !this.isPrecedingSubmitted(index)) return;
 
     this.confirmationService.confirm({
-      message: `Submit Port & Customs Clearance for Shipment #${index + 1}?`,
+      message: `Submit Port and Clearance for Shipment #${index + 1}?`,
       header: 'Submit Clearance Tracker',
       accept: () => {
         const formValue = row.getRawValue();
@@ -864,34 +1002,28 @@ export class ShipmentArrivalComponent {
         this.updateDerivedDates(index);
         this.updateDelayHours(index);
 
-        const transportationBooked = (formValue['transportationBooked'] || []).map((tb: any) => ({
-          containerSerialNo: tb.containerSerialNo || '',
-          transportCompanyName: tb.transportCompanyName || '',
-          bookedDate: toDate(tb.bookedDate),
-          bookingTime: this.toTimeString(tb.bookingTime),
-          transportDate: toDate(tb.transportDate),
-          transportTime: this.toTimeString(tb.transportTime),
-          delayHours: tb.delayHours ?? null,
-        }));
+        const transportationBooked = this.buildTransportationBookedPayload(row);
 
         const payload = new FormData();
         payload.append('arrivalOn', toDate(formValue['arrivalOn']));
         payload.append('shipmentFreeRetentionDate', toDate(formValue['shipmentFreeRetentionDate']));
-        payload.append('portRetentionWithPenaltyDate', toDate(formValue['portRetentionWithPenaltyDate']));
         payload.append('maximumRetentionDate', toDate(formValue['maximumRetentionDate']));
         payload.append('arrivalNoticeDate', toDate(formValue['arrivalNoticeDate']));
         payload.append('arrivalNoticeFreeRetentionDays', String(formValue['arrivalNoticeFreeRetentionDays'] ?? ''));
+        payload.append('customClearanceRequired', String(formValue['customClearanceRequired'] === true));
         payload.append('advanceRequestDate', toDate(formValue['advanceRequestDate']));
         payload.append('doReleasedDate', toDate(formValue['doReleasedDate']));
         payload.append('doReleasedRemarks', formValue['doReleasedRemarks'] || '');
         payload.append('boePassingDate', toDate(formValue['boePassingDate']));
         payload.append('boePassingRemarks', formValue['boePassingRemarks'] || '');
         payload.append('dmBarcode', formValue['dmBarcode'] || '');
+        payload.append('dpwCargoExtraction', JSON.stringify(formValue['dpwCargoExtraction'] || null));
         payload.append('customsClearanceDate', toDate(formValue['customsClearanceDate']));
         payload.append('customsClearanceRemarks', formValue['customsClearanceRemarks'] || '');
-        payload.append('tokenReceivedDate', toDate(formValue['tokenReceivedDate']));
         payload.append('municipalityDate', toDate(formValue['municipalityDate']));
         payload.append('municipalityRemarks', formValue['municipalityRemarks'] || '');
+        payload.append('municipalityStatus', formValue['municipalityStatus'] || 'open');
+        payload.append('municipalityStatusComment', formValue['municipalityStatusComment'] || '');
         payload.append('transportationBooked', JSON.stringify(transportationBooked));
 
         const fileMap: Array<[Step5DocKind, string]> = [
@@ -906,6 +1038,10 @@ export class ShipmentArrivalComponent {
           const file = this.getFile(index, kind);
           if (file) payload.append(key, file, file.name);
         });
+        const dpInvoice = this.getDpInvoiceFile(index);
+        if (dpInvoice) payload.append('dpInvoiceDocument', dpInvoice, dpInvoice.name);
+        const certificate = this.getMunicipalityCertificateFile(index);
+        if (certificate) payload.append('municipalityClearanceCertificate', certificate, certificate.name);
 
         this.store.dispatch(
           ShipmentActions.submitLogistics({
@@ -935,6 +1071,14 @@ export class ShipmentArrivalComponent {
     return rowLocked || !this.canEditLogisticsSection(section) || !!this.lockedSections()[this.sectionKey(index, section)];
   }
 
+  isCustomClearanceRequired(index: number): boolean {
+    return this.formArray.at(index)?.get('customClearanceRequired')?.value === true;
+  }
+
+  isMunicipalityClosed(group: AbstractControl): boolean {
+    return String(group.get('municipalityStatus')?.value || 'open').toLowerCase() === 'closed';
+  }
+
   isPortCustomsLocked(index: number): boolean {
     return this.isLogisticsSectionLocked(index, 'arrivalNotice');
   }
@@ -953,32 +1097,24 @@ export class ShipmentArrivalComponent {
 
   private validateCustomsClearanceSection(index: number, group: AbstractControl): string[] {
     const missingFields: string[] = [];
+    if (!this.isCustomClearanceRequired(index)) {
+      return missingFields;
+    }
     if (!group.get('customsClearanceDate')?.value) {
       missingFields.push('Customs Clearance Date');
-    }
-    const missingDocs = this.getRequiredCustomsDocTypes().filter(
-      (docType) => !this.hasCustomsSubmissionDocument(group, index, docType)
-    );
-    if (missingDocs.length) {
-      const docLabels: Record<CustomsDocType, string> = {
-        boe: 'BOE Copy',
-        do: 'DO Copy',
-        blOriginal: 'BL',
-        invoice: 'Origin Invoice',
-        packingList: 'Packing List',
-        coo: 'COO',
-      };
-      missingFields.push(
-        ...missingDocs.map((docType) => docLabels[docType])
-      );
     }
     return missingFields;
   }
 
   private validateTransportationSection(group: AbstractControl): string[] {
     const missingFields: string[] = [];
-    if (!group.get('tokenReceivedDate')?.value) {
-      missingFields.push('Token Received Date');
+    return missingFields;
+  }
+
+  private validateBoePassingSection(index: number, group: AbstractControl): string[] {
+    const missingFields: string[] = [];
+    if (!this.getDpInvoiceFile(index) && !String(group.get('dpInvoiceDocumentUrl')?.value || '').trim()) {
+      missingFields.push('DP Invoice');
     }
     return missingFields;
   }
@@ -986,14 +1122,11 @@ export class ShipmentArrivalComponent {
   private validateMunicipalitySection(group: AbstractControl): string[] {
     const missingFields: string[] = [];
     if (!group.get('municipalityDate')?.value) {
-      missingFields.push('Municipality Check Date');
+      missingFields.push('Municipality Clearance Application Date');
     }
     const status = String(group.get('municipalityStatus')?.value || 'open').toLowerCase();
     if (!status) {
       missingFields.push('Status');
-    }
-    if (status === 'closed' && !String(group.get('municipalityStatusComment')?.value || '').trim()) {
-      missingFields.push('Closed Comment');
     }
     return missingFields;
   }
@@ -1047,6 +1180,18 @@ export class ShipmentArrivalComponent {
       }
     }
 
+    if (section === 'boePassingDate') {
+      const missingFields = this.validateBoePassingSection(index, group);
+      if (missingFields.length) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Required Fields Missing',
+          detail: `Please complete: ${missingFields.join(', ')}`,
+        });
+        return;
+      }
+    }
+
     if (section === 'municipality') {
       const missingFields = this.validateMunicipalitySection(group);
       if (missingFields.length) {
@@ -1073,6 +1218,7 @@ export class ShipmentArrivalComponent {
     const toDate = (val: unknown) => (val ? new Date(val as Date).toISOString().split('T')[0] : '');
     const payload = new FormData();
     payload.append('sectionKey', section);
+    payload.append('customClearanceRequired', String(this.isCustomClearanceRequired(index)));
 
     if (section === 'transportation') {
       const missingFields = this.validateTransportationSection(group);
@@ -1108,22 +1254,12 @@ export class ShipmentArrivalComponent {
       }
       
       this.updateDelayHours(index);
-      const transportationBooked = this.getTransportationRows(group).getRawValue().map((tb: any) => ({
-        containerSerialNo: tb.containerSerialNo || '',
-        transportCompanyName: tb.transportCompanyName || '',
-        bookedDate: toDate(tb.bookedDate),
-        bookingTime: this.toTimeString(tb.bookingTime),
-        transportDate: toDate(tb.transportDate),
-        transportTime: this.toTimeString(tb.transportTime),
-        delayHours: tb.delayHours ?? null,
-      }));
+      const transportationBooked = this.buildTransportationBookedPayload(group);
       payload.append('transportationBooked', JSON.stringify(transportationBooked));
-      payload.append('tokenReceivedDate', toDate(group.get('tokenReceivedDate')?.value));
     } else if (section === 'arrivalNotice') {
       this.updateDerivedDates(index);
       payload.append('arrivalOn', toDate(group.get('arrivalOn')?.value));
       payload.append('shipmentFreeRetentionDate', toDate(group.get('shipmentFreeRetentionDate')?.value));
-      payload.append('portRetentionWithPenaltyDate', toDate(group.get('portRetentionWithPenaltyDate')?.value));
       payload.append('maximumRetentionDate', toDate(group.get('maximumRetentionDate')?.value));
       payload.append('arrivalNoticeDate', toDate(group.get('arrivalNoticeDate')?.value));
       payload.append('arrivalNoticeFreeRetentionDays', String(group.get('arrivalNoticeFreeRetentionDays')?.value ?? ''));
@@ -1142,13 +1278,20 @@ export class ShipmentArrivalComponent {
       if (config.remarks) payload.append(config.remarks, group.get(config.remarks)?.value || '');
       if (section === 'boePassingDate') {
         payload.append('dmBarcode', group.get('dmBarcode')?.value || '');
+        payload.append('dpwCargoExtraction', JSON.stringify(group.get('dpwCargoExtraction')?.value || null));
+        const dpInvoice = this.getDpInvoiceFile(index);
+        if (dpInvoice) payload.append('dpInvoiceDocument', dpInvoice, dpInvoice.name);
       }
       if (section === 'customsClearance') {
-        this.appendCustomsSubmissionDocuments(index, payload);
+        if (this.isCustomClearanceRequired(index)) {
+          this.appendCustomsSubmissionDocuments(index, payload);
+        }
       }
       if (section === 'municipality') {
         payload.append('municipalityStatus', group.get('municipalityStatus')?.value || 'open');
         payload.append('municipalityStatusComment', group.get('municipalityStatusComment')?.value || '');
+        const certificate = this.getMunicipalityCertificateFile(index);
+        if (certificate) payload.append('municipalityClearanceCertificate', certificate, certificate.name);
       }
       const file = this.getFile(index, section);
       if (file) payload.append(config.file, file, file.name);
@@ -1209,7 +1352,6 @@ export class ShipmentArrivalComponent {
     const arrivalOn = group?.get('arrivalOn')?.value;
     if (!group || !arrivalOn) {
       group?.get('shipmentFreeRetentionDate')?.patchValue(null, { emitEvent: false });
-      group?.get('portRetentionWithPenaltyDate')?.patchValue(null, { emitEvent: false });
       group?.get('maximumRetentionDate')?.patchValue(null, { emitEvent: false });
       return;
     }
@@ -1229,9 +1371,6 @@ export class ShipmentArrivalComponent {
     const portFreeRetentionDate = this.addDays(arrivalOn, 10);
     group.get('maximumRetentionDate')?.patchValue(portFreeRetentionDate, { emitEvent: false });
 
-    // POINT 12: Port Demurrage Start Date = arrival + 10 days + 1 day = day 11
-    const portDemurrageStartDate = this.addDays(arrivalOn, 11);
-    group.get('portRetentionWithPenaltyDate')?.patchValue(portDemurrageStartDate, { emitEvent: false });
   }
 
   private updateDelayHours(index: number): void {
@@ -1299,8 +1438,116 @@ export class ShipmentArrivalComponent {
     });
   }
 
+  private extractDpwCargo(index: number, file: File): void {
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    this.extractingDpwCargoRowIndex.set(index);
+    this.startExtractionExperience();
+    this.shipmentService.extractDpwCargo(formData).subscribe({
+      next: (res) => {
+        this.extractingDpwCargoRowIndex.set(null);
+        this.stopExtractionExperience();
+        const group = this.formArray.at(index);
+        if (!group) return;
+
+        group.get('dpwCargoExtraction')?.setValue(res);
+        this.activeDpwExtractionRowIndex.set(index);
+        this.activeDpwExtraction.set(res);
+        this.dpwExtractionDialogVisible.set(true);
+        this.messageService.add({
+          severity: res.error ? 'warn' : 'success',
+          summary: res.error ? 'DP invoice extracted with warnings' : 'DP invoice extracted',
+          detail: res.error || 'Review the extracted container storage dates before applying.',
+        });
+      },
+      error: (err) => {
+        this.extractingDpwCargoRowIndex.set(null);
+        this.stopExtractionExperience();
+        const normalized = err.error as ExtractDpwCargoResponse | undefined;
+        if (normalized) {
+          this.formArray.at(index)?.get('dpwCargoExtraction')?.setValue(normalized);
+          this.activeDpwExtractionRowIndex.set(index);
+          this.activeDpwExtraction.set(normalized);
+          this.dpwExtractionDialogVisible.set(true);
+        }
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'DP invoice extraction failed',
+          detail: normalized?.error || err.error?.message || 'We could not extract DPW cargo details from the uploaded invoice.',
+        });
+      }
+    });
+  }
+
+  openSavedDpwExtraction(index: number): void {
+    const extraction = this.formArray.at(index)?.get('dpwCargoExtraction')?.value as ExtractDpwCargoResponse | null;
+    if (!extraction) return;
+    this.activeDpwExtractionRowIndex.set(index);
+    this.activeDpwExtraction.set(extraction);
+    this.dpwExtractionDialogVisible.set(true);
+  }
+
+  closeDpwExtractionDialog(): void {
+    this.dpwExtractionDialogVisible.set(false);
+    this.activeDpwExtractionRowIndex.set(null);
+    this.activeDpwExtraction.set(null);
+  }
+
+  applyActiveDpwExtraction(): void {
+    const index = this.activeDpwExtractionRowIndex();
+    const extraction = this.activeDpwExtraction();
+    if (index === null || !extraction) return;
+    const patchedCount = this.applyDpwExtractionToTransportationRows(index, extraction);
+    this.closeDpwExtractionDialog();
+    this.messageService.add({
+      severity: patchedCount > 0 ? 'success' : 'info',
+      summary: patchedCount > 0 ? 'Dates applied' : 'No matching containers',
+      detail: patchedCount > 0
+        ? `${patchedCount} transportation row(s) were updated from the DP invoice.`
+        : 'No transportation rows matched the extracted container serial numbers.',
+    });
+  }
+
+  private applyDpwExtractionToTransportationRows(index: number, extraction: ExtractDpwCargoResponse): number {
+    const group = this.formArray.at(index);
+    if (!group) return 0;
+    const rows = this.getTransportationRows(group);
+    const extractedRows = Array.isArray(extraction.containers) ? extraction.containers : [];
+    const extractedMap = new Map(
+      extractedRows
+        .map((row) => [this.normalizeContainerSerial(row.container), row] as const)
+        .filter(([serial]) => !!serial)
+    );
+    let patched = 0;
+
+    rows.controls.forEach((row) => {
+      const serial = this.normalizeContainerSerial(row.get('containerSerialNo')?.value);
+      const extracted = extractedMap.get(serial);
+      if (!extracted) return;
+
+      const storageStartDate = this.parseApiDate(extracted.from || '');
+      const storageEndDate = this.parseApiDate(extracted.to || '');
+      row.patchValue({
+        storageStartDate,
+        storageEndDate,
+      }, { emitEvent: false });
+      patched += 1;
+    });
+
+    return patched;
+  }
+
+  private normalizeContainerSerial(value: unknown): string {
+    return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  }
+
   private parseApiDate(value: string): Date | null {
     if (!value) return null;
+    const slashParts = value.split('/').map((part) => Number(part));
+    if (slashParts.length === 3 && slashParts.every((part) => Number.isFinite(part))) {
+      const [day, month, year] = slashParts;
+      return new Date(year, month - 1, day);
+    }
     const parts = value.split('-').map((part) => Number(part));
     if (parts.length === 3 && parts.every((part) => Number.isFinite(part))) {
       const [year, month, day] = parts;
@@ -1407,6 +1654,18 @@ export class ShipmentArrivalComponent {
         }));
       });
     }
+    if (section === 'boePassingDate') {
+      this.dpInvoiceFile.update((current) => ({
+        ...current,
+        [index]: null,
+      }));
+    }
+    if (section === 'municipality') {
+      this.municipalityCertificateFile.update((current) => ({
+        ...current,
+        [index]: null,
+      }));
+    }
   }
 
   private patchSavedSection(index: number, section: Step5DocKind | 'transportation', actual: any): void {
@@ -1419,6 +1678,7 @@ export class ShipmentArrivalComponent {
         shipmentFreeRetentionDate: actual.shipmentFreeRetentionDate ? new Date(actual.shipmentFreeRetentionDate) : null,
         portRetentionWithPenaltyDate: actual.portRetentionWithPenaltyDate ? new Date(actual.portRetentionWithPenaltyDate) : null,
         maximumRetentionDate: actual.maximumRetentionDate ? new Date(actual.maximumRetentionDate) : null,
+        customClearanceRequired: actual.customClearanceRequired === true,
         arrivalNoticeDate: actual.arrivalNoticeDate ? new Date(actual.arrivalNoticeDate) : null,
         arrivalNoticeFreeRetentionDays: actual.arrivalNoticeFreeRetentionDays ?? null,
         arrivalNoticeDocumentUrl: actual.arrivalNoticeDocumentUrl || '',
@@ -1440,11 +1700,11 @@ export class ShipmentArrivalComponent {
           transportDate: saved.transportDate ? new Date(saved.transportDate) : null,
           transportTime: saved.transportTime || '',
           delayHours: saved.delayHours ?? 0,
+          storageStartDate: saved.storageStartDate ? new Date(saved.storageStartDate) : null,
+          storageEndDate: saved.storageEndDate ? new Date(saved.storageEndDate) : null,
+          tokenReceivedDate: saved.tokenReceivedDate ? new Date(saved.tokenReceivedDate) : null,
         }, { emitEvent: false });
       });
-      group.patchValue({
-        tokenReceivedDate: actual.tokenReceivedDate ? new Date(actual.tokenReceivedDate) : null,
-      }, { emitEvent: false });
       return;
     }
 
@@ -1466,12 +1726,16 @@ export class ShipmentArrivalComponent {
         boePassingDocumentUrl: actual.boePassingDocumentUrl || '',
         boePassingDocumentName: actual.boePassingDocumentName || '',
         dmBarcode: actual.dmBarcode || '',
+        dpInvoiceDocumentUrl: actual.dpInvoiceDocumentUrl || '',
+        dpInvoiceDocumentName: actual.dpInvoiceDocumentName || '',
+        dpwCargoExtraction: actual.dpwCargoExtraction || null,
       },
       customsClearance: {
         customsClearanceDate: actual.customsClearanceDate ? new Date(actual.customsClearanceDate) : null,
         customsClearanceRemarks: actual.customsClearanceRemarks || '',
         customsClearanceDocumentUrl: actual.customsClearanceDocumentUrl || '',
         customsClearanceDocumentName: actual.customsClearanceDocumentName || '',
+        customClearanceRequired: actual.customClearanceRequired === true,
         customsDocBoeUrl: actual.customsOriginalDocuments?.boe?.documentUrl || actual.customsOriginalDocuments?.boeDocumentUrl || '',
         customsDocBoeName: actual.customsOriginalDocuments?.boe?.documentName || actual.customsOriginalDocuments?.boeDocumentName || '',
         customsDocDoUrl: actual.customsOriginalDocuments?.do?.documentUrl || actual.customsOriginalDocuments?.doDocumentUrl || '',
@@ -1490,6 +1754,8 @@ export class ShipmentArrivalComponent {
         municipalityDocumentName: actual.municipalityDocumentName || '',
         municipalityStatus: actual.municipalityStatus || 'open',
         municipalityStatusComment: actual.municipalityStatusComment || '',
+        municipalityClearanceCertificateUrl: actual.municipalityClearanceCertificateUrl || '',
+        municipalityClearanceCertificateName: actual.municipalityClearanceCertificateName || '',
       },
     };
 
@@ -1500,15 +1766,18 @@ export class ShipmentArrivalComponent {
 
   private isLogisticsRowComplete(row: any): boolean {
     const locked = new Set(row?.lockedLogisticsSections || []);
-    return [
+    const requiredSections = [
       'arrivalNotice',
       'advanceRequest',
       'doReleased',
       'boePassingDate',
-      'customsClearance',
       'municipality',
       'transportation',
-    ].every((section) => locked.has(section));
+    ];
+    if (row?.customClearanceRequired === true) {
+      requiredSections.push('customsClearance');
+    }
+    return requiredSections.every((section) => locked.has(section));
   }
 
   private applySectionLocks(index: number): void {
@@ -1516,13 +1785,13 @@ export class ShipmentArrivalComponent {
     if (!group) return;
 
     const sectionControls: Record<string, string[]> = {
-      arrivalNotice: ['arrivalNoticeDate', 'arrivalOn', 'shipmentFreeRetentionDate', 'maximumRetentionDate', 'portRetentionWithPenaltyDate', 'arrivalNoticeFreeRetentionDays'],
+      arrivalNotice: ['arrivalNoticeDate', 'arrivalOn', 'shipmentFreeRetentionDate', 'maximumRetentionDate', 'arrivalNoticeFreeRetentionDays', 'customClearanceRequired'],
       advanceRequest: ['advanceRequestDate'],
       doReleased: ['doReleasedDate', 'doReleasedRemarks'],
-      boePassingDate: ['boePassingDate', 'boePassingRemarks', 'dmBarcode'],
+      boePassingDate: ['boePassingDate', 'boePassingRemarks', 'dmBarcode', 'dpInvoiceDocumentUrl', 'dpInvoiceDocumentName', 'dpwCargoExtraction'],
       customsClearance: ['customsClearanceDate', 'customsClearanceRemarks'],
-      municipality: ['municipalityDate', 'municipalityRemarks', 'municipalityStatus', 'municipalityStatusComment'],
-      transportation: ['tokenReceivedDate'],
+      municipality: ['municipalityDate', 'municipalityRemarks', 'municipalityStatus', 'municipalityStatusComment', 'municipalityClearanceCertificateUrl', 'municipalityClearanceCertificateName'],
+      transportation: [],
     };
 
     Object.entries(sectionControls).forEach(([section, controls]) => {
@@ -1550,6 +1819,159 @@ export class ShipmentArrivalComponent {
       } else if (!transportRowLocked) {
         row.enable({ emitEvent: false });
         row.get('delayHours')?.disable({ emitEvent: false });
+      }
+    });
+  }
+
+  openBulkDateModal(index: number): void {
+    if (this.isLogisticsSectionLocked(index, 'transportation')) return;
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+    const currentTime = new Date();
+    currentTime.setSeconds(0, 0);
+    this.bulkDateRowIndex.set(index);
+    this.bulkDateForm.reset({
+      transportCompanyName: null,
+      bookedDate: new Date(currentDate),
+      bookingTime: new Date(currentTime),
+      transportDate: new Date(currentDate),
+      transportTime: new Date(currentTime),
+      storageStartDate: null,
+      storageEndDate: null,
+      tokenReceivedDate: null,
+    });
+    this.clearBulkTransportationSelection(index);
+    this.bulkDateModalVisible.set(true);
+  }
+
+  closeBulkDateModal(): void {
+    const index = this.bulkDateRowIndex();
+    if (index !== null) this.clearBulkTransportationSelection(index);
+    this.bulkDateModalVisible.set(false);
+    this.bulkDateRowIndex.set(null);
+  }
+
+  clearBulkTransportationSelection(index: number): void {
+    this.getTransportationRows(this.formArray.at(index)).controls.forEach((row) => {
+      row.get('checked')?.patchValue(false, { emitEvent: false });
+    });
+  }
+
+  getSelectedTransportationRows(index: number): AbstractControl[] {
+    return this.getTransportationRows(this.formArray.at(index)).controls.filter((row) => row.get('checked')?.value === true);
+  }
+
+  selectedTransportationCount(index: number): number {
+    return this.getSelectedTransportationRows(index).length;
+  }
+
+  areAllBulkTransportationRowsSelected(index: number): boolean {
+    const rows = this.getTransportationRows(this.formArray.at(index)).controls;
+    return rows.length > 0 && rows.every((row) => row.get('checked')?.value === true);
+  }
+
+  toggleAllBulkTransportationRows(index: number, event: Event): void {
+    const checked = (event.target as HTMLInputElement | null)?.checked === true;
+    this.getTransportationRows(this.formArray.at(index)).controls.forEach((row) => {
+      row.get('checked')?.patchValue(checked, { emitEvent: false });
+    });
+  }
+
+  saveBulkTransportationSelection(): void {
+    const index = this.bulkDateRowIndex();
+    if (index === null) return;
+    if (this.bulkTransportationSaving()) return;
+
+    const group = this.formArray.at(index);
+    const containerId = group?.get('containerId')?.value;
+    const shipmentId = this.shipmentData()?.shipment?._id;
+    if (!group || !containerId || !shipmentId) return;
+
+    const values = this.bulkDateForm.getRawValue();
+    const selectedRows = this.getSelectedTransportationRows(index);
+
+    if (!selectedRows.length) {
+      this.messageService.add({
+        severity: 'info',
+        summary: 'No rows selected',
+        detail: 'Select one or more containers in the modal before saving.',
+      });
+      return;
+    }
+
+    const patch: Record<string, string | Date> = {};
+    const company = String(values.transportCompanyName || '').trim();
+    if (company) patch['transportCompanyName'] = company;
+    if (values.bookedDate) patch['bookedDate'] = values.bookedDate;
+    if (values.bookingTime) patch['bookingTime'] = values.bookingTime;
+    if (values.transportDate) patch['transportDate'] = values.transportDate;
+    if (values.transportTime) patch['transportTime'] = values.transportTime;
+    if (values.storageStartDate) patch['storageStartDate'] = values.storageStartDate;
+    if (values.storageEndDate) patch['storageEndDate'] = values.storageEndDate;
+    if (values.tokenReceivedDate) patch['tokenReceivedDate'] = values.tokenReceivedDate;
+
+    if (!Object.keys(patch).length) {
+      this.messageService.add({
+        severity: 'info',
+        summary: 'No bulk values entered',
+        detail: 'Enter at least one transport or date value to save.',
+      });
+      return;
+    }
+
+    selectedRows.forEach((row) => {
+      row.patchValue(patch, { emitEvent: false });
+      row.markAllAsTouched();
+      row.updateValueAndValidity({ emitEvent: false });
+    });
+
+    const missingCompany = selectedRows.some((row) => !String(row.get('transportCompanyName')?.value || '').trim());
+    if (missingCompany) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Transport Company Required',
+        detail: 'Selected containers need a transport company before saving.',
+      });
+      return;
+    }
+
+    this.onTransportationTimeChange(index);
+    selectedRows.forEach((row) => row.updateValueAndValidity({ emitEvent: false }));
+    if (selectedRows.some((row) => row.invalid)) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Invalid transportation timing',
+        detail: 'Transportation date and time must be the same as or later than the arranged date and booking time.',
+      });
+      return;
+    }
+
+    const payload = new FormData();
+    payload.append('sectionKey', 'transportation');
+    payload.append('transportationPartialSave', 'true');
+    payload.append('transportationBooked', JSON.stringify(this.buildTransportationBookedPayload(group)));
+
+    this.bulkTransportationSaving.set(true);
+    this.shipmentService.submitLogistics(containerId, payload).subscribe({
+      next: () => {
+        this.bulkTransportationSaving.set(false);
+        const count = selectedRows.length;
+        this.clearBulkTransportationSelection(index);
+        this.closeBulkDateModal();
+        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Transportation Updated',
+          detail: `${count} selected container(s) updated and saved.`,
+        });
+      },
+      error: (error) => {
+        this.bulkTransportationSaving.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Bulk Save Failed',
+          detail: error?.error?.message || 'Unable to save selected transportation rows.',
+        });
       }
     });
   }

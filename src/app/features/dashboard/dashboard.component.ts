@@ -243,6 +243,10 @@ export class DashboardComponent implements OnInit {
     return Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
   }
 
+  getPivotFclTotal(pivot: DashboardStatusPivot, column: string): number {
+    return Number(pivot.totalsFCL?.[column] || 0);
+  }
+
   getStatusSeverity(status: string | null | undefined): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {
     const s = String(status || '').trim().toLowerCase();
     if (!s) return 'secondary';

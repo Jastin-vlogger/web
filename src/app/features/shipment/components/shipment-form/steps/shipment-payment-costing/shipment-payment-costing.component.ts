@@ -116,7 +116,7 @@ export class ShipmentPaymentCostingComponent {
     'Shipment Tracker',
     'BL Details',
     'Document Tracker',
-    'Port and Customs Clearance Tracker',
+    'Port and Clearance',
     'Storage Allocation & Arrival',
     'Quality',
     'Payment & Costing',
@@ -912,7 +912,7 @@ export class ShipmentPaymentCostingComponent {
     if (this.submittedStep7Indices().includes(index)) return 'Payment & Costing';
     if (this.submittedStep6Indices().includes(index)) return 'Quality';
     if (this.submittedStep5Indices().includes(index)) return 'Storage Allocation & Arrival';
-    if (this.submittedStep4Indices().includes(index)) return 'Port and Customs Clearance Tracker';
+    if (this.submittedStep4Indices().includes(index)) return 'Port and Clearance';
     if (this.submittedStep3Indices().includes(index)) return 'Document Tracker';
     if (this.submittedActualIndices().includes(index)) return 'BL Details';
     if (this.isPlannedLocked()) return 'Shipment Tracker';
