@@ -6,16 +6,15 @@ export type DocumentMilestoneKey =
   | 'murabaha_submit'
   | 'release';
 
-export const PAUSED_DOCUMENT_MILESTONES: readonly DocumentMilestoneKey[] = [
-  'murabaha_submit',
-  'release',
-];
+export const PAUSED_DOCUMENT_MILESTONES: readonly DocumentMilestoneKey[] = [];
 
 export const BANK_DOCUMENT_MILESTONES: readonly DocumentMilestoneKey[] = [
   'courier',
   'receiving',
   'inward',
   'murabaha_process',
+  'murabaha_submit',
+  'release',
 ];
 
 export const DIRECT_DOCUMENT_MILESTONES: readonly DocumentMilestoneKey[] = [
@@ -46,6 +45,8 @@ export type DocumentationCompletionValues = {
   receiver?: unknown;
   bankName?: unknown;
   inwardCollectionAdviceDate?: unknown;
+  inwardCollectionAdviceReceivedAt?: unknown;
+  inwardCollectionAdviceSubmittedAt?: unknown;
   inwardCollectionAdviceDocumentUrl?: unknown;
   murabahaContractReleasedDate?: unknown;
   murabahaContractApprovedDate?: unknown;
@@ -82,12 +83,16 @@ export const isDocumentationMilestoneComplete = (
       return isBankReceiverValue(values.receiver) ? hasValue(values.bankName) : true;
     }
     case 'inward':
-      return hasValue(values.inwardCollectionAdviceDate) || hasValue(values.inwardCollectionAdviceDocumentUrl);
+      return hasValue(values.inwardCollectionAdviceDate) ||
+        hasValue(values.inwardCollectionAdviceReceivedAt) ||
+        hasValue(values.inwardCollectionAdviceSubmittedAt) ||
+        hasValue(values.inwardCollectionAdviceDocumentUrl);
     case 'murabaha_process':
       return hasValue(values.murabahaContractReleasedDate) || hasValue(values.murabahaContractApprovedDate);
     case 'murabaha_submit':
+      return hasValue(values.murabahaContractSubmittedDate) || hasValue(values.murabahaContractSubmittedDocumentUrl);
     case 'release':
-      return false;
+      return hasValue(values.documentsReleasedDate) || hasValue(values.documentsReleasedDocumentUrl);
   }
 };
 

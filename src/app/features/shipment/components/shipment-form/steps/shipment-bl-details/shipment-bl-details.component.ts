@@ -1,6 +1,6 @@
 import { Component, Input, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AbstractControl, FormArray, ReactiveFormsModule } from '@angular/forms';
+import { AbstractControl, FormArray, FormControl, FormGroup, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Store } from '@ngrx/store';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -42,6 +42,7 @@ import {
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     ReactiveFormsModule,
     AccordionModule,
     DatePickerModule,
@@ -95,6 +96,24 @@ export class ShipmentBlDetailsComponent {
   readonly storageValidationModalVisible = signal(false);
   readonly storageValidationMessage = signal('');
   readonly storageValidationDetails = signal<Array<{ storage: string; packaging: string }>>([]);
+  readonly clearingSubmitModalVisible = signal(false);
+  readonly clearingSubmitIndex = signal<number | null>(null);
+  readonly clearingSubmitDraft = signal({
+    chequeNo: '',
+    chequeDate: '',
+    paymentVoucherNo: '',
+    transactionId: '',
+  });
+  readonly clearingInfoModalVisible = signal(false);
+  readonly clearingInfoIndex = signal<number | null>(null);
+  readonly additionalRequestModalVisible = signal(false);
+  readonly additionalRequestIndex = signal<number | null>(null);
+  readonly additionalRequestDraft = signal({
+    title: '',
+    comment: '',
+    requestAmount: null as number | null,
+  });
+  readonly additionalRequestFiles = signal<Record<number, File | null>>({});
   readonly paymentToOptions = [
     { label: 'MOFA', value: 'MOFA' },
     { label: 'Shipping line', value: 'Shipping line' },
@@ -264,6 +283,40 @@ export class ShipmentBlDetailsComponent {
         storageAvailability: Number(saved.storageAvailability ?? 0),
       }, { emitEvent: false });
     });
+
+    const decision = row.get('storageAllocationDecision') as FormGroup | null;
+    const savedDecision = actual.storageAllocationDecision || {};
+    if (decision) {
+      decision.patchValue({
+        similarItems: savedDecision.similarItems ?? true,
+        splitRequired: savedDecision.splitRequired ?? false,
+        splitQuantity: Number(savedDecision.splitQuantity ?? actual.storageAllocationSplits?.length ?? 1) || 1,
+      }, { emitEvent: false });
+    }
+
+    const splitRows = this.getStorageSplitRows(row);
+    while (splitRows.length) splitRows.removeAt(splitRows.length - 1, { emitEvent: false });
+    const actualSplitRows = Array.isArray(actual.storageAllocationSplits) && actual.storageAllocationSplits.length
+      ? actual.storageAllocationSplits
+      : [{ sn: 1, itemName: 'Similar Item Set', quantity: this.getDefaultStorageSplitQuantity(index), warehouse: '' }];
+
+    actualSplitRows.forEach((entry: any, rowIndex: number) => {
+      splitRows.push(this.createStorageSplitGroup({
+        sn: Number(entry?.sn) || rowIndex + 1,
+        itemName: entry?.itemName || 'Similar Item Set',
+        quantity: entry?.quantity ?? this.getDefaultStorageSplitQuantity(index),
+        warehouse: entry?.warehouse || '',
+      }), { emitEvent: false });
+    });
+  }
+
+  private createStorageSplitGroup(entry: { sn: number; itemName?: string; quantity?: number | null; warehouse?: string }): FormGroup {
+    return new FormGroup({
+      sn: new FormControl(entry.sn),
+      itemName: new FormControl(entry.itemName || 'Similar Item Set'),
+      quantity: new FormControl(entry.quantity ?? null),
+      warehouse: new FormControl(entry.warehouse || ''),
+    });
   }
 
   setCostSheetSearchTerm(index: number, term: string): void {
@@ -409,12 +462,17 @@ export class ShipmentBlDetailsComponent {
     const rawStatus = actual?.storageAllocationApproval?.status || 'draft';
     if (rawStatus !== 'draft') return rawStatus;
     const rows = actual?.storageAllocations || [];
-    const hasSavedData = Array.isArray(rows) && rows.some((entry: any) =>
+    const splitRows = actual?.storageAllocationSplits || [];
+    const hasLegacyData = Array.isArray(rows) && rows.some((entry: any) =>
       String(entry?.containerSerialNo || '').trim().length > 0 ||
       Number(entry?.bags || 0) > 0 ||
       String(entry?.warehouse || '').trim().length > 0
     );
-    return hasSavedData ? 'pending_warehouse_manager' : 'draft';
+    const hasSplitData = Array.isArray(splitRows) && splitRows.some((entry: any) =>
+      String(entry?.itemName || '').trim().length > 0 ||
+      Number(entry?.quantity || 0) > 0
+    );
+    return hasLegacyData || hasSplitData ? 'pending_warehouse_manager' : 'draft';
   }
 
   isClearingAdvanceApproved(index: number): boolean {
@@ -554,6 +612,130 @@ export class ShipmentBlDetailsComponent {
 
   getStorageRows(group: AbstractControl): FormArray {
     return group.get('storageAllocations') as FormArray;
+  }
+
+  getStorageDecision(group: AbstractControl): FormGroup {
+    return group.get('storageAllocationDecision') as FormGroup;
+  }
+
+  getStorageSplitRows(group: AbstractControl): FormArray {
+    return group.get('storageAllocationSplits') as FormArray;
+  }
+
+  getStorageItemOptions(index: number): Array<{ label: string; value: string }> {
+    const shipment = this.shipmentData()?.shipment as any;
+    const lineItems = Array.isArray(shipment?.lineItems) ? shipment.lineItems : [];
+    const names = new Set<string>(['Similar Item Set']);
+    const lineItem = lineItems[index];
+    [
+      lineItem?.itemDescription,
+      lineItem?.itemName,
+      lineItem?.item,
+      shipment?.itemDescription,
+      shipment?.item,
+      ...lineItems.map((item: any) => item?.itemDescription || item?.itemName || item?.item),
+    ].forEach((value) => {
+      const label = String(value || '').trim();
+      if (label) names.add(label);
+    });
+    return Array.from(names).map((label) => ({ label, value: label }));
+  }
+
+  private getDefaultStorageSplitQuantity(index: number, count: number = 1): number | null {
+    if (count > 1) return null;
+    const actual = this.getActualShipment(index);
+    const row = this.formArray.at(index);
+    return Number(
+      actual?.quantityByMt ??
+      actual?.qtyMT ??
+      row?.get('quantityByMt')?.value ??
+      row?.get('qtyMT')?.value ??
+      0
+    ) || null;
+  }
+
+  private getDefaultStorageItemName(index: number, similarItems: boolean): string {
+    if (similarItems) return 'Similar Item Set';
+    return this.getStorageItemOptions(index).find((option) => option.value !== 'Similar Item Set')?.value || '';
+  }
+
+  private syncStorageSplitRows(group: AbstractControl, count: number, similarItems: boolean, shipmentIndex: number): void {
+    const rows = this.getStorageSplitRows(group);
+    const nextCount = Math.max(1, Math.floor(Number(count) || 1));
+    while (rows.length < nextCount) {
+      rows.push(this.createStorageSplitGroup({
+        sn: rows.length + 1,
+        itemName: this.getDefaultStorageItemName(shipmentIndex, similarItems),
+        quantity: this.getDefaultStorageSplitQuantity(shipmentIndex, nextCount),
+        warehouse: '',
+      }));
+    }
+    while (rows.length > nextCount) {
+      rows.removeAt(rows.length - 1);
+    }
+    rows.controls.forEach((control, rowIndex) => {
+      const patch: any = { sn: rowIndex + 1 };
+      if (similarItems) patch.itemName = 'Similar Item Set';
+      if (nextCount <= 1) {
+        patch.quantity = this.getDefaultStorageSplitQuantity(shipmentIndex, 1);
+      }
+      control.patchValue(patch, { emitEvent: false });
+    });
+  }
+
+  onStorageSplitRequiredChange(group: AbstractControl, checked: boolean, shipmentIndex: number): void {
+    const decision = this.getStorageDecision(group);
+    const nextCount = checked ? Math.max(2, Number(decision.get('splitQuantity')?.value) || 2) : 1;
+    decision.patchValue({ splitRequired: checked, splitQuantity: nextCount }, { emitEvent: false });
+    this.syncStorageSplitRows(group, nextCount, !!decision.get('similarItems')?.value, shipmentIndex);
+  }
+
+  onStorageSimilarItemsChange(group: AbstractControl, checked: boolean, shipmentIndex: number): void {
+    const decision = this.getStorageDecision(group);
+    decision.patchValue({ similarItems: checked }, { emitEvent: false });
+    const count = Number(decision.get('splitQuantity')?.value) || this.getStorageSplitRows(group).length;
+    this.syncStorageSplitRows(group, count, checked, shipmentIndex);
+  }
+
+  onStorageSplitQuantityChange(group: AbstractControl, value: unknown, shipmentIndex: number): void {
+    const decision = this.getStorageDecision(group);
+    const count = Math.max(1, Math.floor(Number(value) || 1));
+    decision.patchValue({
+      splitRequired: count > 1,
+      splitQuantity: count,
+    }, { emitEvent: false });
+    this.syncStorageSplitRows(group, count, !!decision.get('similarItems')?.value, shipmentIndex);
+  }
+
+  addStorageSplitRow(group: AbstractControl, shipmentIndex: number): void {
+    const decision = this.getStorageDecision(group);
+    const rows = this.getStorageSplitRows(group);
+    const nextCount = rows.length + 1;
+    decision.patchValue({
+      splitRequired: true,
+      splitQuantity: nextCount
+    }, { emitEvent: false });
+    this.syncStorageSplitRows(group, nextCount, !!decision.get('similarItems')?.value, shipmentIndex);
+  }
+
+  removeStorageSplitRow(group: AbstractControl, rowIndex: number, shipmentIndex: number): void {
+    const decision = this.getStorageDecision(group);
+    const rows = this.getStorageSplitRows(group);
+    if (rows.length <= 1) return;
+    rows.removeAt(rowIndex);
+    rows.controls.forEach((control, idx) => {
+      control.patchValue({ sn: idx + 1 }, { emitEvent: false });
+    });
+    const nextCount = rows.length;
+    decision.patchValue({
+      splitRequired: nextCount > 1,
+      splitQuantity: nextCount
+    }, { emitEvent: false });
+  }
+
+  getStorageSplitTotal(group: AbstractControl): number {
+    return this.getStorageSplitRows(group).getRawValue().reduce((sum: number, entry: any) =>
+      sum + (Number(entry?.quantity) || 0), 0);
   }
 
   private normalizeContainerNumber(value: unknown): string {
@@ -868,6 +1050,186 @@ export class ShipmentBlDetailsComponent {
       month: '2-digit',
       year: 'numeric',
     }).format(date);
+  }
+
+  formatDateTimeForDisplay(value: unknown): string {
+    if (!value) return '—';
+    const date = new Date(value as string | Date);
+    if (Number.isNaN(date.getTime())) return '—';
+    return new Intl.DateTimeFormat('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
+  }
+
+  private toDateInputValue(value: unknown): string {
+    if (!value) return '';
+    const date = value instanceof Date ? value : new Date(value as string);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString().split('T')[0];
+  }
+
+  private getUserDisplay(user: any): string {
+    if (!user) return '—';
+    if (typeof user === 'string') return user || '—';
+    return String(user.name || user.email || user._id || '—');
+  }
+
+  getClearingAdvancePaymentDetails(index: number): any {
+    return this.getActualShipment(index)?.clearingAdvancePaymentDetails || {};
+  }
+
+  openClearingAdvanceInfo(index: number): void {
+    this.clearingInfoIndex.set(index);
+    this.clearingInfoModalVisible.set(true);
+  }
+
+  closeClearingAdvanceInfo(): void {
+    this.clearingInfoModalVisible.set(false);
+    this.clearingInfoIndex.set(null);
+  }
+
+  getClearingAdvanceInfoRows(index: number): Array<{ label: string; value: string }> {
+    const actual = this.getActualShipment(index) || {};
+    const approval = actual.clearingAdvanceApproval || {};
+    const payment = actual.clearingAdvancePaymentDetails || {};
+    return [
+      { label: 'Requested At', value: this.formatDateTimeForDisplay(approval.submittedAt || approval.requestedAt || actual.clearingAdvanceRequestedAt) },
+      { label: 'Requested By', value: this.getUserDisplay(approval.submittedBy || approval.requestedBy) },
+      { label: 'Approved At', value: this.formatDateTimeForDisplay(approval.fasApprovedAt || approval.approvedAt) },
+      { label: 'Approved By', value: this.getUserDisplay(approval.fasApprovedBy || approval.approvedBy) },
+      { label: 'Cheque No', value: payment.chequeNo || '—' },
+      { label: 'Cheque Date', value: this.formatDateForReport(payment.chequeDate) },
+      { label: 'Payment Voucher No', value: payment.paymentVoucherNo || '—' },
+      { label: 'Transaction ID', value: payment.transactionId || '—' },
+    ];
+  }
+
+  canCreateAdditionalClearingRequest(index: number): boolean {
+    if (!this.isClearingAdvanceApproved(index)) return false;
+    if (this.authService.isAdminLevelRole()) return true;
+    return this.canViewClearingAdvance() && this.rbacService.hasPermission('shipment.tab.bl_details.clearing_advance.edit');
+  }
+
+  getAdditionalClearingRequests(index: number): any[] {
+    const requests = this.getActualShipment(index)?.additionalClearingAdvanceRequests;
+    return Array.isArray(requests) ? requests : [];
+  }
+
+  getAdditionalRequestStatusLabel(request: any): string {
+    const status = String(request?.status || 'pending_fas');
+    if (status === 'approved') return 'Approved';
+    if (status === 'rejected') return 'Rejected';
+    return 'Pending FAS';
+  }
+
+  canApproveAdditionalClearingRequest(request: any): boolean {
+    const status = String(request?.status || 'pending_fas');
+    return status === 'pending_fas' && (
+      this.authService.isAdminLevelRole() ||
+      this.isFasRole() ||
+      this.isFasManagerRole()
+    );
+  }
+
+  openAdditionalClearingRequestModal(index: number): void {
+    this.additionalRequestIndex.set(index);
+    this.additionalRequestDraft.set({ title: '', comment: '', requestAmount: null });
+    this.additionalRequestModalVisible.set(true);
+  }
+
+  closeAdditionalClearingRequestModal(): void {
+    this.additionalRequestModalVisible.set(false);
+    this.additionalRequestIndex.set(null);
+  }
+
+  updateAdditionalRequestDraft(field: 'title' | 'comment' | 'requestAmount', value: string | number | null): void {
+    this.additionalRequestDraft.update((current) => {
+      const next: any = { ...current };
+      next[field] = value;
+      return next;
+    });
+  }
+
+  onAdditionalRequestFileSelected(event: Event, index: number): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    this.additionalRequestFiles.update((current) => ({ ...current, [index]: file }));
+    input.value = '';
+  }
+
+  getAdditionalRequestFile(index: number): File | null {
+    return this.additionalRequestFiles()[index] ?? null;
+  }
+
+  clearAdditionalRequestFile(index: number): void {
+    this.additionalRequestFiles.update((current) => ({ ...current, [index]: null }));
+  }
+
+  submitAdditionalClearingRequest(): void {
+    const index = this.additionalRequestIndex();
+    if (index == null) return;
+    const row = this.formArray.at(index);
+    const shipmentId = this.shipmentData()?.shipment?._id;
+    const containerId = row?.get('containerId')?.value;
+    if (!containerId || !shipmentId) return;
+
+    const draft = this.additionalRequestDraft();
+    const title = String(draft.title || '').trim();
+    const requestAmount = Number(draft.requestAmount) || 0;
+    if (!title || requestAmount <= 0) {
+      this.notificationService.error('Required Fields Missing', 'Title and Request Amount are required.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('title', title);
+    formData.append('comment', String(draft.comment || '').trim());
+    formData.append('requestAmount', String(requestAmount));
+    const file = this.getAdditionalRequestFile(index);
+    if (file) formData.append('attachment', file, file.name);
+
+    this.savingKey.set(`cost-${index}`);
+    this.shipmentService.submitAdditionalClearingAdvanceRequest(containerId, formData).subscribe({
+      next: (response) => {
+        this.savingKey.set(null);
+        this.applyActualOverride(index, (response as any)?.container?.actual);
+        this.clearAdditionalRequestFile(index);
+        this.closeAdditionalClearingRequestModal();
+        this.notificationService.success('Submitted', 'Additional clearing request submitted for FAS approval.');
+        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+      },
+      error: (error) => {
+        this.savingKey.set(null);
+        this.notificationService.error('Submit failed', error.error?.message || 'Could not submit additional request.');
+      },
+    });
+  }
+
+  approveAdditionalClearingRequest(index: number, request: any): void {
+    if (!this.canApproveAdditionalClearingRequest(request)) return;
+    const row = this.formArray.at(index);
+    const shipmentId = this.shipmentData()?.shipment?._id;
+    const containerId = row?.get('containerId')?.value;
+    const requestId = request?._id || request?.id;
+    if (!containerId || !requestId || !shipmentId) return;
+
+    this.savingKey.set(`cost-${index}`);
+    this.shipmentService.approveAdditionalClearingAdvanceRequest(containerId, requestId).subscribe({
+      next: (response) => {
+        this.savingKey.set(null);
+        this.applyActualOverride(index, (response as any)?.container?.actual);
+        this.notificationService.success('Approved', 'Additional clearing request approved.');
+        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+      },
+      error: (error) => {
+        this.savingKey.set(null);
+        this.notificationService.error('Approval failed', error.error?.message || 'Could not approve additional request.');
+      },
+    });
   }
 
   private formatClearingAdvanceApprover(approval: any): string {
@@ -1287,16 +1649,6 @@ export class ShipmentBlDetailsComponent {
     const shipmentId = this.shipmentData()?.shipment?._id;
     if (!row || !shipmentId) return;
 
-    if (this.getActiveTab(index) === 'storage') {
-      const validation = this.validateStorageAllocationContainers(row);
-      if (!validation.valid) {
-        this.storageValidationMessage.set(validation.message);
-        this.storageValidationDetails.set(validation.mismatches);
-        this.storageValidationModalVisible.set(true);
-        return;
-      }
-    }
-
     const containerId = row.get('containerId')?.value;
     if (!containerId) {
       this.notificationService.warn('Missing container', 'This shipment row is not linked to a container yet.');
@@ -1385,8 +1737,51 @@ export class ShipmentBlDetailsComponent {
     });
   }
 
-  async saveCostSheet(index: number): Promise<void> {
-    if (!this.canEditClearingAdvance()) return;
+  saveCostSheet(index: number): void {
+    if (!this.canEditClearingAdvance(index)) return;
+    const details = this.getClearingAdvancePaymentDetails(index);
+    this.clearingSubmitIndex.set(index);
+    this.clearingSubmitDraft.set({
+      chequeNo: details.chequeNo || '',
+      chequeDate: this.toDateInputValue(details.chequeDate || new Date()),
+      paymentVoucherNo: details.paymentVoucherNo || '',
+      transactionId: details.transactionId || '',
+    });
+    this.clearingSubmitModalVisible.set(true);
+  }
+
+  closeClearingSubmitModal(): void {
+    this.clearingSubmitModalVisible.set(false);
+    this.clearingSubmitIndex.set(null);
+  }
+
+  updateClearingSubmitDraft(field: 'chequeNo' | 'chequeDate' | 'paymentVoucherNo' | 'transactionId', value: string): void {
+    this.clearingSubmitDraft.update((current) => ({ ...current, [field]: value }));
+  }
+
+  confirmClearingAdvanceSubmit(): void {
+    const index = this.clearingSubmitIndex();
+    if (index == null) return;
+    const draft = this.clearingSubmitDraft();
+    const missing: string[] = [];
+    if (!String(draft.chequeNo || '').trim()) missing.push('Cheque No');
+    if (!String(draft.chequeDate || '').trim()) missing.push('Cheque Date');
+    if (!String(draft.paymentVoucherNo || '').trim()) missing.push('Payment Voucher No');
+    if (missing.length) {
+      this.notificationService.error('Required Fields Missing', `Please fill: ${missing.join(', ')}`);
+      return;
+    }
+    this.clearingSubmitModalVisible.set(false);
+    void this.submitCostSheet(index, draft);
+  }
+
+  private async submitCostSheet(index: number, paymentDetails: {
+    chequeNo: string;
+    chequeDate: string;
+    paymentVoucherNo: string;
+    transactionId?: string;
+  }): Promise<void> {
+    if (!this.canEditClearingAdvance(index)) return;
     const row = this.formArray.at(index);
     const shipmentId = this.shipmentData()?.shipment?._id;
     if (!row || !shipmentId) return;
@@ -1396,13 +1791,6 @@ export class ShipmentBlDetailsComponent {
       this.notificationService.warn('Missing container', 'This shipment row is not linked to a container yet.');
       return;
     }
-
-    const confirmed = await this.confirmDialog.ask({
-      message: `Save cost sheet for Shipment ${index + 1}?`,
-      header: 'Save Cost Sheet',
-      acceptLabel: 'Yes, Save',
-    });
-    if (!confirmed) return;
 
     const costSheetBookings = this.getCostSheetRows(row).getRawValue().map((entry: any) => ({
       sn: Number(entry.sn) || 0,
@@ -1422,6 +1810,12 @@ export class ShipmentBlDetailsComponent {
     this.savingKey.set(`cost-${index}`);
     const formData = new FormData();
     formData.append('costSheetBookings', JSON.stringify(costSheetBookings));
+    formData.append('clearingAdvancePaymentDetails', JSON.stringify({
+      chequeNo: String(paymentDetails.chequeNo || '').trim(),
+      chequeDate: paymentDetails.chequeDate,
+      paymentVoucherNo: String(paymentDetails.paymentVoucherNo || '').trim(),
+      transactionId: String(paymentDetails.transactionId || '').trim(),
+    }));
 
     const bookingFile = this.getBookingFile(index);
     if (bookingFile) {
@@ -1444,6 +1838,7 @@ export class ShipmentBlDetailsComponent {
         this.editingCostSheet.update((current) => ({ ...current, [index]: false }));
         this.notificationService.success('Saved', 'Cost sheet booking saved successfully.');
         this.ensureAccordionOpen(index); // POINT 8: keep accordion open
+        this.closeClearingSubmitModal();
         this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
       },
       error: (error) => {
@@ -1465,14 +1860,6 @@ export class ShipmentBlDetailsComponent {
       return;
     }
 
-    const validation = this.validateStorageAllocationContainers(row);
-    if (!validation.valid) {
-      this.storageValidationMessage.set(validation.message);
-      this.storageValidationDetails.set(validation.mismatches);
-      this.storageValidationModalVisible.set(true);
-      return;
-    }
-
     const confirmed = await this.confirmDialog.ask({
       message: `Save storage allocations for Shipment ${index + 1}?`,
       header: 'Save Storage Allocation',
@@ -1480,29 +1867,43 @@ export class ShipmentBlDetailsComponent {
     });
     if (!confirmed) return;
 
-    // Validate storage allocation required fields
-    const storageRows = this.getStorageRows(row).getRawValue();
-    const invalidStorageRows = storageRows.filter((entry: any) =>
-      !String(entry.containerSerialNo || '').trim() ||
-      (entry.bags == null || entry.bags === '') ||
-      !String(entry.warehouse || '').trim()
-    );
-    if (invalidStorageRows.length > 0) {
-      this.notificationService.error('Required Fields Missing', 'Container Serial No, Bags, and Warehouse are required for all storage allocation rows.');
+    const decisionGroup = this.getStorageDecision(row);
+    const decision = decisionGroup.getRawValue();
+    const splitRequired = !!decision.splitRequired;
+    const splitQuantity = Math.max(0, Math.floor(Number(decision.splitQuantity) || 0));
+    this.syncStorageSplitRows(row, splitRequired ? splitQuantity : 0, !!decision.similarItems, index);
+
+    const splitRows = this.getStorageSplitRows(row).getRawValue().map((entry: any, rowIndex: number) => ({
+      sn: rowIndex + 1,
+      itemName: String(entry?.itemName || '').trim(),
+      quantity: Number(entry?.quantity) || 0,
+    }));
+
+    if (splitRequired && splitQuantity <= 0) {
+      this.notificationService.error('Required Fields Missing', 'Split Quantity is required when split is enabled.');
       return;
     }
 
-    const storageAllocations = this.getStorageRows(row).getRawValue().map((entry: any) => ({
-      sn: Number(entry.sn) || 0,
-      containerSerialNo: entry.containerSerialNo || '',
-      bags: Number(entry.bags ?? 0) || 0,
-      warehouse: entry.warehouse || '',
-      storageAvailability: Number(entry.storageAvailability) || 0,
-    }));
+    if (splitRequired) {
+      const invalidRows = splitRows.filter((entry: any) =>
+        !entry.itemName ||
+        !entry.quantity ||
+        entry.quantity <= 0
+      );
+      if (invalidRows.length) {
+        this.notificationService.error('Required Fields Missing', 'Item Name and Quantity are required for all split rows.');
+        return;
+      }
+    }
 
     this.savingKey.set(`storage-${index}`);
     const formData = new FormData();
-    formData.append('storageAllocations', JSON.stringify(storageAllocations));
+    formData.append('storageAllocationDecision', JSON.stringify({
+      similarItems: !!decision.similarItems,
+      splitRequired,
+      splitQuantity: splitRequired ? splitQuantity : 0,
+    }));
+    formData.append('storageAllocationSplits', JSON.stringify(splitRequired ? splitRows : []));
 
     this.shipmentService.submitBLDetails(containerId, formData).subscribe({
       next: (response) => {

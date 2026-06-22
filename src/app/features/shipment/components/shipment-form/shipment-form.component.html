@@ -103,6 +103,22 @@
           </div>
         </div>
       </div>
+
+      <!-- Supplier info in top right -->
+      @if (getSupplierName() || getSupplierEmail()) {
+        <div class="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm sm:self-center">
+          <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[11px] font-black uppercase text-white shadow-sm">
+            {{ getSupplierInitials() }}
+          </span>
+          <div class="min-w-0">
+            <div class="text-[10px] font-black uppercase tracking-wider text-slate-400">Supplier</div>
+            <div class="truncate text-xs font-black text-slate-900 leading-tight">{{ getSupplierName() || 'Name not available' }}</div>
+            @if (getSupplierEmail()) {
+              <div class="truncate text-[10px] font-semibold text-slate-500 leading-tight">{{ getSupplierEmail() }}</div>
+            }
+          </div>
+        </div>
+      }
     </header>
 
     @if (trackerAccessDenied()) {

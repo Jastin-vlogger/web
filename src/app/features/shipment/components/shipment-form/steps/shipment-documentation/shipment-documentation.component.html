@@ -106,7 +106,7 @@
                   </div>
 
                   @if (isMilestoneEditing(i, 'courier')) {
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div class="flex flex-col gap-1.5">
                         <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">B/L No</label>
                         <div class="flex items-center gap-2">
@@ -133,7 +133,7 @@
                         <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Courier Provider<span class="text-red-500 ml-0.5">*</span></label>
                         <input pInputText formControlName="courierServiceProvider" class="table-input-text w-full" placeholder="Provider name" />
                       </div>
-                      <div class="md:col-span-2 lg:col-span-3 flex flex-col gap-1.5">
+                      <div class="md:col-span-2 lg:col-span-4 flex flex-col gap-1.5">
                         <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Document Arrival Notes</label>
                         <textarea pInputTextarea formControlName="docArrivalNotes" rows="2" class="table-input-text w-full py-2" placeholder="Any special notes about arrival..."></textarea>
                       </div>
@@ -146,7 +146,7 @@
                     </div>
                   } @else {
                     <!-- Summary View -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-[11px]">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-[11px]">
                       <div class="flex flex-col py-1">
                         <span class="text-slate-400 font-medium">B/L No</span>
                         <div class="flex items-center gap-2">
@@ -178,7 +178,7 @@
                         <span class="text-slate-700 font-bold">{{ group.get('courierServiceProvider')?.value || 'N/A' }}</span>
                       </div>
                       @if (group.get('docArrivalNotes')?.value) {
-                        <div class="md:col-span-3 flex flex-col py-1">
+                        <div class="md:col-span-4 flex flex-col py-1">
                           <span class="text-slate-400 font-medium">Arrival Notes</span>
                           <span class="text-slate-700">{{ group.get('docArrivalNotes')?.value }}</span>
                         </div>
@@ -265,10 +265,23 @@
 
                     @if (isMilestoneEditing(i, 'inward')) {
                       <div class="flex flex-col gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Advice Date</label>
+                            <p-datepicker formControlName="inwardCollectionAdviceDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [showIcon]="true" />
+                          </div>
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Received At</label>
+                            <p-datepicker formControlName="inwardCollectionAdviceReceivedAt" appendTo="body" inputStyleClass="table-input" placeholder="Select received date" styleClass="w-full" dateFormat="dd/mm/yy" [showIcon]="true" />
+                          </div>
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Submitted At</label>
+                            <p-datepicker formControlName="inwardCollectionAdviceSubmittedAt" appendTo="body" inputStyleClass="table-input" placeholder="Select submitted date" styleClass="w-full" dateFormat="dd/mm/yy" [showIcon]="true" />
+                          </div>
+                        </div>
                         <div class="flex flex-col gap-1.5">
-                          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Notice Date & Document</label>
+                          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Advice Document</label>
                           <div class="flex flex-col sm:flex-row gap-3">
-                            <p-datepicker formControlName="inwardCollectionAdviceDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full sm:max-w-xs" dateFormat="dd/mm/yy" [showIcon]="true" />
                             <div class="flex items-center gap-2">
                               <button type="button" (click)="clickFileInput(i, 'inwardAdvice')" class="flex-1 sm:flex-none inline-flex h-10 px-4 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors">
                                 <i class="pi pi-upload"></i>
@@ -295,13 +308,21 @@
                         </div>
                       </div>
                     } @else {
-                      <div class="flex items-center justify-between text-[11px]">
+                      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-[11px]">
                         <div class="flex flex-col">
                           <span class="text-slate-400 font-medium">Advice Date</span>
                           <span class="text-slate-700 font-bold">{{ (group.get('inwardCollectionAdviceDate')?.value | date:'dd/MM/yyyy') || 'N/A' }}</span>
                         </div>
+                        <div class="flex flex-col">
+                          <span class="text-slate-400 font-medium">Received At</span>
+                          <span class="text-slate-700 font-bold">{{ (group.get('inwardCollectionAdviceReceivedAt')?.value | date:'dd/MM/yyyy') || 'N/A' }}</span>
+                        </div>
+                        <div class="flex flex-col">
+                          <span class="text-slate-400 font-medium">Submitted At</span>
+                          <span class="text-slate-700 font-bold">{{ (group.get('inwardCollectionAdviceSubmittedAt')?.value | date:'dd/MM/yyyy') || 'N/A' }}</span>
+                        </div>
                         @if (getSavedFileUrl(group, 'inwardAdvice')) {
-                          <div class="flex items-center gap-2">
+                          <div class="flex items-center gap-2 md:justify-end">
                             <div class="flex items-center gap-2 text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg font-bold">
                               <i class="pi pi-file-pdf"></i>
                               <span>Advice Doc Attached</span>
@@ -356,7 +377,6 @@
                 </div>
                 }
 
-                <!-- Milestones 5 and 6 are paused for now; milestone 4 is the current completion point. -->
                 <!-- Milestone 5: Contract Submission -->
                 @if (isMilestoneVisible(i, 'murabaha_submit', $any(group))) {
                 <div class="relative group">

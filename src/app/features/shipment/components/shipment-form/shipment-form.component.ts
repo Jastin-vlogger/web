@@ -315,6 +315,36 @@ export class ShipmentFormComponent implements OnDestroy {
     return clean.match(/^(RHST-\d+\/[A-Z0-9-]+)/i)?.[1] || clean;
   }
 
+  getSupplierName(): string {
+    const shipment = this.shipmentData()?.shipment as any;
+    const name = String(
+      shipment?.supplierName ||
+      shipment?.supplierId?.name ||
+      shipment?.supplier ||
+      ''
+    ).trim();
+    return name.includes('@') ? '' : name;
+  }
+
+  getSupplierEmail(): string {
+    const shipment = this.shipmentData()?.shipment as any;
+    return String(
+      shipment?.supplierEmail ||
+      shipment?.supplierId?.email ||
+      (typeof shipment?.supplier === 'string' && shipment.supplier.includes('@') ? shipment.supplier : '') ||
+      (shipment?.supplier && typeof shipment.supplier === 'object' ? shipment.supplier.email : '') ||
+      ''
+    ).trim();
+  }
+
+  getSupplierInitials(): string {
+    const name = this.getSupplierName();
+    const email = this.getSupplierEmail();
+    const source = name || email || 'SU';
+    const parts = source.split(/[\s@._-]+/).filter(Boolean);
+    return (parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : source.slice(0, 2)).toUpperCase();
+  }
+
   isStepReadOnly(stepIndex: number): boolean {
     if (stepIndex === 0) {
       return true;
@@ -400,6 +430,8 @@ export class ShipmentFormComponent implements OnDestroy {
       receiver: getValue('receiver'),
       bankName: getValue('bankName'),
       inwardCollectionAdviceDate: getValue('inwardCollectionAdviceDate'),
+      inwardCollectionAdviceReceivedAt: getValue('inwardCollectionAdviceReceivedAt'),
+      inwardCollectionAdviceSubmittedAt: getValue('inwardCollectionAdviceSubmittedAt'),
       inwardCollectionAdviceDocumentUrl: getValue('inwardCollectionAdviceDocumentUrl'),
       murabahaContractReleasedDate: getValue('murabahaContractReleasedDate'),
       murabahaContractApprovedDate: getValue('murabahaContractApprovedDate'),
@@ -886,6 +918,8 @@ export class ShipmentFormComponent implements OnDestroy {
             receiver: [actualData?.receiver || (data.shipment?.bankName ? 'Bank' : ''), Validators.required],
             bankName: [actualData?.bankName || data.shipment?.bankName || ''],
             inwardCollectionAdviceDate: [actualData?.inwardCollectionAdviceDate ? new Date(actualData.inwardCollectionAdviceDate) : null],
+            inwardCollectionAdviceReceivedAt: [(actualData as any)?.inwardCollectionAdviceReceivedAt ? new Date((actualData as any).inwardCollectionAdviceReceivedAt) : null],
+            inwardCollectionAdviceSubmittedAt: [(actualData as any)?.inwardCollectionAdviceSubmittedAt ? new Date((actualData as any).inwardCollectionAdviceSubmittedAt) : null],
             inwardCollectionAdviceDocumentUrl: [actualData?.inwardCollectionAdviceDocumentUrl || ''],
             inwardCollectionAdviceDocumentName: [actualData?.inwardCollectionAdviceDocumentName || ''],
             murabahaContractReleasedDate: [actualData?.murabahaContractReleasedDate ? new Date(actualData.murabahaContractReleasedDate) : null],
@@ -1228,6 +1262,8 @@ export class ShipmentFormComponent implements OnDestroy {
           receiver: ['', Validators.required],
           bankName: [''],
           inwardCollectionAdviceDate: [null],
+          inwardCollectionAdviceReceivedAt: [null],
+          inwardCollectionAdviceSubmittedAt: [null],
           inwardCollectionAdviceDocumentUrl: [''],
           inwardCollectionAdviceDocumentName: [''],
           murabahaContractReleasedDate: [null],
@@ -1428,7 +1464,42 @@ export class ShipmentFormComponent implements OnDestroy {
         actualData?.storageAllocations,
         extractedContainerSource
       ),
+      storageAllocationDecision: this.fb.group({
+        similarItems: [(actualData as any)?.storageAllocationDecision?.similarItems ?? true],
+        splitRequired: [(actualData as any)?.storageAllocationDecision?.splitRequired ?? false],
+        splitQuantity: [
+          (actualData as any)?.storageAllocationDecision?.splitQuantity ??
+          ((actualData as any)?.storageAllocationSplits?.length || 0)
+        ],
+      }),
+      storageAllocationSplits: this.createStorageAllocationSplitRows(
+        (actualData as any)?.storageAllocationSplits,
+        actualData,
+        shipmentIndex
+      ),
     });
+  }
+
+  private createStorageAllocationSplitRows(existingRows?: any[], actualData?: any, shipmentIndex: number = 0): FormArray {
+    const rows = new FormArray<FormGroup>([]);
+    const sourceRows = Array.isArray(existingRows) && existingRows.length ? existingRows : [{}];
+    const fallbackItem =
+      this.getLineItemByShipmentIndex(this.shipmentData() ?? undefined, shipmentIndex)?.itemDescription ||
+      this.shipmentData()?.shipment?.itemDescription ||
+      this.shipmentData()?.shipment?.item ||
+      'Similar Item Set';
+    const fallbackQuantity = Number(actualData?.quantityByMt ?? actualData?.qtyMT ?? 0) || null;
+
+    sourceRows.forEach((row, index) => {
+      rows.push(this.fb.group({
+        sn: [Number(row?.sn) || index + 1],
+        itemName: [row?.itemName || (existingRows && existingRows.length ? fallbackItem : 'Similar Item Set')],
+        quantity: [row?.quantity ?? fallbackQuantity],
+        warehouse: [row?.warehouse || ''],
+      }));
+    });
+
+    return rows;
   }
 
   private getLineItemByShipmentIndex(data: ShipmentDetailsResponse | undefined, shipmentIndex: number): any | null {

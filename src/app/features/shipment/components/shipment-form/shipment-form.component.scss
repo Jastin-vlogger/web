@@ -123,7 +123,10 @@
             }
 
             /* Responsive tweaks for the table wrapper */
-            .p-datatable-wrapper,
+            .p-datatable-wrapper {
+                @apply rounded-xl border border-slate-100;
+                overflow-x: auto !important;
+            }
             & {
                 @apply rounded-xl border border-slate-100;
             }
@@ -283,7 +286,9 @@
             /* Equal-width columns so inputs align with Scheduled table */
             th.actual-col-serial, td.actual-col-serial { width: 190px; min-width: 190px; }
             th.actual-col-shipment, td.actual-col-shipment { width: 180px; min-width: 180px; }
-            th.actual-col-num, td.actual-col-num { width: 68px; min-width: 68px; }
+            th.actual-col-status, td.actual-col-status { width: 140px; min-width: 140px; }
+            th.actual-col-num, td.actual-col-num { width: 72px; min-width: 72px; }
+            th.actual-col-bags, td.actual-col-bags { width: 90px; min-width: 90px; }
             th.actual-col-compact, td.actual-col-compact { width: 78px; min-width: 78px; }
             th.actual-col-ci, td.actual-col-ci { width: 220px; min-width: 220px; }
             th.actual-col-bl, td.actual-col-bl { width: 200px; min-width: 200px; }
@@ -293,7 +298,9 @@
             .actual-col-serial .table-input-text,
             .actual-col-ci .table-input-text,
             .actual-col-num .table-input input,
-            .actual-col-num .p-inputnumber { width: 100%; min-width: 0; }
+            .actual-col-num .p-inputnumber,
+            .actual-col-bags .table-input input,
+            .actual-col-bags .p-inputnumber { width: 100%; min-width: 0; }
             .actual-col-compact .table-input input,
             .actual-col-compact .p-inputnumber { width: 100%; min-width: 0; }
             .actual-col-compact .p-inputnumber-input {

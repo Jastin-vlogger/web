@@ -333,9 +333,6 @@ export class ShipmentDocumentationComponent {
     const hasMilestone2 = this.isMilestoneFilled(group, 'receiving');
     const isBank = this.isBankReceiver(group);
 
-    // Milestones 5 and 6 are intentionally paused for now.
-    // Current completion point: Bank receivers finish at M4, Direct receivers finish at M2.
-
     if (milestone === 'receiving') return hasMilestone1;
 
     if (milestone === 'inward') {
@@ -346,6 +343,14 @@ export class ShipmentDocumentationComponent {
     if (milestone === 'murabaha_process') {
       // Only show for Bank receiver, after inward is filled
       return isBank && this.isMilestoneFilled(group, 'inward');
+    }
+
+    if (milestone === 'murabaha_submit') {
+      return isBank && this.isMilestoneFilled(group, 'murabaha_process');
+    }
+
+    if (milestone === 'release') {
+      return isBank && this.isMilestoneFilled(group, 'murabaha_submit');
     }
 
     return true;
@@ -369,9 +374,16 @@ export class ShipmentDocumentationComponent {
 
     switch (milestone) {
       case 'inward':
-        return !!group.get('inwardCollectionAdviceDate')?.value || !!this.getSavedFileUrl(group, 'inwardAdvice');
+        return !!group.get('inwardCollectionAdviceDate')?.value ||
+          !!group.get('inwardCollectionAdviceReceivedAt')?.value ||
+          !!group.get('inwardCollectionAdviceSubmittedAt')?.value ||
+          !!this.getSavedFileUrl(group, 'inwardAdvice');
       case 'murabaha_process':
         return !!group.get('murabahaContractReleasedDate')?.value || !!group.get('murabahaContractApprovedDate')?.value;
+      case 'murabaha_submit':
+        return !!group.get('murabahaContractSubmittedDate')?.value || !!this.getSavedFileUrl(group, 'murabahaSubmitted');
+      case 'release':
+        return !!group.get('documentsReleasedDate')?.value || !!this.getSavedFileUrl(group, 'documentsReleased');
       default:
         return false;
     }
@@ -839,6 +851,8 @@ export class ShipmentDocumentationComponent {
     payload.append('receiver', formValue['receiver'] || '');
     payload.append('bankName', formValue['bankName'] || '');
     payload.append('inwardCollectionAdviceDate', toDate(formValue['inwardCollectionAdviceDate']));
+    payload.append('inwardCollectionAdviceReceivedAt', toDate(formValue['inwardCollectionAdviceReceivedAt']));
+    payload.append('inwardCollectionAdviceSubmittedAt', toDate(formValue['inwardCollectionAdviceSubmittedAt']));
     const murabahaReleasedDate = toDate(formValue['murabahaContractApprovedDate']);
     payload.append('murabahaContractReleasedDate', murabahaReleasedDate);
     payload.append('murabahaContractApprovedDate', murabahaReleasedDate);
@@ -895,6 +909,8 @@ export class ShipmentDocumentationComponent {
         break;
       case 'inward': {
         payload.append('inwardCollectionAdviceDate', toDate(formValue['inwardCollectionAdviceDate']));
+        payload.append('inwardCollectionAdviceReceivedAt', toDate(formValue['inwardCollectionAdviceReceivedAt']));
+        payload.append('inwardCollectionAdviceSubmittedAt', toDate(formValue['inwardCollectionAdviceSubmittedAt']));
         const inf = this.getFile(index, 'inwardAdvice');
         if (inf) payload.append('inwardCollectionAdviceDocument', inf, inf.name);
         break;
@@ -939,6 +955,8 @@ export class ShipmentDocumentationComponent {
       receiver: actual.receiver || '',
       bankName: actual.bankName || '',
       inwardCollectionAdviceDate: actual.inwardCollectionAdviceDate ? new Date(actual.inwardCollectionAdviceDate) : null,
+      inwardCollectionAdviceReceivedAt: actual.inwardCollectionAdviceReceivedAt ? new Date(actual.inwardCollectionAdviceReceivedAt) : null,
+      inwardCollectionAdviceSubmittedAt: actual.inwardCollectionAdviceSubmittedAt ? new Date(actual.inwardCollectionAdviceSubmittedAt) : null,
       inwardCollectionAdviceDocumentUrl: actual.inwardCollectionAdviceDocumentUrl || '',
       inwardCollectionAdviceDocumentName: actual.inwardCollectionAdviceDocumentName || '',
       murabahaContractReleasedDate: actual.murabahaContractReleasedDate ? new Date(actual.murabahaContractReleasedDate) : null,
@@ -994,8 +1012,7 @@ export class ShipmentDocumentationComponent {
 
   /**
    * Returns 0–100 progress for the courier animation.
-   * Milestones 5 and 6 are paused for now. Bank receivers complete at M4;
-   * Direct receivers complete at M2.
+   * Bank receivers use all six milestones; direct receivers complete at M2.
    */
   getCourierProgressPercent(index: number): number {
     const group = this.formArray?.at(index) as FormGroup | null;

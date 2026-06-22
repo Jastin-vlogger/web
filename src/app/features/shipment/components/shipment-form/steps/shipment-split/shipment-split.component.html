@@ -179,7 +179,8 @@
           }
         </div>
       </div>
-      <p-table [value]="plannedSplits.controls" styleClass="p-datatable-sm custom-tracker-table planned-table">
+      <div class="overflow-x-auto w-full">
+        <p-table [value]="plannedSplits.controls" styleClass="p-datatable-sm custom-tracker-table planned-table">
         <ng-template pTemplate="header">
           <tr>
             <th scope="col" class="planned-col-shipment">SHIPMENT NO</th>
@@ -308,6 +309,7 @@
           </tr>
         </ng-template>
       </p-table>
+    </div>
       @if (!isPlannedLocked() && plannedSplits.length > 0) {
         <div class="border-t border-slate-100 px-4 py-2 flex justify-start">
           <button
@@ -473,17 +475,18 @@
           class="px-4 py-1.5 bg-emerald-600 text-white rounded-lg text-[9px] font-black uppercase text-nowrap disabled:opacity-50"
         >+ Add Record</button>
       </div>
-      <p-table [value]="actualSplits.controls" styleClass="p-datatable-sm custom-tracker-table actual-table">
-        <ng-template pTemplate="header">
-          <tr>
-            <th scope="col" class="actual-col-serial">SCHEDULE SERIAL NO</th>
-            <th scope="col" class="actual-col-shipment">SHIPMENT NO</th>
-            <th scope="col" class="actual-col-status">STATUS</th>
-            <th scope="col" class="actual-col-compact">FCL</th>
-            <th scope="col" class="actual-col-compact">SIZE</th>
-            <th scope="col" class="actual-col-num">QTY(MT)</th>
-            <th scope="col" class="actual-col-num">BAGS</th>
-            <th scope="col" class="actual-col-num">PALLET</th>
+      <div class="overflow-x-auto w-full">
+        <p-table [value]="actualSplits.controls" styleClass="p-datatable-sm custom-tracker-table actual-table">
+          <ng-template pTemplate="header">
+            <tr>
+              <th scope="col" class="actual-col-serial">SCHEDULE SERIAL NO</th>
+              <th scope="col" class="actual-col-shipment">SHIPMENT NO</th>
+              <th scope="col" class="actual-col-status">STATUS</th>
+              <th scope="col" class="actual-col-compact">FCL</th>
+              <th scope="col" class="actual-col-compact">SIZE</th>
+              <th scope="col" class="actual-col-num">QTY(MT)</th>
+              <th scope="col" class="actual-col-bags">BAGS</th>
+              <th scope="col" class="actual-col-num">PALLET</th>
             <th scope="col" class="actual-col-bl">PACKING</th>
             <th scope="col" class="actual-col-bl">BL NO</th>
             <th scope="col" class="actual-col-ci">COMMERCIAL INVOICE NO</th>
@@ -526,7 +529,7 @@
                 inputStyleClass="table-input" ariaLabel="Qty MT" placeholder="0.00"
               ></p-inputNumber>
             </td>
-            <td class="actual-col-num">
+            <td class="actual-col-bags">
               <p-inputNumber formControlName="bags" styleClass="w-full"
                 inputStyleClass="table-input" ariaLabel="Bags" placeholder="0"
                 (onInput)="markActualBagsAsManual(i)"
@@ -812,6 +815,7 @@
           </tr>
         </ng-template>
       </p-table>
+    </div>
       @if (actualBagCapacityError(); as bagError) {
         <div class="px-4 py-3 border-t border-rose-100 bg-rose-50/70 text-[11px] font-semibold text-rose-700">
           {{ bagError }}

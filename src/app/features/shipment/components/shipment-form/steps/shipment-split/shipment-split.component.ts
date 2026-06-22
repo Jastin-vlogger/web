@@ -865,6 +865,47 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     return this.getShipmentTrackerBase();
   }
 
+  private isEmailLike(value: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+  }
+
+  getShipmentUserName(): string {
+    const shipment = this.shipmentData()?.shipment as any;
+    const name = String(
+      shipment?.supplierName ||
+      shipment?.supplierId?.name ||
+      shipment?.supplier ||
+      ''
+    ).trim();
+    return this.isEmailLike(name) ? '' : name;
+  }
+
+  getShipmentUserEmail(): string {
+    const shipment = this.shipmentData()?.shipment as any;
+    return String(
+      shipment?.supplierEmail ||
+      shipment?.supplierId?.email ||
+      shipment?.supplier?.email ||
+      ''
+    ).trim();
+  }
+
+  getShipmentUserInitials(): string {
+    const name = this.getShipmentUserName();
+    const email = this.getShipmentUserEmail();
+    const source = name || email || 'SU';
+    const parts = source.split(/[\s@._-]+/).filter(Boolean);
+    return (parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : source.slice(0, 2)).toUpperCase();
+  }
+
+  getSupplierName(): string {
+    return this.getShipmentUserName();
+  }
+
+  getSupplierEmail(): string {
+    return this.getShipmentUserEmail();
+  }
+
   getEtaShareText(): string {
     const shipmentNo = this.shipmentData()?.shipment?.shipmentNo || 'Shipment';
     const trackerId = this.getShipmentTrackerId();

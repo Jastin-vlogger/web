@@ -293,6 +293,14 @@
                         [ngClass]="getApprovalBadgeClasses(getClearingAdvanceApprovalLabel(i))">
                         {{ getClearingAdvanceApprovalLabel(i) }}
                       </span>
+                      <button
+                        type="button"
+                        (click)="openClearingAdvanceInfo(i)"
+                        class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600"
+                        title="View clearing advance details"
+                      >
+                        <i class="pi pi-info-circle"></i>
+                      </button>
                     </div>
                     <div class="flex min-w-0 flex-wrap items-center gap-2 xl:justify-end">
                       <input
@@ -320,6 +328,16 @@
                         <i class="pi pi-file-export text-[10px]"></i>
                         Generate Report
                       </button>
+                      @if (canCreateAdditionalClearingRequest(i)) {
+                        <button
+                          type="button"
+                          (click)="openAdditionalClearingRequestModal(i)"
+                          class="inline-flex h-10 items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-[10px] font-black uppercase tracking-wider text-indigo-700 hover:bg-indigo-100"
+                        >
+                          <i class="pi pi-plus text-[10px]"></i>
+                          Additional Requests
+                        </button>
+                      }
                       @if (canEditClearingAdvance(i)) {
                         <button
                           type="button"
@@ -549,6 +567,52 @@
                       </button>
                     </div>
                   }
+                  @if (getAdditionalClearingRequests(i).length) {
+                    <div class="border-t border-slate-100 bg-white px-4 py-4">
+                      <div class="mb-3 flex items-center justify-between gap-3">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">Additional Requests</span>
+                        <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-black uppercase text-slate-500">{{ getAdditionalClearingRequests(i).length }} Total</span>
+                      </div>
+                      <div class="grid grid-cols-1 gap-3">
+                        @for (request of getAdditionalClearingRequests(i); track request._id || request.id || $index) {
+                          <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                              <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                  <span class="text-sm font-black text-slate-800">{{ request.title || 'Additional Request' }}</span>
+                                  <span class="rounded-full border px-2 py-0.5 text-[9px] font-black uppercase"
+                                    [ngClass]="getApprovalBadgeClasses(getAdditionalRequestStatusLabel(request))">
+                                    {{ getAdditionalRequestStatusLabel(request) }}
+                                  </span>
+                                </div>
+                                <p class="mt-1 text-[11px] text-slate-500">{{ request.comment || 'No comment' }}</p>
+                                <div class="mt-2 flex flex-wrap gap-3 text-[10px] font-semibold text-slate-500">
+                                  <span>Amount: <strong class="text-slate-800">{{ request.requestAmount || 0 }}</strong></span>
+                                  <span>Requested: <strong class="text-slate-800">{{ formatDateTimeForDisplay(request.submittedAt) }}</strong></span>
+                                  @if (request.approvedAt) {
+                                    <span>Approved: <strong class="text-slate-800">{{ formatDateTimeForDisplay(request.approvedAt) }}</strong></span>
+                                  }
+                                </div>
+                              </div>
+                              <div class="flex items-center gap-2 shrink-0">
+                                @if (request.attachmentDocumentUrl) {
+                                  <button type="button" (click)="openRemoteDocumentPreview(request.attachmentDocumentUrl, request.attachmentDocumentName || 'Additional Request Attachment')" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600">
+                                    <i class="pi pi-eye"></i>
+                                  </button>
+                                }
+                                @if (canApproveAdditionalClearingRequest(request)) {
+                                  <button type="button" (click)="approveAdditionalClearingRequest(i, request)" [disabled]="isSaving(i, 'cost')" class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 text-[10px] font-black uppercase text-violet-700 hover:bg-violet-100 disabled:opacity-50">
+                                    <i class="pi pi-check-circle text-[10px]"></i>
+                                    Approve
+                                  </button>
+                                }
+                              </div>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
                 </div>
               } @else if (getActiveTab(i) === 'packaging') {
                 <div class="rounded-2xl border border-slate-200 overflow-hidden" [class.rbac-readonly-shell]="!canEditStorageAllocations(i)">
@@ -635,83 +699,147 @@
                     }
                     </div>
                   </div>
-                  @if (getStorageCloseMismatchWarnings(group).length) {
-                    <div class="border-b border-amber-100 bg-amber-50/80 px-4 py-3">
-                      <div class="flex items-start gap-2">
-                        <i class="pi pi-exclamation-triangle mt-0.5 text-[12px] text-amber-600"></i>
-                        <div class="flex flex-col gap-1">
-                          <span class="text-[11px] font-bold text-amber-800">Some container numbers look very close but do not match.</span>
-                          @for (warning of getStorageCloseMismatchWarnings(group); track $index) {
-                            <span class="text-[11px] text-amber-700">
-                              Container in Storage: <strong>{{ warning.storage }}</strong>
-                              <span class="mx-1">|</span>
-                              Container in Packaging: <strong>{{ warning.packaging }}</strong>
+                  <div class="grid grid-cols-1 gap-4 bg-white p-4">
+                    <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4" [formGroup]="getStorageDecision(group)">
+                      <div class="mb-4 flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2">
+                          <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-white">
+                            <i class="pi pi-sliders-h text-[13px]"></i>
+                          </span>
+                          <span class="text-[11px] font-black uppercase tracking-wider text-slate-700">Allocation Decision</span>
+                        </div>
+                      </div>
+                      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div class="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                          <div class="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">Similar Items</div>
+                          <div class="flex items-center gap-3">
+                            <p-toggleswitch formControlName="similarItems" (onChange)="onStorageSimilarItemsChange(group, $any($event).checked, i)"></p-toggleswitch>
+                            <span class="text-xs font-black" [class.text-emerald-600]="getStorageDecision(group).get('similarItems')?.value" [class.text-slate-500]="!getStorageDecision(group).get('similarItems')?.value">
+                              {{ getStorageDecision(group).get('similarItems')?.value ? 'Yes' : 'No' }}
                             </span>
-                          }
+                          </div>
+                        </div>
+                        <div class="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                          <div class="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">Split Required</div>
+                          <div class="flex items-center gap-3">
+                            <p-toggleswitch formControlName="splitRequired" (onChange)="onStorageSplitRequiredChange(group, $any($event).checked, i)"></p-toggleswitch>
+                            <span class="text-xs font-black" [class.text-emerald-600]="getStorageDecision(group).get('splitRequired')?.value" [class.text-slate-500]="!getStorageDecision(group).get('splitRequired')?.value">
+                              {{ getStorageDecision(group).get('splitRequired')?.value ? 'Yes' : 'No' }}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  }
-                  <div class="hidden md:grid md:grid-cols-[48px_minmax(0,1.25fr)_110px_minmax(260px,1.9fr)] gap-3 px-4 py-2.5 bg-slate-50/70 border-b border-slate-100">
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">SN</span>
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Container Serial No<span class="text-red-500 ml-0.5">*</span></span>
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Bags<span class="text-red-500 ml-0.5">*</span></span>
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Warehouse<span class="text-red-500 ml-0.5">*</span></span>
-                  </div>
-                  <div class="flex flex-col">
-                    @for (row of getStorageRows(group).controls; track $index) {
-                      <div [formGroup]="$any(row)" class="border-b last:border-b-0 border-slate-100 p-4">
-                        <div class="hidden md:grid md:grid-cols-[48px_minmax(0,1.25fr)_110px_minmax(260px,1.9fr)] gap-3 items-start">
-                          <div class="flex items-center min-h-10 text-sm font-bold text-slate-700">{{ row.get('sn')?.value }}</div>
-                          <div class="flex flex-col gap-1.5">
-                            <input pInputText formControlName="containerSerialNo" class="table-input-text w-full" placeholder="Container Serial No" />
-                            @if (getStorageRowMismatch(group, $index); as mismatch) {
-                              <span class="text-[10px] font-medium text-rose-600">
-                                Expected packaging container: <strong>{{ mismatch.packaging }}</strong>
-                              </span>
-                            }
-                          </div>
-                          <p-inputNumber formControlName="bags" styleClass="w-full" inputStyleClass="table-input w-full" [useGrouping]="false" placeholder="0" />
-                          <p-select
-                            [options]="warehouseOptions()"
-                            formControlName="warehouse"
-                            optionLabel="label"
-                            optionValue="value"
-                            placeholder="Select warehouse"
-                            styleClass="w-full"
-                            appendTo="body">
-                          </p-select>
+
+                    <div class="rounded-xl border border-slate-200 bg-white p-4">
+                      <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div class="flex items-center gap-2">
+                          <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                            <i class="pi pi-sitemap text-[13px]"></i>
+                          </span>
+                          <span class="text-[11px] font-black uppercase tracking-wider text-slate-700">Split Configuration</span>
                         </div>
-                        <div class="md:hidden flex flex-col gap-3">
-                          <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">SN {{ row.get('sn')?.value }}</span>
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Container Serial No</label>
-                            <input pInputText formControlName="containerSerialNo" class="table-input-text w-full" placeholder="Container Serial No" />
-                            @if (getStorageRowMismatch(group, $index); as mismatch) {
-                              <span class="text-[10px] font-medium text-rose-600">
-                                Expected packaging container: <strong>{{ mismatch.packaging }}</strong>
-                              </span>
-                            }
-                          </div>
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Warehouse</label>
-                            <p-select
-                              [options]="warehouseOptions()"
-                              formControlName="warehouse"
-                              optionLabel="label"
-                              optionValue="value"
-                              placeholder="Select warehouse"
+                        <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                          <button
+                            type="button"
+                            (click)="addStorageSplitRow(group, i)"
+                            class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-blue-700 shrink-0"
+                          >
+                            <i class="pi pi-plus text-[10px]"></i>
+                            Add Split Item
+                          </button>
+                          <div class="flex flex-col gap-1.5 w-full md:w-56" [formGroup]="getStorageDecision(group)">
+                            <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Split Quantity</label>
+                            <p-inputNumber
+                              formControlName="splitQuantity"
                               styleClass="w-full"
-                              appendTo="body">
-                            </p-select>
-                          </div>
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Bags</label>
-                            <p-inputNumber formControlName="bags" styleClass="w-full" inputStyleClass="table-input w-full" [useGrouping]="false" placeholder="0" />
+                              inputStyleClass="table-input w-full"
+                              [useGrouping]="false"
+                              [min]="0"
+                              placeholder="0"
+                              (onInput)="onStorageSplitQuantityChange(group, $any($event).value, i)"
+                              (onBlur)="onStorageSplitQuantityChange(group, getStorageDecision(group).get('splitQuantity')?.value, i)" />
                           </div>
                         </div>
                       </div>
-                    }
+
+                      @if (getStorageSplitRows(group).length) {
+                        <div class="rounded-xl border border-slate-200 overflow-hidden">
+                          <div class="hidden md:grid md:grid-cols-[60px_minmax(180px,1.2fr)_120px_minmax(180px,1fr)_50px] gap-3 bg-slate-50/80 px-4 py-2.5">
+                            <span class="text-[9px] font-black uppercase tracking-wider text-slate-400">SN</span>
+                            <span class="text-[9px] font-black uppercase tracking-wider text-slate-400">Item Name<span class="ml-0.5 text-red-500">*</span></span>
+                            <span class="text-[9px] font-black uppercase tracking-wider text-slate-400">Quantity<span class="ml-0.5 text-red-500">*</span></span>
+                            <span class="text-[9px] font-black uppercase tracking-wider text-slate-400">Warehouse<span class="ml-0.5 text-red-500">*</span></span>
+                            <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 text-center">Action</span>
+                          </div>
+                          <div class="flex flex-col">
+                            @for (splitRow of getStorageSplitRows(group).controls; track $index) {
+                              <div [formGroup]="$any(splitRow)" class="border-t border-slate-100 p-4 first:border-t-0">
+                                <div class="grid grid-cols-1 gap-3 md:grid-cols-[60px_minmax(180px,1.2fr)_120px_minmax(180px,1fr)_50px] md:items-start">
+                                  <div class="flex h-10 items-center text-sm font-black text-slate-700">{{ splitRow.get('sn')?.value }}</div>
+                                  <div class="flex flex-col gap-1.5">
+                                    <label class="md:hidden text-[10px] font-bold uppercase tracking-wider text-slate-500">Item Name</label>
+                                    <p-select
+                                      formControlName="itemName"
+                                      [options]="getStorageItemOptions(i)"
+                                      optionLabel="label"
+                                      optionValue="value"
+                                      placeholder="Select item"
+                                      styleClass="w-full"
+                                      appendTo="body"
+                                      [disabled]="getStorageDecision(group).get('similarItems')?.value">
+                                    </p-select>
+                                  </div>
+                                  <div class="flex flex-col gap-1.5">
+                                    <label class="md:hidden text-[10px] font-bold uppercase tracking-wider text-slate-500">Quantity</label>
+                                    <p-inputNumber
+                                      formControlName="quantity"
+                                      styleClass="w-full"
+                                      inputStyleClass="table-input w-full"
+                                      [minFractionDigits]="0"
+                                      [maxFractionDigits]="3"
+                                      [useGrouping]="false"
+                                      placeholder="0"
+                                      [readonly]="!getStorageDecision(group).get('splitRequired')?.value" />
+                                  </div>
+                                  <div class="flex flex-col gap-1.5">
+                                    <label class="md:hidden text-[10px] font-bold uppercase tracking-wider text-slate-500">Warehouse</label>
+                                    <p-select
+                                      formControlName="warehouse"
+                                      [options]="warehouseOptions()"
+                                      optionLabel="label"
+                                      optionValue="value"
+                                      placeholder="Select warehouse"
+                                      styleClass="w-full"
+                                      appendTo="body">
+                                    </p-select>
+                                  </div>
+                                  <div class="flex h-10 items-center justify-center">
+                                    <button
+                                      type="button"
+                                      (click)="removeStorageSplitRow(group, $index, i)"
+                                      [disabled]="getStorageSplitRows(group).length <= 1"
+                                      class="rbac-allow-interaction flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                      title="Delete Split Item"
+                                    >
+                                      <i class="pi pi-trash text-xs"></i>
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            }
+                          </div>
+                          <div class="border-t border-slate-100 bg-slate-50/70 px-4 py-3 text-right">
+                            <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">Total Quantity: </span>
+                            <span class="text-sm font-black text-slate-800">{{ getStorageSplitTotal(group) }}</span>
+                          </div>
+                        </div>
+                      } @else {
+                        <div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-xs font-semibold text-slate-400">
+                          Enable Split Required or enter a Split Quantity to generate rows.
+                        </div>
+                      }
+                    </div>
                   </div>
                 </div>
               }
@@ -810,6 +938,140 @@
       }
     }
   </div>
+</p-dialog>
+
+<p-dialog
+  header="Submit Clearing Advance"
+  [visible]="clearingSubmitModalVisible()"
+  (visibleChange)="clearingSubmitModalVisible.set($event)"
+  [modal]="true"
+  [dismissableMask]="false"
+  [style]="{ width: '92vw', maxWidth: '560px' }"
+  [draggable]="false"
+  [resizable]="false"
+  appendTo="body">
+  <div class="flex flex-col gap-4">
+    <div class="rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-3">
+      <p class="text-[10px] font-black uppercase tracking-wider text-blue-700">Approval Details Required</p>
+      <p class="mt-1 text-xs text-blue-800">Enter cheque and voucher details before sending this clearing advance for approval.</p>
+    </div>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="flex flex-col gap-1.5">
+        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Cheque No<span class="ml-0.5 text-red-500">*</span></label>
+        <input pInputText class="table-input-text w-full" [value]="clearingSubmitDraft().chequeNo" (input)="updateClearingSubmitDraft('chequeNo', $any($event.target).value)" placeholder="Enter cheque no" />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Cheque Date<span class="ml-0.5 text-red-500">*</span></label>
+        <input type="date" class="table-input-text w-full" [value]="clearingSubmitDraft().chequeDate" (input)="updateClearingSubmitDraft('chequeDate', $any($event.target).value)" />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Payment Voucher No<span class="ml-0.5 text-red-500">*</span></label>
+        <input pInputText class="table-input-text w-full" [value]="clearingSubmitDraft().paymentVoucherNo" (input)="updateClearingSubmitDraft('paymentVoucherNo', $any($event.target).value)" placeholder="Enter voucher no" />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Transaction ID</label>
+        <input pInputText class="table-input-text w-full" [value]="clearingSubmitDraft().transactionId" (input)="updateClearingSubmitDraft('transactionId', $any($event.target).value)" placeholder="Optional transaction id" />
+      </div>
+    </div>
+    <div class="flex justify-end gap-2 border-t border-slate-100 pt-4">
+      <button type="button" (click)="closeClearingSubmitModal()" class="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50">
+        Cancel
+      </button>
+      <button type="button" (click)="confirmClearingAdvanceSubmit()" [disabled]="clearingSubmitIndex() === null || isSaving(clearingSubmitIndex() || 0, 'cost')" class="inline-flex h-10 items-center gap-1.5 rounded-lg bg-emerald-600 px-4 text-[10px] font-black uppercase tracking-wider text-white hover:bg-emerald-700 disabled:opacity-50">
+        <i class="pi pi-check text-[10px]"></i>
+        Submit
+      </button>
+    </div>
+  </div>
+</p-dialog>
+
+<p-dialog
+  header="Clearing Advance Information"
+  [visible]="clearingInfoModalVisible()"
+  (visibleChange)="clearingInfoModalVisible.set($event)"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '92vw', maxWidth: '560px' }"
+  [draggable]="false"
+  [resizable]="false"
+  appendTo="body">
+  @if (clearingInfoIndex() !== null) {
+    @let idx = clearingInfoIndex()!;
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      @for (row of getClearingAdvanceInfoRows(idx); track row.label) {
+        <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">{{ row.label }}</p>
+          <p class="mt-1 text-sm font-bold text-slate-800 break-words">{{ row.value }}</p>
+        </div>
+      }
+    </div>
+  }
+</p-dialog>
+
+<p-dialog
+  header="Additional Clearing Request"
+  [visible]="additionalRequestModalVisible()"
+  (visibleChange)="additionalRequestModalVisible.set($event)"
+  [modal]="true"
+  [dismissableMask]="false"
+  [style]="{ width: '92vw', maxWidth: '620px' }"
+  [draggable]="false"
+  [resizable]="false"
+  appendTo="body">
+  @if (additionalRequestIndex() !== null) {
+    @let idx = additionalRequestIndex()!;
+    <div class="flex flex-col gap-4">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Title<span class="ml-0.5 text-red-500">*</span></label>
+          <input pInputText class="table-input-text w-full" [value]="additionalRequestDraft().title" (input)="updateAdditionalRequestDraft('title', $any($event.target).value)" placeholder="Request title" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Request Amount<span class="ml-0.5 text-red-500">*</span></label>
+          <p-inputNumber
+            [ngModel]="additionalRequestDraft().requestAmount"
+            [ngModelOptions]="{ standalone: true }"
+            (onInput)="updateAdditionalRequestDraft('requestAmount', $any($event).value)"
+            styleClass="w-full"
+            inputStyleClass="table-input w-full"
+            [minFractionDigits]="2"
+            [maxFractionDigits]="2"
+            placeholder="0.00" />
+        </div>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Comment / Details</label>
+        <textarea rows="3" class="table-input-text w-full py-2" [value]="additionalRequestDraft().comment" (input)="updateAdditionalRequestDraft('comment', $any($event.target).value)" placeholder="Add request details"></textarea>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <label class="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 cursor-pointer">
+            <i class="pi pi-upload text-[10px]"></i>
+            Upload Attachment
+            <input type="file" class="hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onAdditionalRequestFileSelected($event, idx)" />
+          </label>
+          @if (getAdditionalRequestFile(idx)) {
+            <button type="button" (click)="openDocumentPreview(getAdditionalRequestFile(idx)!, 'Additional Request Attachment')" class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600">
+              <i class="pi pi-eye"></i>
+            </button>
+            <button type="button" (click)="clearAdditionalRequestFile(idx)" class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100">
+              <i class="pi pi-trash"></i>
+            </button>
+            <span class="text-xs font-semibold text-slate-500">{{ getAdditionalRequestFile(idx)?.name }}</span>
+          }
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 border-t border-slate-100 pt-4">
+        <button type="button" (click)="closeAdditionalClearingRequestModal()" class="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50">
+          Cancel
+        </button>
+        <button type="button" (click)="submitAdditionalClearingRequest()" [disabled]="additionalRequestIndex() === null || isSaving(idx, 'cost')" class="inline-flex h-10 items-center gap-1.5 rounded-lg bg-indigo-600 px-4 text-[10px] font-black uppercase tracking-wider text-white hover:bg-indigo-700 disabled:opacity-50">
+          <i class="pi pi-send text-[10px]"></i>
+          Submit Request
+        </button>
+      </div>
+    </div>
+  }
 </p-dialog>
 
 @if (storageValidationModalVisible()) {

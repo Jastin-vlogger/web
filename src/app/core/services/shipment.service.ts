@@ -413,6 +413,18 @@ export class ShipmentService {
     return this.http.patch<ShipmentContainerApprovalResponse>(`${this.apiUrl}/container/bl-details/${containerId}/clearing-advance/approve`, {});
   }
 
+  submitAdditionalClearingAdvanceRequest(containerId: string, payload: FormData): Observable<ShipmentContainerApprovalResponse> {
+    return this.http.post<ShipmentContainerApprovalResponse>(`${this.apiUrl}/container/bl-details/${containerId}/clearing-advance/additional-requests`, payload);
+  }
+
+  approveAdditionalClearingAdvanceRequest(containerId: string, requestId: string): Observable<ShipmentContainerApprovalResponse> {
+    return this.http.patch<ShipmentContainerApprovalResponse>(`${this.apiUrl}/container/bl-details/${containerId}/clearing-advance/additional-requests/${requestId}/approve`, {});
+  }
+
+  approvePaymentAllocation(containerId: string): Observable<ShipmentContainerApprovalResponse> {
+    return this.http.patch<ShipmentContainerApprovalResponse>(`${this.apiUrl}/container/payment-allocation/${containerId}/approve`, {});
+  }
+
   approvePaymentCosting(containerId: string): Observable<ShipmentContainerApprovalResponse> {
     return this.http.patch<ShipmentContainerApprovalResponse>(`${this.apiUrl}/container/payment-costing/${containerId}/approve`, {});
   }
