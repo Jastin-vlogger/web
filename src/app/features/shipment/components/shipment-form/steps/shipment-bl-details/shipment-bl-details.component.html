@@ -293,6 +293,14 @@
                         [ngClass]="getApprovalBadgeClasses(getClearingAdvanceApprovalLabel(i))">
                         {{ getClearingAdvanceApprovalLabel(i) }}
                       </span>
+                      <button
+                        type="button"
+                        (click)="openClearingAdvanceInfo(i)"
+                        class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600"
+                        title="View clearing advance details"
+                      >
+                        <i class="pi pi-info-circle"></i>
+                      </button>
                     </div>
                     <div class="flex min-w-0 flex-wrap items-center gap-2 xl:justify-end">
                       <input
@@ -320,6 +328,16 @@
                         <i class="pi pi-file-export text-[10px]"></i>
                         Generate Report
                       </button>
+                      @if (canCreateAdditionalClearingRequest(i)) {
+                        <button
+                          type="button"
+                          (click)="openAdditionalClearingRequestModal(i)"
+                          class="inline-flex h-10 items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 text-[10px] font-black uppercase tracking-wider text-indigo-700 hover:bg-indigo-100"
+                        >
+                          <i class="pi pi-plus text-[10px]"></i>
+                          Additional Requests
+                        </button>
+                      }
                       @if (canEditClearingAdvance(i)) {
                         <button
                           type="button"
@@ -549,6 +567,52 @@
                       </button>
                     </div>
                   }
+                  @if (getAdditionalClearingRequests(i).length) {
+                    <div class="border-t border-slate-100 bg-white px-4 py-4">
+                      <div class="mb-3 flex items-center justify-between gap-3">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">Additional Requests</span>
+                        <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-black uppercase text-slate-500">{{ getAdditionalClearingRequests(i).length }} Total</span>
+                      </div>
+                      <div class="grid grid-cols-1 gap-3">
+                        @for (request of getAdditionalClearingRequests(i); track request._id || request.id || $index) {
+                          <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+                            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                              <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                  <span class="text-sm font-black text-slate-800">{{ request.title || 'Additional Request' }}</span>
+                                  <span class="rounded-full border px-2 py-0.5 text-[9px] font-black uppercase"
+                                    [ngClass]="getApprovalBadgeClasses(getAdditionalRequestStatusLabel(request))">
+                                    {{ getAdditionalRequestStatusLabel(request) }}
+                                  </span>
+                                </div>
+                                <p class="mt-1 text-[11px] text-slate-500">{{ request.comment || 'No comment' }}</p>
+                                <div class="mt-2 flex flex-wrap gap-3 text-[10px] font-semibold text-slate-500">
+                                  <span>Amount: <strong class="text-slate-800">{{ request.requestAmount || 0 }}</strong></span>
+                                  <span>Requested: <strong class="text-slate-800">{{ formatDateTimeForDisplay(request.submittedAt) }}</strong></span>
+                                  @if (request.approvedAt) {
+                                    <span>Approved: <strong class="text-slate-800">{{ formatDateTimeForDisplay(request.approvedAt) }}</strong></span>
+                                  }
+                                </div>
+                              </div>
+                              <div class="flex items-center gap-2 shrink-0">
+                                @if (request.attachmentDocumentUrl) {
+                                  <button type="button" (click)="openRemoteDocumentPreview(request.attachmentDocumentUrl, request.attachmentDocumentName || 'Additional Request Attachment')" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600">
+                                    <i class="pi pi-eye"></i>
+                                  </button>
+                                }
+                                @if (canApproveAdditionalClearingRequest(request)) {
+                                  <button type="button" (click)="approveAdditionalClearingRequest(i, request)" [disabled]="isSaving(i, 'cost')" class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 text-[10px] font-black uppercase text-violet-700 hover:bg-violet-100 disabled:opacity-50">
+                                    <i class="pi pi-check-circle text-[10px]"></i>
+                                    Approve
+                                  </button>
+                                }
+                              </div>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  }
                 </div>
               } @else if (getActiveTab(i) === 'packaging') {
                 <div class="rounded-2xl border border-slate-200 overflow-hidden" [class.rbac-readonly-shell]="!canEditStorageAllocations(i)">
@@ -635,80 +699,214 @@
                     }
                     </div>
                   </div>
-                  @if (getStorageCloseMismatchWarnings(group).length) {
-                    <div class="border-b border-amber-100 bg-amber-50/80 px-4 py-3">
-                      <div class="flex items-start gap-2">
-                        <i class="pi pi-exclamation-triangle mt-0.5 text-[12px] text-amber-600"></i>
-                        <div class="flex flex-col gap-1">
-                          <span class="text-[11px] font-bold text-amber-800">Some container numbers look very close but do not match.</span>
-                          @for (warning of getStorageCloseMismatchWarnings(group); track $index) {
-                            <span class="text-[11px] text-amber-700">
-                              Container in Storage: <strong>{{ warning.storage }}</strong>
-                              <span class="mx-1">|</span>
-                              Container in Packaging: <strong>{{ warning.packaging }}</strong>
+                  <div class="grid grid-cols-1 gap-4 bg-white p-4">
+                    <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4" [formGroup]="getStorageDecision(group)">
+                      <div class="mb-4 flex items-center gap-2">
+                        <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-white">
+                          <i class="pi pi-sliders-h text-[13px]"></i>
+                        </span>
+                        <span class="text-[11px] font-black uppercase tracking-wider text-slate-700">Allocation Decision</span>
+                      </div>
+                      
+                      <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 flex flex-col gap-1.5">
+                          <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Single Item</div>
+                          <div class="flex items-center gap-3 h-10">
+                            <p-toggleswitch 
+                              [ngModel]="getStorageDecision(group).get('singleItem')?.value" 
+                              [ngModelOptions]="{standalone: true}" 
+                              (onChange)="onSingleItemChange(group, $event.checked, i)">
+                            </p-toggleswitch>
+                            <span class="text-xs font-bold" 
+                              [class.text-blue-600]="getStorageDecision(group).get('singleItem')?.value === true" 
+                              [class.text-slate-500]="getStorageDecision(group).get('singleItem')?.value !== true">
+                              {{ getStorageDecision(group).get('singleItem')?.value === true ? 'Yes' : 'No' }}
                             </span>
+                          </div>
+                        </div>
+                        
+                        <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 flex flex-col gap-1.5">
+                          <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Allocate Same Warehouse</div>
+                          <div class="flex items-center gap-3 h-10">
+                            <p-toggleswitch 
+                              [ngModel]="getStorageDecision(group).get('allocateSameWarehouse')?.value" 
+                              [ngModelOptions]="{standalone: true}" 
+                              (onChange)="onAllocateSameWarehouseChange(group, $event.checked, i)">
+                            </p-toggleswitch>
+                            <span class="text-xs font-bold" 
+                              [class.text-blue-600]="getStorageDecision(group).get('allocateSameWarehouse')?.value === true" 
+                              [class.text-slate-500]="getStorageDecision(group).get('allocateSameWarehouse')?.value !== true">
+                              {{ getStorageDecision(group).get('allocateSameWarehouse')?.value === true ? 'Yes' : 'No' }}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 flex flex-col gap-1.5">
+                          <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Destination Warehouse(s)</div>
+                          @if (getStorageDecision(group).get('allocateSameWarehouse')?.value) {
+                            <p-select 
+                              [options]="warehouseOptions()" 
+                              optionLabel="label" 
+                              optionValue="value" 
+                              placeholder="Select Warehouse" 
+                              styleClass="w-full"
+                              appendTo="body"
+                              [ngModel]="getStorageDecision(group).get('warehousesSelected')?.value?.[0]" 
+                              [ngModelOptions]="{standalone: true}" 
+                              (onChange)="onWarehouseSelectedChange(group, $event.value, i)">
+                            </p-select>
+                          } @else {
+                            <p-multiselect 
+                              formControlName="warehousesSelected"
+                              [options]="warehouseOptions()" 
+                              optionLabel="label" 
+                              optionValue="value" 
+                              placeholder="Select Warehouses" 
+                              display="chip" 
+                              styleClass="w-full" 
+                              appendTo="body"
+                              (onChange)="onWarehousesSelectedChange(group, $event.value, i)">
+                            </p-multiselect>
                           }
+                        </div>
+
+                        <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 flex flex-col gap-1.5 justify-between">
+                          <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Warehouse Count</div>
+                          <div class="text-xl font-black text-slate-800 my-1">
+                            {{ getWarehouseCount(group) }}
+                          </div>
+                          <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                            Read Only
+                          </div>
                         </div>
                       </div>
                     </div>
-                  }
-                  <div class="hidden md:grid md:grid-cols-[48px_minmax(0,1.25fr)_110px_minmax(260px,1.9fr)] gap-3 px-4 py-2.5 bg-slate-50/70 border-b border-slate-100">
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">SN</span>
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Container Serial No<span class="text-red-500 ml-0.5">*</span></span>
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Bags<span class="text-red-500 ml-0.5">*</span></span>
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Warehouse<span class="text-red-500 ml-0.5">*</span></span>
-                  </div>
-                  <div class="flex flex-col">
-                    @for (row of getStorageRows(group).controls; track $index) {
-                      <div [formGroup]="$any(row)" class="border-b last:border-b-0 border-slate-100 p-4">
-                        <div class="hidden md:grid md:grid-cols-[48px_minmax(0,1.25fr)_110px_minmax(260px,1.9fr)] gap-3 items-start">
-                          <div class="flex items-center min-h-10 text-sm font-bold text-slate-700">{{ row.get('sn')?.value }}</div>
-                          <div class="flex flex-col gap-1.5">
-                            <input pInputText formControlName="containerSerialNo" class="table-input-text w-full" placeholder="Container Serial No" />
-                            @if (getStorageRowMismatch(group, $index); as mismatch) {
-                              <span class="text-[10px] font-medium text-rose-600">
-                                Expected packaging container: <strong>{{ mismatch.packaging }}</strong>
-                              </span>
-                            }
+
+                    <!-- SCENARIO 1 PANEL -->
+                    @if (getStorageDecision(group).get('allocateSameWarehouse')?.value) {
+                      @let selectedWh = getStorageDecision(group).get('warehousesSelected')?.value?.[0];
+                      @if (selectedWh) {
+                        <div class="p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-3">
+                          <i class="pi pi-check-circle text-emerald-600 text-lg"></i>
+                          <div class="text-xs text-emerald-800">
+                            <strong>All containers will be allocated to:</strong> <span class="font-bold underline">{{ selectedWh }}</span>. No manual split is required.
                           </div>
-                          <p-inputNumber formControlName="bags" styleClass="w-full" inputStyleClass="table-input w-full" [useGrouping]="false" placeholder="0" />
-                          <p-select
-                            [options]="warehouseOptions()"
-                            formControlName="warehouse"
-                            optionLabel="label"
-                            optionValue="value"
-                            placeholder="Select warehouse"
-                            styleClass="w-full"
-                            appendTo="body">
-                          </p-select>
                         </div>
-                        <div class="md:hidden flex flex-col gap-3">
-                          <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">SN {{ row.get('sn')?.value }}</span>
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Container Serial No</label>
-                            <input pInputText formControlName="containerSerialNo" class="table-input-text w-full" placeholder="Container Serial No" />
-                            @if (getStorageRowMismatch(group, $index); as mismatch) {
-                              <span class="text-[10px] font-medium text-rose-600">
-                                Expected packaging container: <strong>{{ mismatch.packaging }}</strong>
-                              </span>
+                      } @else {
+                        <div class="p-4 bg-amber-50 border border-amber-100 rounded-xl flex items-center gap-3">
+                          <i class="pi pi-exclamation-triangle text-amber-600 text-lg"></i>
+                          <div class="text-xs text-amber-800">
+                            Please select a destination warehouse above.
+                          </div>
+                        </div>
+                      }
+                    }
+
+                    <!-- SCENARIO 2 PANEL -->
+                    @if (!getStorageDecision(group).get('allocateSameWarehouse')?.value) {
+                      <div class="flex flex-col gap-4">
+                        <div class="rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-3 flex items-center gap-3">
+                          <i class="pi pi-info-circle text-blue-600 text-base"></i>
+                          <div class="text-xs text-blue-800 font-medium">
+                            Containers will be divided among the selected warehouses for each item.
+                          </div>
+                        </div>
+
+                        <div class="text-[11px] font-black uppercase tracking-wider text-slate-700 mt-2">
+                          Warehouse Allocation by Item
+                        </div>
+
+                        @let itemAllocations = getStorageDecision(group).get('itemAllocations')?.value || [];
+                        @for (item of itemAllocations; track item.itemName; let itemIdx = $index) {
+                          <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+                            <!-- Collapsible Header -->
+                            <div 
+                              (click)="toggleItemCollapse(i, itemIdx)"
+                              class="cursor-pointer bg-slate-50 hover:bg-slate-100/80 px-4 py-3 flex items-center justify-between border-b border-slate-200 select-none transition-colors"
+                            >
+                              <div class="flex items-center gap-2 text-slate-700">
+                                <i 
+                                  class="pi text-[11px] text-slate-400 font-bold transition-transform duration-200"
+                                  [class.pi-chevron-down]="isItemCollapsed(i, itemIdx)"
+                                  [class.pi-chevron-up]="!isItemCollapsed(i, itemIdx)"
+                                ></i>
+                                <span class="text-xs font-bold text-slate-800">
+                                  Item {{ itemIdx + 1 }}: {{ item.itemName }}
+                                </span>
+                              </div>
+                              <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-black uppercase text-slate-700 bg-blue-50/80 border border-blue-100/60 px-2.5 py-1 rounded-md">
+                                  Expected Containers: {{ item.expectedContainers }}
+                                </span>
+                              </div>
+                            </div>
+
+                            <!-- Body Content -->
+                            @if (!isItemCollapsed(i, itemIdx)) {
+                              <div class="p-4 bg-white flex flex-col gap-3">
+                                @if (getWarehouseCount(group) > 1) {
+                                  <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                                    <table class="w-full text-left border-collapse">
+                                      <thead>
+                                        <tr class="bg-slate-50 border-b border-slate-200">
+                                          <th class="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-wider w-16">SN</th>
+                                          <th class="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-wider">Warehouse Name</th>
+                                          <th class="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-wider w-44">Containers Assigned</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        @for (alloc of item.allocations; track alloc.warehouse; let allocIdx = $index) {
+                                          <tr class="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50">
+                                            <td class="px-4 py-2 text-xs font-bold text-slate-700">{{ allocIdx + 1 }}</td>
+                                            <td class="px-4 py-2 text-xs font-medium text-slate-700">{{ alloc.warehouse }}</td>
+                                            <td class="px-4 py-2">
+                                              <p-inputNumber
+                                                [ngModel]="alloc.containersAssigned"
+                                                [ngModelOptions]="{standalone: true}"
+                                                (onInput)="onItemAllocationSpinnerChange(group, itemIdx, alloc.warehouse, $event.value ?? 0, i)"
+                                                styleClass="w-full"
+                                                inputStyleClass="table-input w-full"
+                                                [min]="0"
+                                                [max]="item.expectedContainers"
+                                                [showButtons]="true"
+                                                [useGrouping]="false"
+                                                placeholder="0">
+                                              </p-inputNumber>
+                                            </td>
+                                          </tr>
+                                        }
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                  
+                                  <!-- Total Row inside item card matching screenshot style -->
+                                  <div class="rounded-lg bg-blue-50/30 border border-blue-100/50 px-4 py-2.5 flex justify-between items-center">
+                                    <span class="text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                                      Total Assigned for Item {{ itemIdx + 1 }}
+                                    </span>
+                                    @let totalAllocated = getItemAllocationTotal(item);
+                                    <span class="text-xs font-black text-blue-600">
+                                      {{ totalAllocated }} / {{ item.expectedContainers }}
+                                    </span>
+                                  </div>
+                                } @else {
+                                  <div class="p-6 text-center text-xs text-slate-400 italic">
+                                    Please select at least 2 warehouses from the dropdown above to distribute allocations.
+                                  </div>
+                                }
+                              </div>
                             }
                           </div>
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Warehouse</label>
-                            <p-select
-                              [options]="warehouseOptions()"
-                              formControlName="warehouse"
-                              optionLabel="label"
-                              optionValue="value"
-                              placeholder="Select warehouse"
-                              styleClass="w-full"
-                              appendTo="body">
-                            </p-select>
-                          </div>
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Bags</label>
-                            <p-inputNumber formControlName="bags" styleClass="w-full" inputStyleClass="table-input w-full" [useGrouping]="false" placeholder="0" />
-                          </div>
+                        }
+
+                        <!-- Total Assigned for all items row -->
+                        <div class="rounded-xl bg-blue-50/50 border border-blue-100 px-4 py-3 flex justify-between items-center mt-2">
+                          <span class="text-[11px] font-black uppercase text-slate-600 tracking-wider">
+                            Total Assigned (All Items)
+                          </span>
+                          <span class="text-xs font-black text-blue-600">
+                            {{ getAllItemsAllocationTotal(group) }} / {{ shipmentData()?.shipment?.assumedContainerCount || 0 }}
+                          </span>
                         </div>
                       </div>
                     }
@@ -810,6 +1008,140 @@
       }
     }
   </div>
+</p-dialog>
+
+<p-dialog
+  header="Submit Clearing Advance"
+  [visible]="clearingSubmitModalVisible()"
+  (visibleChange)="clearingSubmitModalVisible.set($event)"
+  [modal]="true"
+  [dismissableMask]="false"
+  [style]="{ width: '92vw', maxWidth: '560px' }"
+  [draggable]="false"
+  [resizable]="false"
+  appendTo="body">
+  <div class="flex flex-col gap-4">
+    <div class="rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-3">
+      <p class="text-[10px] font-black uppercase tracking-wider text-blue-700">Approval Details Required</p>
+      <p class="mt-1 text-xs text-blue-800">Enter cheque and voucher details before sending this clearing advance for approval.</p>
+    </div>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="flex flex-col gap-1.5">
+        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Cheque No<span class="ml-0.5 text-red-500">*</span></label>
+        <input pInputText class="table-input-text w-full" [value]="clearingSubmitDraft().chequeNo" (input)="updateClearingSubmitDraft('chequeNo', $any($event.target).value)" placeholder="Enter cheque no" />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Cheque Date<span class="ml-0.5 text-red-500">*</span></label>
+        <input type="date" class="table-input-text w-full" [value]="clearingSubmitDraft().chequeDate" (input)="updateClearingSubmitDraft('chequeDate', $any($event.target).value)" />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Payment Voucher No<span class="ml-0.5 text-red-500">*</span></label>
+        <input pInputText class="table-input-text w-full" [value]="clearingSubmitDraft().paymentVoucherNo" (input)="updateClearingSubmitDraft('paymentVoucherNo', $any($event.target).value)" placeholder="Enter voucher no" />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Transaction ID</label>
+        <input pInputText class="table-input-text w-full" [value]="clearingSubmitDraft().transactionId" (input)="updateClearingSubmitDraft('transactionId', $any($event.target).value)" placeholder="Optional transaction id" />
+      </div>
+    </div>
+    <div class="flex justify-end gap-2 border-t border-slate-100 pt-4">
+      <button type="button" (click)="closeClearingSubmitModal()" class="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50">
+        Cancel
+      </button>
+      <button type="button" (click)="confirmClearingAdvanceSubmit()" [disabled]="clearingSubmitIndex() === null || isSaving(clearingSubmitIndex() || 0, 'cost')" class="inline-flex h-10 items-center gap-1.5 rounded-lg bg-emerald-600 px-4 text-[10px] font-black uppercase tracking-wider text-white hover:bg-emerald-700 disabled:opacity-50">
+        <i class="pi pi-check text-[10px]"></i>
+        Submit
+      </button>
+    </div>
+  </div>
+</p-dialog>
+
+<p-dialog
+  header="Clearing Advance Information"
+  [visible]="clearingInfoModalVisible()"
+  (visibleChange)="clearingInfoModalVisible.set($event)"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '92vw', maxWidth: '560px' }"
+  [draggable]="false"
+  [resizable]="false"
+  appendTo="body">
+  @if (clearingInfoIndex() !== null) {
+    @let idx = clearingInfoIndex()!;
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      @for (row of getClearingAdvanceInfoRows(idx); track row.label) {
+        <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">{{ row.label }}</p>
+          <p class="mt-1 text-sm font-bold text-slate-800 break-words">{{ row.value }}</p>
+        </div>
+      }
+    </div>
+  }
+</p-dialog>
+
+<p-dialog
+  header="Additional Clearing Request"
+  [visible]="additionalRequestModalVisible()"
+  (visibleChange)="additionalRequestModalVisible.set($event)"
+  [modal]="true"
+  [dismissableMask]="false"
+  [style]="{ width: '92vw', maxWidth: '620px' }"
+  [draggable]="false"
+  [resizable]="false"
+  appendTo="body">
+  @if (additionalRequestIndex() !== null) {
+    @let idx = additionalRequestIndex()!;
+    <div class="flex flex-col gap-4">
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Title<span class="ml-0.5 text-red-500">*</span></label>
+          <input pInputText class="table-input-text w-full" [value]="additionalRequestDraft().title" (input)="updateAdditionalRequestDraft('title', $any($event.target).value)" placeholder="Request title" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Request Amount<span class="ml-0.5 text-red-500">*</span></label>
+          <p-inputNumber
+            [ngModel]="additionalRequestDraft().requestAmount"
+            [ngModelOptions]="{ standalone: true }"
+            (onInput)="updateAdditionalRequestDraft('requestAmount', $any($event).value)"
+            styleClass="w-full"
+            inputStyleClass="table-input w-full"
+            [minFractionDigits]="2"
+            [maxFractionDigits]="2"
+            placeholder="0.00" />
+        </div>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Comment / Details</label>
+        <textarea rows="3" class="table-input-text w-full py-2" [value]="additionalRequestDraft().comment" (input)="updateAdditionalRequestDraft('comment', $any($event.target).value)" placeholder="Add request details"></textarea>
+      </div>
+      <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <label class="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50 cursor-pointer">
+            <i class="pi pi-upload text-[10px]"></i>
+            Upload Attachment
+            <input type="file" class="hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onAdditionalRequestFileSelected($event, idx)" />
+          </label>
+          @if (getAdditionalRequestFile(idx)) {
+            <button type="button" (click)="openDocumentPreview(getAdditionalRequestFile(idx)!, 'Additional Request Attachment')" class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600">
+              <i class="pi pi-eye"></i>
+            </button>
+            <button type="button" (click)="clearAdditionalRequestFile(idx)" class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100">
+              <i class="pi pi-trash"></i>
+            </button>
+            <span class="text-xs font-semibold text-slate-500">{{ getAdditionalRequestFile(idx)?.name }}</span>
+          }
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 border-t border-slate-100 pt-4">
+        <button type="button" (click)="closeAdditionalClearingRequestModal()" class="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-white px-4 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-50">
+          Cancel
+        </button>
+        <button type="button" (click)="submitAdditionalClearingRequest()" [disabled]="additionalRequestIndex() === null || isSaving(idx, 'cost')" class="inline-flex h-10 items-center gap-1.5 rounded-lg bg-indigo-600 px-4 text-[10px] font-black uppercase tracking-wider text-white hover:bg-indigo-700 disabled:opacity-50">
+          <i class="pi pi-send text-[10px]"></i>
+          Submit Request
+        </button>
+      </div>
+    </div>
+  }
 </p-dialog>
 
 @if (storageValidationModalVisible()) {

@@ -9,6 +9,37 @@
         cursor: pointer;
     }
 
+    .actual-table table {
+        table-layout: fixed;
+        min-width: 2010px;
+    }
+
+    .actual-table .actual-col-status {
+        width: 140px;
+        min-width: 140px;
+        max-width: 140px;
+    }
+
+    .actual-table .actual-col-compact {
+        width: 64px;
+        min-width: 64px;
+        max-width: 64px;
+    }
+
+    .actual-table .actual-col-num {
+        width: 78px;
+        min-width: 78px;
+        max-width: 78px;
+    }
+
+    .actual-table .actual-col-num .p-inputnumber,
+    .actual-table .actual-col-compact .p-inputnumber,
+    .actual-table .actual-col-num .table-input,
+    .actual-table .actual-col-compact .table-input {
+        width: 100%;
+        min-width: 0;
+    }
+
     .extraction-overlay {
         @apply fixed inset-0 z-[1200] flex items-center justify-center p-4;
     }

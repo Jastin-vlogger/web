@@ -6,16 +6,15 @@ export type DocumentMilestoneKey =
   | 'murabaha_submit'
   | 'release';
 
-export const PAUSED_DOCUMENT_MILESTONES: readonly DocumentMilestoneKey[] = [
-  'murabaha_submit',
-  'release',
-];
+export const PAUSED_DOCUMENT_MILESTONES: readonly DocumentMilestoneKey[] = [];
 
 export const BANK_DOCUMENT_MILESTONES: readonly DocumentMilestoneKey[] = [
   'courier',
   'receiving',
   'inward',
   'murabaha_process',
+  'murabaha_submit',
+  'release',
 ];
 
 export const DIRECT_DOCUMENT_MILESTONES: readonly DocumentMilestoneKey[] = [
@@ -26,10 +25,10 @@ export const DIRECT_DOCUMENT_MILESTONES: readonly DocumentMilestoneKey[] = [
 export const DOCUMENT_MILESTONE_LABELS: Record<DocumentMilestoneKey, string> = {
   courier: 'Courier Logistics',
   receiving: 'Receiver & Bank Setup',
-  inward: 'Inward Collection Advice',
+  inward: 'DA Upload & Bank Submission Status',
   murabaha_process: 'Murabaha Contract Phase',
-  murabaha_submit: 'Contract Submission',
-  release: 'Final Documents Release',
+  murabaha_submit: 'Bank Submission',
+  release: 'Final Contract Received From Bank',
 };
 
 export const isPausedDocumentMilestone = (milestone: string): milestone is DocumentMilestoneKey =>
@@ -46,11 +45,21 @@ export type DocumentationCompletionValues = {
   receiver?: unknown;
   bankName?: unknown;
   inwardCollectionAdviceDate?: unknown;
+  inwardCollectionAdviceReceivedAt?: unknown;
+  inwardCollectionAdviceSubmittedAt?: unknown;
   inwardCollectionAdviceDocumentUrl?: unknown;
+  bankSubmittedToBank?: unknown;
+  daSignedDocumentUrl?: unknown;
+  dnSignedDocumentUrl?: unknown;
+  skipMurabaha?: unknown;
   murabahaContractReleasedDate?: unknown;
   murabahaContractApprovedDate?: unknown;
+  murabahaContractDocumentUrl?: unknown;
   murabahaContractSubmittedDate?: unknown;
   murabahaContractSubmittedDocumentUrl?: unknown;
+  daSubmittedToBank?: unknown;
+  murabahaSubmittedToBank?: unknown;
+  submissionPackageDocumentUrl?: unknown;
   documentsReleasedDate?: unknown;
   documentsReleasedDocumentUrl?: unknown;
 };
@@ -79,15 +88,23 @@ export const isDocumentationMilestoneComplete = (
     case 'receiving': {
       const hasReceiver = hasValue(values.receiver);
       if (!hasReceiver || !hasValue(values.expectedDocDate)) return false;
-      return isBankReceiverValue(values.receiver) ? hasValue(values.bankName) : true;
+      if (isBankReceiverValue(values.receiver)) {
+        return hasValue(values.bankName) && hasValue(values.inwardCollectionAdviceDocumentUrl);
+      }
+      return true;
     }
     case 'inward':
-      return hasValue(values.inwardCollectionAdviceDate) || hasValue(values.inwardCollectionAdviceDocumentUrl);
+      return hasValue(values.inwardCollectionAdviceSubmittedAt) ||
+        hasValue(values.daSignedDocumentUrl) ||
+        values.bankSubmittedToBank === true ||
+        values.bankSubmittedToBank === false;
     case 'murabaha_process':
-      return hasValue(values.murabahaContractReleasedDate) || hasValue(values.murabahaContractApprovedDate);
+      if (values.skipMurabaha === true || values.skipMurabaha === 'true') return true;
+      return hasValue(values.murabahaContractReleasedDate) || hasValue(values.murabahaContractDocumentUrl);
     case 'murabaha_submit':
+      return hasValue(values.murabahaContractSubmittedDate) || hasValue(values.submissionPackageDocumentUrl);
     case 'release':
-      return false;
+      return hasValue(values.documentsReleasedDate) || hasValue(values.documentsReleasedDocumentUrl);
   }
 };
 

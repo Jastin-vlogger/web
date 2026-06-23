@@ -157,7 +157,33 @@ export class DashboardComponent implements OnInit {
 
   readonly volumeTodayStats = computed(() => {
     const summary = this.dashboard()?.shippingStatus?.volumeToday ?? [];
-    if (summary.length) return summary.filter((metric) => this.canViewDashboardPermission(metric.permissionKey));
+    const normalizeLabel = (label: string) => String(label || '').trim().toLowerCase();
+    const priorityByLabel = new Map([
+      ['at the port', 0],
+      ['on transit', 1],
+      ['etd yet to due', 2],
+      ['eta yet to due', 2],
+      ['etd yet to be confirmed', 3],
+      ['total lpo', 4],
+      ['total lpos', 4],
+    ]);
+    const displayLabel = (label: string) => {
+      const normalized = normalizeLabel(label);
+      if (normalized === 'eta yet to due') return 'ETD Yet To Due';
+      if (normalized === 'total lpo') return 'Total LPOs';
+      return label;
+    };
+    if (summary.length) {
+      return summary
+        .filter((metric) => this.canViewDashboardPermission(metric.permissionKey))
+        .map((metric, index) => ({ ...metric, label: displayLabel(metric.label), __index: index }))
+        .sort((left, right) => {
+          const leftPriority = priorityByLabel.get(normalizeLabel(left.label)) ?? Number.MAX_SAFE_INTEGER;
+          const rightPriority = priorityByLabel.get(normalizeLabel(right.label)) ?? Number.MAX_SAFE_INTEGER;
+          return leftPriority === rightPriority ? left.__index - right.__index : leftPriority - rightPriority;
+        })
+        .map(({ __index, ...metric }) => metric);
+    }
     const dashboard = this.dashboard();
     if (!dashboard) return [];
     return [{ label: 'Total Shipments', value: dashboard.kpis.totalShipments, permissionKey: 'dashboard.snapshot.total_shipments.view' }]

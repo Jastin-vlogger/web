@@ -14,6 +14,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
 import { AccordionModule } from 'primeng/accordion';
 import { DialogModule } from 'primeng/dialog';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import {
   selectShipmentData,
   selectSubmittedActualIndices,
@@ -43,6 +44,7 @@ import {
     SelectModule,
     AccordionModule,
     DialogModule,
+    ToggleSwitchModule,
   ],
   providers: [],
   templateUrl: './shipment-documentation.component.html',
@@ -54,7 +56,7 @@ import {
       gap: 0.5rem;
       border-radius: 0.75rem;
       background-color: #3b82f6;
-      padding: 0.625rem 1.25rem;
+      padding: 0.45rem 1rem;
       font-size: 10px;
       font-weight: 900;
       text-transform: uppercase;
@@ -71,6 +73,30 @@ import {
     }
     .primary-milestone-btn:active:not(:disabled) { transform: scale(0.98); }
     .primary-milestone-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .secondary-cancel-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      border-radius: 0.75rem;
+      border: 1px solid #e2e8f0;
+      background-color: #ffffff;
+      padding: 0.45rem 1rem;
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #475569;
+      transition: all 0.2s ease-in-out;
+      cursor: pointer;
+    }
+    .secondary-cancel-btn:hover:not(:disabled) {
+      background-color: #f8fafc;
+      border-color: #cbd5e1;
+    }
+    .secondary-cancel-btn:active:not(:disabled) { transform: scale(0.98); }
+    .secondary-cancel-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .icon-btn-secondary {
       display: inline-flex;
@@ -132,12 +158,16 @@ export class ShipmentDocumentationComponent {
   @Output() navigateToSplit = new EventEmitter<void>();
 
   @ViewChild('inwardAdviceFileInput') inwardAdviceFileInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('daSignedFileInput') daSignedFileInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('dnSignedFileInput') dnSignedFileInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('murabahaContractFileInput') murabahaContractFileInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('murabahaSubmittedFileInput') murabahaSubmittedFileInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('submissionPackageFileInput') submissionPackageFileInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('documentsReleasedFileInput') documentsReleasedFileInputRef?: ElementRef<HTMLInputElement>;
 
   /** Set right before programmatic .click() so (change) knows which row. */
   private pendingFileRow: number | null = null;
-  private pendingFileKind: 'inwardAdvice' | 'murabahaSubmitted' | 'documentsReleased' | null = null;
+  private pendingFileKind: 'inwardAdvice' | 'daSigned' | 'dnSigned' | 'murabahaContract' | 'murabahaSubmitted' | 'submissionPackage' | 'documentsReleased' | null = null;
   private restoredUiStateKey: string | null = null;
 
   private store = inject(Store);
@@ -191,7 +221,11 @@ export class ShipmentDocumentationComponent {
   });
 
   readonly inwardAdviceFile = signal<Record<number, File | null>>({});
+  readonly daSignedFile = signal<Record<number, File | null>>({});
+  readonly dnSignedFile = signal<Record<number, File | null>>({});
+  readonly murabahaContractFile = signal<Record<number, File | null>>({});
   readonly murabahaSubmittedFile = signal<Record<number, File | null>>({});
+  readonly submissionPackageFile = signal<Record<number, File | null>>({});
   readonly documentsReleasedFile = signal<Record<number, File | null>>({});
   readonly statusModalVisible = signal(false);
   readonly statusModalShipmentIndex = signal<number | null>(null);
@@ -319,8 +353,10 @@ export class ShipmentDocumentationComponent {
     if (isPausedDocumentMilestone(milestone)) return false;
     if (!this.canEditMilestone(milestone)) return false;
     const rowEditing = this.editingMilestones()[index];
-    if (rowEditing?.[milestone]) return true;
-    return !this.isMilestoneSaved(index, milestone);
+    if (rowEditing && rowEditing[milestone] !== undefined) {
+      return rowEditing[milestone];
+    }
+    return false;
   }
 
   isMilestoneVisible(index: number, milestone: string, group: FormGroup): boolean {
@@ -333,9 +369,6 @@ export class ShipmentDocumentationComponent {
     const hasMilestone2 = this.isMilestoneFilled(group, 'receiving');
     const isBank = this.isBankReceiver(group);
 
-    // Milestones 5 and 6 are intentionally paused for now.
-    // Current completion point: Bank receivers finish at M4, Direct receivers finish at M2.
-
     if (milestone === 'receiving') return hasMilestone1;
 
     if (milestone === 'inward') {
@@ -346,6 +379,14 @@ export class ShipmentDocumentationComponent {
     if (milestone === 'murabaha_process') {
       // Only show for Bank receiver, after inward is filled
       return isBank && this.isMilestoneFilled(group, 'inward');
+    }
+
+    if (milestone === 'murabaha_submit') {
+      return isBank && this.isMilestoneFilled(group, 'murabaha_process');
+    }
+
+    if (milestone === 'release') {
+      return isBank && this.isMilestoneFilled(group, 'murabaha_submit');
     }
 
     return true;
@@ -364,14 +405,22 @@ export class ShipmentDocumentationComponent {
         receiver: group.get('receiver')?.value,
         bankName: group.get('bankName')?.value,
         expectedDocDate: group.get('expectedDocDate')?.value,
+        inwardCollectionAdviceDocumentUrl: group.get('inwardCollectionAdviceDocumentUrl')?.value,
       }, 'receiving');
     }
 
     switch (milestone) {
       case 'inward':
-        return !!group.get('inwardCollectionAdviceDate')?.value || !!this.getSavedFileUrl(group, 'inwardAdvice');
+        return !!group.get('inwardCollectionAdviceDate')?.value ||
+          !!group.get('inwardCollectionAdviceReceivedAt')?.value ||
+          !!group.get('inwardCollectionAdviceSubmittedAt')?.value ||
+          !!this.getSavedFileUrl(group, 'inwardAdvice');
       case 'murabaha_process':
         return !!group.get('murabahaContractReleasedDate')?.value || !!group.get('murabahaContractApprovedDate')?.value;
+      case 'murabaha_submit':
+        return !!group.get('murabahaContractSubmittedDate')?.value || !!this.getSavedFileUrl(group, 'murabahaSubmitted');
+      case 'release':
+        return !!group.get('documentsReleasedDate')?.value || !!this.getSavedFileUrl(group, 'documentsReleased');
       default:
         return false;
     }
@@ -388,7 +437,27 @@ export class ShipmentDocumentationComponent {
     this.persistUiState();
   }
 
-  onFilesSelected(event: Event, containerIndex: number, kind: 'inwardAdvice' | 'murabahaSubmitted' | 'documentsReleased'): void {
+  cancelEditMilestone(index: number, milestone: string): void {
+    const actual = this.shipmentData()?.actual?.[index];
+    if (actual) {
+      this.applyDocumentationResponse(index, actual, milestone);
+    } else {
+      const milestoneKeys = milestone === 'courier' ? ['courier', 'receiving'] : [milestone];
+      
+      if (milestoneKeys.includes('courier')) this.clearFile(index, 'inwardAdvice');
+      if (milestoneKeys.includes('inward')) {
+        this.clearFile(index, 'daSigned');
+        this.clearFile(index, 'dnSigned');
+      }
+      if (milestoneKeys.includes('murabaha_process')) this.clearFile(index, 'murabahaContract');
+      if (milestoneKeys.includes('murabaha_submit')) this.clearFile(index, 'submissionPackage');
+      if (milestoneKeys.includes('release')) this.clearFile(index, 'documentsReleased');
+      
+      this.toggleEditMilestone(index, milestone, false);
+    }
+  }
+
+  onFilesSelected(event: Event, containerIndex: number, kind: 'inwardAdvice' | 'daSigned' | 'dnSigned' | 'murabahaContract' | 'murabahaSubmitted' | 'submissionPackage' | 'documentsReleased'): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] ?? null;
     if (!file) return;
@@ -396,9 +465,17 @@ export class ShipmentDocumentationComponent {
     const targetSignal =
       kind === 'inwardAdvice'
         ? this.inwardAdviceFile
-        : kind === 'murabahaSubmitted'
-          ? this.murabahaSubmittedFile
-          : this.documentsReleasedFile;
+        : kind === 'daSigned'
+          ? this.daSignedFile
+          : kind === 'dnSigned'
+            ? this.dnSignedFile
+            : kind === 'murabahaContract'
+              ? this.murabahaContractFile
+              : kind === 'murabahaSubmitted'
+                ? this.murabahaSubmittedFile
+                : kind === 'submissionPackage'
+                  ? this.submissionPackageFile
+                  : this.documentsReleasedFile;
 
     targetSignal.update((current) => ({
       ...current,
@@ -408,42 +485,62 @@ export class ShipmentDocumentationComponent {
     input.value = '';
   }
 
-  clickFileInput(index: number, kind: 'inwardAdvice' | 'murabahaSubmitted' | 'documentsReleased'): void {
+  clickFileInput(index: number, kind: 'inwardAdvice' | 'daSigned' | 'dnSigned' | 'murabahaContract' | 'murabahaSubmitted' | 'submissionPackage' | 'documentsReleased'): void {
     this.pendingFileRow = index;
     this.pendingFileKind = kind;
     const refs = {
       inwardAdvice: this.inwardAdviceFileInputRef,
+      daSigned: this.daSignedFileInputRef,
+      dnSigned: this.dnSignedFileInputRef,
+      murabahaContract: this.murabahaContractFileInputRef,
       murabahaSubmitted: this.murabahaSubmittedFileInputRef,
+      submissionPackage: this.submissionPackageFileInputRef,
       documentsReleased: this.documentsReleasedFileInputRef,
     };
     const el = refs[kind]?.nativeElement;
     if (el) el.click();
   }
 
-  onFileInputChange(event: Event, kind: 'inwardAdvice' | 'murabahaSubmitted' | 'documentsReleased'): void {
+  onFileInputChange(event: Event, kind: 'inwardAdvice' | 'daSigned' | 'dnSigned' | 'murabahaContract' | 'murabahaSubmitted' | 'submissionPackage' | 'documentsReleased'): void {
     const row = this.pendingFileRow;
     if (row !== null && this.pendingFileKind === kind) this.onFilesSelected(event, row, kind);
     this.pendingFileRow = null;
     this.pendingFileKind = null;
   }
 
-  getFile(containerIndex: number, kind: 'inwardAdvice' | 'murabahaSubmitted' | 'documentsReleased'): File | null {
+  getFile(containerIndex: number, kind: 'inwardAdvice' | 'daSigned' | 'dnSigned' | 'murabahaContract' | 'murabahaSubmitted' | 'submissionPackage' | 'documentsReleased'): File | null {
     const source =
       kind === 'inwardAdvice'
         ? this.inwardAdviceFile()
-        : kind === 'murabahaSubmitted'
-          ? this.murabahaSubmittedFile()
-          : this.documentsReleasedFile();
+        : kind === 'daSigned'
+          ? this.daSignedFile()
+          : kind === 'dnSigned'
+            ? this.dnSignedFile()
+            : kind === 'murabahaContract'
+              ? this.murabahaContractFile()
+              : kind === 'murabahaSubmitted'
+                ? this.murabahaSubmittedFile()
+                : kind === 'submissionPackage'
+                  ? this.submissionPackageFile()
+                  : this.documentsReleasedFile();
     return source[containerIndex] ?? null;
   }
 
-  clearFile(containerIndex: number, kind: 'inwardAdvice' | 'murabahaSubmitted' | 'documentsReleased'): void {
+  clearFile(containerIndex: number, kind: 'inwardAdvice' | 'daSigned' | 'dnSigned' | 'murabahaContract' | 'murabahaSubmitted' | 'submissionPackage' | 'documentsReleased'): void {
     const targetSignal =
       kind === 'inwardAdvice'
         ? this.inwardAdviceFile
-        : kind === 'murabahaSubmitted'
-          ? this.murabahaSubmittedFile
-          : this.documentsReleasedFile;
+        : kind === 'daSigned'
+          ? this.daSignedFile
+          : kind === 'dnSigned'
+            ? this.dnSignedFile
+            : kind === 'murabahaContract'
+              ? this.murabahaContractFile
+              : kind === 'murabahaSubmitted'
+                ? this.murabahaSubmittedFile
+                : kind === 'submissionPackage'
+                  ? this.submissionPackageFile
+                  : this.documentsReleasedFile;
 
     targetSignal.update((current) => ({
       ...current,
@@ -451,23 +548,39 @@ export class ShipmentDocumentationComponent {
     }));
   }
 
-  getSavedFileUrl(group: AbstractControl, kind: 'inwardAdvice' | 'murabahaSubmitted' | 'documentsReleased'): string {
+  getSavedFileUrl(group: AbstractControl, kind: 'inwardAdvice' | 'daSigned' | 'dnSigned' | 'murabahaContract' | 'murabahaSubmitted' | 'submissionPackage' | 'documentsReleased'): string {
     const controlName =
       kind === 'inwardAdvice'
         ? 'inwardCollectionAdviceDocumentUrl'
-        : kind === 'murabahaSubmitted'
-          ? 'murabahaContractSubmittedDocumentUrl'
-          : 'documentsReleasedDocumentUrl';
+        : kind === 'daSigned'
+          ? 'daSignedDocumentUrl'
+          : kind === 'dnSigned'
+            ? 'dnSignedDocumentUrl'
+            : kind === 'murabahaContract'
+              ? 'murabahaContractDocumentUrl'
+              : kind === 'murabahaSubmitted'
+                ? 'murabahaContractSubmittedDocumentUrl'
+                : kind === 'submissionPackage'
+                  ? 'submissionPackageDocumentUrl'
+                  : 'documentsReleasedDocumentUrl';
     return group.get(controlName)?.value || '';
   }
 
-  getSavedFileName(group: AbstractControl, kind: 'inwardAdvice' | 'murabahaSubmitted' | 'documentsReleased'): string {
+  getSavedFileName(group: AbstractControl, kind: 'inwardAdvice' | 'daSigned' | 'dnSigned' | 'murabahaContract' | 'murabahaSubmitted' | 'submissionPackage' | 'documentsReleased'): string {
     const controlName =
       kind === 'inwardAdvice'
         ? 'inwardCollectionAdviceDocumentName'
-        : kind === 'murabahaSubmitted'
-          ? 'murabahaContractSubmittedDocumentName'
-          : 'documentsReleasedDocumentName';
+        : kind === 'daSigned'
+          ? 'daSignedDocumentName'
+          : kind === 'dnSigned'
+            ? 'dnSignedDocumentName'
+            : kind === 'murabahaContract'
+              ? 'murabahaContractDocumentName'
+              : kind === 'murabahaSubmitted'
+                ? 'murabahaContractSubmittedDocumentName'
+                : kind === 'submissionPackage'
+                  ? 'submissionPackageDocumentName'
+                  : 'documentsReleasedDocumentName';
     return group.get(controlName)?.value || '';
   }
 
@@ -702,6 +815,12 @@ export class ShipmentDocumentationComponent {
           missing.push('Courier Provider');
         if (!String(group.get('docArrivalNotes')?.value || '').trim())
           missing.push('Document Arrival Notes');
+        if (!group.get('receiver')?.value)
+          missing.push('Receiver');
+        if (this.isBankReceiver(group) && !group.get('bankName')?.value)
+          missing.push('Bank Name');
+        if (!group.get('expectedDocDate')?.value)
+          missing.push('Expected Date of Doc Arrival');
         if (missing.length > 0) {
           this.notificationService.error('Required Fields Missing', `Please fill: ${missing.join(', ')}.`);
           return false;
@@ -786,8 +905,9 @@ export class ShipmentDocumentationComponent {
 
     if (!this.isMilestoneSectionValid(index, milestone)) return;
 
+    const labelName = milestone === 'courier' ? 'Courier Logistics & Receiver Setup' : (this.documentMilestoneLabels[milestone as DocumentMilestoneKey] || milestone);
     const confirmed = await this.confirmDialog.ask({
-      message: `Save ${this.documentMilestoneLabels[milestone as DocumentMilestoneKey] || milestone} for Shipment #${index + 1}?`,
+      message: `Save ${labelName} for Shipment #${index + 1}?`,
       header: 'Save Milestone',
       acceptLabel: 'Yes, Save',
     });
@@ -803,7 +923,7 @@ export class ShipmentDocumentationComponent {
     this.shipmentService.submitDocumentationPayment(request.containerId, request.payload).subscribe({
       next: (response) => {
         this.applyDocumentationResponse(index, response?.container?.actual, milestone);
-        this.notificationService.success('Saved', `${this.documentMilestoneLabels[milestone as DocumentMilestoneKey] || milestone} saved successfully.`);
+        this.notificationService.success('Saved', `${labelName} saved successfully.`);
         const shipmentId = this.shipmentData()?.shipment?._id;
         if (shipmentId) {
           this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
@@ -839,6 +959,8 @@ export class ShipmentDocumentationComponent {
     payload.append('receiver', formValue['receiver'] || '');
     payload.append('bankName', formValue['bankName'] || '');
     payload.append('inwardCollectionAdviceDate', toDate(formValue['inwardCollectionAdviceDate']));
+    payload.append('inwardCollectionAdviceReceivedAt', toDate(formValue['inwardCollectionAdviceReceivedAt']));
+    payload.append('inwardCollectionAdviceSubmittedAt', toDate(formValue['inwardCollectionAdviceSubmittedAt']));
     const murabahaReleasedDate = toDate(formValue['murabahaContractApprovedDate']);
     payload.append('murabahaContractReleasedDate', murabahaReleasedDate);
     payload.append('murabahaContractApprovedDate', murabahaReleasedDate);
@@ -887,6 +1009,11 @@ export class ShipmentDocumentationComponent {
         payload.append('courierServiceProvider', formValue['courierServiceProvider'] || '');
         payload.append('DHL', formValue['courierTrackNo'] || '');
         payload.append('docArrivalNotes', formValue['docArrivalNotes'] || '');
+        payload.append('receiver', formValue['receiver'] || '');
+        payload.append('bankName', formValue['bankName'] || '');
+        payload.append('expectedDocDate', toDate(formValue['expectedDocDate']));
+        const inf = this.getFile(index, 'inwardAdvice');
+        if (inf) payload.append('inwardCollectionAdviceDocument', inf, inf.name);
         break;
       case 'receiving':
         payload.append('receiver', formValue['receiver'] || '');
@@ -894,22 +1021,27 @@ export class ShipmentDocumentationComponent {
         payload.append('expectedDocDate', toDate(formValue['expectedDocDate']));
         break;
       case 'inward': {
-        payload.append('inwardCollectionAdviceDate', toDate(formValue['inwardCollectionAdviceDate']));
-        const inf = this.getFile(index, 'inwardAdvice');
-        if (inf) payload.append('inwardCollectionAdviceDocument', inf, inf.name);
+        payload.append('bankSubmittedToBank', formValue['bankSubmittedToBank'] ?? false);
+        payload.append('inwardCollectionAdviceSubmittedAt', toDate(formValue['inwardCollectionAdviceSubmittedAt']));
+        const das = this.getFile(index, 'daSigned');
+        if (das) payload.append('daSignedDocument', das, das.name);
+        const dns = this.getFile(index, 'dnSigned');
+        if (dns) payload.append('dnSignedDocument', dns, dns.name);
         break;
       }
-      case 'murabaha_process':
-        {
-          const murabahaReleasedDate = toDate(formValue['murabahaContractApprovedDate']);
-          payload.append('murabahaContractReleasedDate', murabahaReleasedDate);
-          payload.append('murabahaContractApprovedDate', murabahaReleasedDate);
-        }
+      case 'murabaha_process': {
+        payload.append('skipMurabaha', formValue['skipMurabaha'] ?? false);
+        payload.append('murabahaContractReleasedDate', toDate(formValue['murabahaContractReleasedDate']));
+        const mc = this.getFile(index, 'murabahaContract');
+        if (mc) payload.append('murabahaContractDocument', mc, mc.name);
         break;
+      }
       case 'murabaha_submit': {
         payload.append('murabahaContractSubmittedDate', toDate(formValue['murabahaContractSubmittedDate']));
-        const msf = this.getFile(index, 'murabahaSubmitted');
-        if (msf) payload.append('murabahaContractSubmittedDocument', msf, msf.name);
+        payload.append('daSubmittedToBank', formValue['daSubmittedToBank'] ?? false);
+        payload.append('murabahaSubmittedToBank', formValue['murabahaSubmittedToBank'] ?? false);
+        const sp = this.getFile(index, 'submissionPackage');
+        if (sp) payload.append('submissionPackageDocument', sp, sp.name);
         break;
       }
       case 'release': {
@@ -939,15 +1071,29 @@ export class ShipmentDocumentationComponent {
       receiver: actual.receiver || '',
       bankName: actual.bankName || '',
       inwardCollectionAdviceDate: actual.inwardCollectionAdviceDate ? new Date(actual.inwardCollectionAdviceDate) : null,
+      inwardCollectionAdviceReceivedAt: actual.inwardCollectionAdviceReceivedAt ? new Date(actual.inwardCollectionAdviceReceivedAt) : null,
+      inwardCollectionAdviceSubmittedAt: actual.inwardCollectionAdviceSubmittedAt ? new Date(actual.inwardCollectionAdviceSubmittedAt) : null,
       inwardCollectionAdviceDocumentUrl: actual.inwardCollectionAdviceDocumentUrl || '',
       inwardCollectionAdviceDocumentName: actual.inwardCollectionAdviceDocumentName || '',
+      bankSubmittedToBank: actual.bankSubmittedToBank || false,
+      daSignedDocumentUrl: actual.daSignedDocumentUrl || '',
+      daSignedDocumentName: actual.daSignedDocumentName || '',
+      dnSignedDocumentUrl: actual.dnSignedDocumentUrl || '',
+      dnSignedDocumentName: actual.dnSignedDocumentName || '',
+      skipMurabaha: actual.skipMurabaha || false,
       murabahaContractReleasedDate: actual.murabahaContractReleasedDate ? new Date(actual.murabahaContractReleasedDate) : null,
       murabahaContractApprovedDate: actual.murabahaContractApprovedDate || actual.murabahaContractReleasedDate
         ? new Date(actual.murabahaContractApprovedDate || actual.murabahaContractReleasedDate)
         : null,
+      murabahaContractDocumentUrl: actual.murabahaContractDocumentUrl || '',
+      murabahaContractDocumentName: actual.murabahaContractDocumentName || '',
       murabahaContractSubmittedDate: actual.murabahaContractSubmittedDate ? new Date(actual.murabahaContractSubmittedDate) : null,
       murabahaContractSubmittedDocumentUrl: actual.murabahaContractSubmittedDocumentUrl || '',
       murabahaContractSubmittedDocumentName: actual.murabahaContractSubmittedDocumentName || '',
+      daSubmittedToBank: actual.daSubmittedToBank || false,
+      murabahaSubmittedToBank: actual.murabahaSubmittedToBank || false,
+      submissionPackageDocumentUrl: actual.submissionPackageDocumentUrl || '',
+      submissionPackageDocumentName: actual.submissionPackageDocumentName || '',
       documentsReleasedDate: actual.documentsReleasedDate ? new Date(actual.documentsReleasedDate) : null,
       documentsReleasedDocumentUrl: actual.documentsReleasedDocumentUrl || '',
       documentsReleasedDocumentName: actual.documentsReleasedDocumentName || '',
@@ -955,7 +1101,9 @@ export class ShipmentDocumentationComponent {
 
     const milestoneKeys = milestone === 'all'
       ? this.getActiveMilestonesForGroup(row)
-      : [milestone];
+      : milestone === 'courier'
+        ? ['courier', 'receiving']
+        : [milestone];
 
     this.savedMilestoneOverrides.update((current) => {
       const rowState = current[index] || {};
@@ -966,8 +1114,13 @@ export class ShipmentDocumentationComponent {
       return { ...current, [index]: next };
     });
 
-    if (milestoneKeys.includes('inward')) this.clearFile(index, 'inwardAdvice');
-    if (milestoneKeys.includes('murabaha_submit')) this.clearFile(index, 'murabahaSubmitted');
+    if (milestoneKeys.includes('courier')) this.clearFile(index, 'inwardAdvice');
+    if (milestoneKeys.includes('inward')) {
+      this.clearFile(index, 'daSigned');
+      this.clearFile(index, 'dnSigned');
+    }
+    if (milestoneKeys.includes('murabaha_process')) this.clearFile(index, 'murabahaContract');
+    if (milestoneKeys.includes('murabaha_submit')) this.clearFile(index, 'submissionPackage');
     if (milestoneKeys.includes('release')) this.clearFile(index, 'documentsReleased');
     if (milestone !== 'all') this.toggleEditMilestone(index, milestone, false);
 
@@ -994,8 +1147,7 @@ export class ShipmentDocumentationComponent {
 
   /**
    * Returns 0–100 progress for the courier animation.
-   * Milestones 5 and 6 are paused for now. Bank receivers complete at M4;
-   * Direct receivers complete at M2.
+   * Bank receivers use all six milestones; direct receivers complete at M2.
    */
   getCourierProgressPercent(index: number): number {
     const group = this.formArray?.at(index) as FormGroup | null;

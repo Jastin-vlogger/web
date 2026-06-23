@@ -663,12 +663,33 @@ export interface ClearingAdvanceApprovalState {
   fasManagerApprovedBy?: string | null;
 }
 
+export interface ClearingAdvancePaymentDetails {
+  chequeNo?: string;
+  chequeDate?: string | null;
+  paymentVoucherNo?: string;
+  transactionId?: string;
+}
+
+export interface AdditionalClearingAdvanceRequest {
+  _id?: string;
+  title?: string;
+  comment?: string;
+  requestAmount?: number;
+  attachmentDocumentUrl?: string;
+  attachmentDocumentName?: string;
+  status?: 'pending_fas' | 'approved' | string;
+  submittedAt?: string | null;
+  submittedBy?: string | { _id?: string; name?: string; email?: string; role?: string } | null;
+  fasApprovedAt?: string | null;
+  fasApprovedBy?: string | { _id?: string; name?: string; email?: string; role?: string } | null;
+}
+
 export interface PaymentCostingApprovalState {
   status?: 'draft' | 'pending_fas_manager' | 'approved';
   submittedAt?: string | null;
-  submittedBy?: string | null;
+  submittedBy?: string | { _id?: string; name?: string; email?: string; role?: string } | null;
   fasManagerApprovedAt?: string | null;
-  fasManagerApprovedBy?: string | null;
+  fasManagerApprovedBy?: string | { _id?: string; name?: string; email?: string; role?: string } | null;
 }
 
 export interface StorageAllocationApprovalState {
@@ -707,6 +728,7 @@ export interface ActualContainer {
   updatedETD?: string;
   updatedETA?: string;
   BLNo?: string;
+  blFirstSavedAt?: string;
   portOfLoading?: string;
   portOfDischarge?: string;
   noOfContainers?: number;
@@ -780,13 +802,25 @@ export interface ActualContainer {
     label?: string;
     submittedAt?: string;
   } | null;
+  clearingAdvancePaymentDetails?: ClearingAdvancePaymentDetails | null;
   clearingAdvanceApproval?: ClearingAdvanceApprovalState;
+  additionalClearingAdvanceRequests?: AdditionalClearingAdvanceRequest[];
   storageAllocations?: {
     sn?: number;
     containerSerialNo?: string;
     bags?: number;
     warehouse?: string;
     storageAvailability?: number;
+  }[];
+  storageAllocationDecision?: {
+    similarItems?: boolean;
+    splitRequired?: boolean;
+    splitQuantity?: number;
+  } | null;
+  storageAllocationSplits?: {
+    sn?: number;
+    itemName?: string;
+    quantity?: number;
   }[];
   storageAllocationApproval?: StorageAllocationApprovalState;
   storageArrivalApproval?: StorageArrivalApprovalState;
@@ -799,13 +833,27 @@ export interface ActualContainer {
   receiver?: string;
   bankName?: string;
   inwardCollectionAdviceDate?: string;
+  inwardCollectionAdviceReceivedAt?: string;
+  inwardCollectionAdviceSubmittedAt?: string;
   inwardCollectionAdviceDocumentUrl?: string;
   inwardCollectionAdviceDocumentName?: string;
+  bankSubmittedToBank?: boolean;
+  daSignedDocumentUrl?: string;
+  daSignedDocumentName?: string;
+  dnSignedDocumentUrl?: string;
+  dnSignedDocumentName?: string;
+  skipMurabaha?: boolean;
   murabahaContractReleasedDate?: string;
   murabahaContractApprovedDate?: string;
+  murabahaContractDocumentUrl?: string;
+  murabahaContractDocumentName?: string;
   murabahaContractSubmittedDate?: string;
   murabahaContractSubmittedDocumentUrl?: string;
   murabahaContractSubmittedDocumentName?: string;
+  daSubmittedToBank?: boolean;
+  murabahaSubmittedToBank?: boolean;
+  submissionPackageDocumentUrl?: string;
+  submissionPackageDocumentName?: string;
   documentsReleasedDate?: string;
   documentsReleasedDocumentUrl?: string;
   documentsReleasedDocumentName?: string;
@@ -1019,6 +1067,7 @@ export interface ActualContainer {
     attachmentDocumentUrl?: string;
     attachmentDocumentName?: string;
   }[];
+  paymentAllocationApproval?: PaymentCostingApprovalState;
   paymentCostings?: {
     sn?: number;
     description?: string;

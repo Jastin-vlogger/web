@@ -96,7 +96,7 @@ export function getComputedShipmentStatus(params: {
 
   const plannedEtd = plannedRow?.etd ? new Date(plannedRow.etd) : null;
   if (plannedEtd && !Number.isNaN(plannedEtd.getTime())) {
-    return 'ETA yet to due';
+    return 'ETD yet to Due';
   }
 
   const fallback = String(params.fallbackStageLabel || params.shipmentCurrentStage || 'Shipment Entry').trim();

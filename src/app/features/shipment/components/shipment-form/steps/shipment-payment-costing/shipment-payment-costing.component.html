@@ -23,6 +23,9 @@
             >
               {{ getPaymentApprovalLabel(singleShipmentIndex!) }}
             </span>
+            <button type="button" (click)="openPaymentAllocationInfo(singleShipmentIndex!)" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600" title="View payment allocation details">
+              <i class="pi pi-info-circle"></i>
+            </button>
           </div>
           <div class="flex flex-wrap items-center gap-2">
             <button
@@ -33,6 +36,17 @@
               <i class="pi pi-file-export"></i>
               Generate Report
             </button>
+            @if (canApproveAllocation(singleShipmentIndex!)) {
+              <button
+                type="button"
+                (click)="approvePaymentAllocation(singleShipmentIndex!)"
+                [disabled]="savingRowIndex() === singleShipmentIndex"
+                class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-[10px] font-bold uppercase text-violet-700 hover:bg-violet-100 disabled:opacity-50"
+              >
+                <i class="pi pi-check-circle"></i>
+                Approve
+              </button>
+            }
             @if (isAllocationReadOnly(singleShipmentIndex!) && !isAllocationApproved(singleShipmentIndex!)) {
               <button
                 type="button"
@@ -60,12 +74,13 @@
           </div>
         </div>
         <div class="w-full overflow-x-auto overflow-y-hidden" formArrayName="paymentAllocations">
-          <table class="min-w-[1260px] w-full table-fixed text-sm">
+          <table class="min-w-[1400px] w-full table-fixed text-sm">
             <colgroup>
               <col class="w-[64px]" />
-              <col class="w-[26%]" />
+              <col class="w-[24%]" />
               <col class="w-[130px]" />
               <col class="w-[130px]" />
+              <col class="w-[140px]" />
               <col class="w-[170px]" />
               <col class="w-[150px]" />
               <col class="w-[170px]" />
@@ -76,7 +91,8 @@
                 <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500 w-16">SN</th>
                 <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Description</th>
                 <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-slate-500">Request Amount</th>
-                <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Paid Amount</th>
+                <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Received Amount</th>
+                <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-50">Difference Amount</th>
                 <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Payment To</th>
                 <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Payment Term</th>
                 <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Reference</th>
@@ -97,6 +113,9 @@
                   </td>
                   <td class="px-4 py-4 align-middle">
                     <p-inputNumber formControlName="paidAmount" styleClass="w-full" inputStyleClass="table-input w-full" [readonly]="isAllocationReadOnly(singleShipmentIndex!)" [minFractionDigits]="2" [maxFractionDigits]="2"></p-inputNumber>
+                  </td>
+                  <td class="px-4 py-4 align-middle bg-amber-50/60">
+                    <div class="table-input-text w-full bg-amber-50 min-h-[52px] flex items-center justify-center font-black text-amber-700">{{ getAllocationDifference(rowEntry.control) }}</div>
                   </td>
                   <td class="px-4 py-4 align-middle">
                     <p-select formControlName="paymentTo" [options]="paymentToOptions" optionLabel="label" optionValue="value" placeholder="Payment To" styleClass="w-full" appendTo="body" [disabled]="isAllocationReadOnly(singleShipmentIndex!)" />
@@ -129,6 +148,9 @@
                 <td class="px-4 py-3"></td>
                 <td class="px-4 py-3 text-sm font-black text-slate-800 text-center">{{ getAllocationTotal(group, 'requestAmount') }}</td>
                 <td class="px-4 py-3 text-sm font-black text-slate-800">{{ getAllocationTotal(group, 'paidAmount') }}</td>
+                <td class="px-4 py-3 text-sm font-black text-amber-700 bg-amber-50 text-center">{{ getAllocationDifferenceTotal(group) }}</td>
+                <td class="px-4 py-3"></td>
+                <td class="px-4 py-3"></td>
                 <td class="px-4 py-3"></td>
                 <td class="px-4 py-3"></td>
               </tr>
@@ -202,8 +224,8 @@
                 <th class="min-w-[64px]">SN</th>
                 <th class="min-w-[320px]">DESCRIPTION</th>
                 <th class="min-w-[160px]">REQUEST AMOUNT</th>
-                <th class="min-w-[160px]">PAID AMOUNT</th>
-                <th class="min-w-[160px] bg-amber-50">DIFFERENCE (PAID - REQUEST)</th>
+                <th class="min-w-[160px]">RECEIVED AMOUNT</th>
+                <th class="min-w-[160px] bg-amber-50">DIFFERENCE (RECEIVED - REQUEST)</th>
                 <th class="min-w-[250px]">REF BILL NO</th>
                 <th class="min-w-[160px]">REF BILL DATE</th>
                 <th class="min-w-[200px]">REF BILL VENDOR</th>
@@ -358,6 +380,9 @@
                     >
                       {{ getPaymentApprovalLabel(i) }}
                     </span>
+                    <button type="button" (click)="openPaymentAllocationInfo(i)" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600" title="View payment allocation details">
+                      <i class="pi pi-info-circle"></i>
+                    </button>
                   </div>
                   <div class="flex flex-wrap items-center gap-2">
                     <button
@@ -368,6 +393,17 @@
                       <i class="pi pi-file-export"></i>
                       Generate Report
                     </button>
+                    @if (canApproveAllocation(i)) {
+                      <button
+                        type="button"
+                        (click)="approvePaymentAllocation(i)"
+                        [disabled]="savingRowIndex() === i"
+                        class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-[10px] font-bold uppercase text-violet-700 hover:bg-violet-100 disabled:opacity-50"
+                      >
+                        <i class="pi pi-check-circle"></i>
+                        Approve
+                      </button>
+                    }
                     @if (isAllocationReadOnly(i) && !isAllocationApproved(i)) {
                       <button
                         type="button"
@@ -395,12 +431,13 @@
                   </div>
                 </div>
                 <div class="w-full overflow-x-auto overflow-y-hidden" formArrayName="paymentAllocations">
-                  <table class="min-w-[1260px] w-full table-fixed text-sm">
+                  <table class="min-w-[1400px] w-full table-fixed text-sm">
                     <colgroup>
                       <col class="w-[64px]" />
-                      <col class="w-[26%]" />
+                      <col class="w-[24%]" />
                       <col class="w-[130px]" />
                       <col class="w-[130px]" />
+                      <col class="w-[140px]" />
                       <col class="w-[170px]" />
                       <col class="w-[150px]" />
                       <col class="w-[170px]" />
@@ -411,7 +448,8 @@
                         <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500 w-16">SN</th>
                         <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Description</th>
                         <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-slate-500">Request Amount</th>
-                        <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Paid Amount</th>
+                        <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Received Amount</th>
+                        <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-50">Difference Amount</th>
                         <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Payment To</th>
                         <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Payment Term</th>
                         <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Reference</th>
@@ -432,6 +470,9 @@
                           </td>
                           <td class="px-4 py-4 align-middle">
                             <p-inputNumber formControlName="paidAmount" styleClass="w-full" inputStyleClass="table-input w-full" [readonly]="isAllocationReadOnly(i)" [minFractionDigits]="2" [maxFractionDigits]="2"></p-inputNumber>
+                          </td>
+                          <td class="px-4 py-4 align-middle bg-amber-50/60">
+                            <div class="table-input-text w-full bg-amber-50 min-h-[52px] flex items-center justify-center font-black text-amber-700">{{ getAllocationDifference(rowEntry.control) }}</div>
                           </td>
                           <td class="px-4 py-4 align-middle">
                             <p-select formControlName="paymentTo" [options]="paymentToOptions" optionLabel="label" optionValue="value" placeholder="Payment To" styleClass="w-full" appendTo="body" [disabled]="isAllocationReadOnly(i)" />
@@ -464,6 +505,9 @@
                         <td class="px-4 py-3"></td>
                         <td class="px-4 py-3 text-sm font-black text-slate-800 text-center">{{ getAllocationTotal(group, 'requestAmount') }}</td>
                         <td class="px-4 py-3 text-sm font-black text-slate-800">{{ getAllocationTotal(group, 'paidAmount') }}</td>
+                        <td class="px-4 py-3 text-sm font-black text-amber-700 bg-amber-50 text-center">{{ getAllocationDifferenceTotal(group) }}</td>
+                        <td class="px-4 py-3"></td>
+                        <td class="px-4 py-3"></td>
                         <td class="px-4 py-3"></td>
                         <td class="px-4 py-3"></td>
                       </tr>
@@ -535,8 +579,8 @@
                         <th class="min-w-[64px]">SN</th>
                         <th class="min-w-[320px]">DESCRIPTION</th>
                         <th class="min-w-[160px]">REQUEST AMOUNT</th>
-                        <th class="min-w-[160px]">PAID AMOUNT</th>
-                        <th class="min-w-[160px] bg-amber-50">DIFFERENCE (PAID - REQUEST)</th>
+                        <th class="min-w-[160px]">RECEIVED AMOUNT</th>
+                        <th class="min-w-[160px] bg-amber-50">DIFFERENCE (RECEIVED - REQUEST)</th>
                         <th class="min-w-[250px]">REF BILL NO</th>
                         <th class="min-w-[160px]">REF BILL DATE</th>
                         <th class="min-w-[200px]">REF BILL VENDOR</th>
@@ -777,6 +821,29 @@
         </div>
       </div>
     }
+  }
+</p-dialog>
+
+<p-dialog
+  header="Payment Allocation Information"
+  [visible]="paymentAllocationInfoModalVisible()"
+  (visibleChange)="paymentAllocationInfoModalVisible.set($event)"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '92vw', maxWidth: '560px' }"
+  [draggable]="false"
+  [resizable]="false"
+  appendTo="body">
+  @if (paymentAllocationInfoIndex() !== null) {
+    @let idx = paymentAllocationInfoIndex()!;
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      @for (row of getPaymentAllocationInfoRows(idx); track row.label) {
+        <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">{{ row.label }}</p>
+          <p class="mt-1 text-sm font-bold text-slate-800 break-words">{{ row.value }}</p>
+        </div>
+      }
+    </div>
   }
 </p-dialog>
 

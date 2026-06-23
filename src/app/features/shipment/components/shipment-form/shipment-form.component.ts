@@ -315,6 +315,36 @@ export class ShipmentFormComponent implements OnDestroy {
     return clean.match(/^(RHST-\d+\/[A-Z0-9-]+)/i)?.[1] || clean;
   }
 
+  getSupplierName(): string {
+    const shipment = this.shipmentData()?.shipment as any;
+    const name = String(
+      shipment?.supplierName ||
+      shipment?.supplierId?.name ||
+      shipment?.supplier ||
+      ''
+    ).trim();
+    return name.includes('@') ? '' : name;
+  }
+
+  getSupplierEmail(): string {
+    const shipment = this.shipmentData()?.shipment as any;
+    return String(
+      shipment?.supplierEmail ||
+      shipment?.supplierId?.email ||
+      (typeof shipment?.supplier === 'string' && shipment.supplier.includes('@') ? shipment.supplier : '') ||
+      (shipment?.supplier && typeof shipment.supplier === 'object' ? shipment.supplier.email : '') ||
+      ''
+    ).trim();
+  }
+
+  getSupplierInitials(): string {
+    const name = this.getSupplierName();
+    const email = this.getSupplierEmail();
+    const source = name || email || 'SU';
+    const parts = source.split(/[\s@._-]+/).filter(Boolean);
+    return (parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : source.slice(0, 2)).toUpperCase();
+  }
+
   isStepReadOnly(stepIndex: number): boolean {
     if (stepIndex === 0) {
       return true;
@@ -400,9 +430,23 @@ export class ShipmentFormComponent implements OnDestroy {
       receiver: getValue('receiver'),
       bankName: getValue('bankName'),
       inwardCollectionAdviceDate: getValue('inwardCollectionAdviceDate'),
+      inwardCollectionAdviceReceivedAt: getValue('inwardCollectionAdviceReceivedAt'),
+      inwardCollectionAdviceSubmittedAt: getValue('inwardCollectionAdviceSubmittedAt'),
       inwardCollectionAdviceDocumentUrl: getValue('inwardCollectionAdviceDocumentUrl'),
+      bankSubmittedToBank: getValue('bankSubmittedToBank'),
+      daSignedDocumentUrl: getValue('daSignedDocumentUrl'),
+      dnSignedDocumentUrl: getValue('dnSignedDocumentUrl'),
+      skipMurabaha: getValue('skipMurabaha'),
       murabahaContractReleasedDate: getValue('murabahaContractReleasedDate'),
       murabahaContractApprovedDate: getValue('murabahaContractApprovedDate'),
+      murabahaContractDocumentUrl: getValue('murabahaContractDocumentUrl'),
+      murabahaContractSubmittedDate: getValue('murabahaContractSubmittedDate'),
+      murabahaContractSubmittedDocumentUrl: getValue('murabahaContractSubmittedDocumentUrl'),
+      daSubmittedToBank: getValue('daSubmittedToBank'),
+      murabahaSubmittedToBank: getValue('murabahaSubmittedToBank'),
+      submissionPackageDocumentUrl: getValue('submissionPackageDocumentUrl'),
+      documentsReleasedDate: getValue('documentsReleasedDate'),
+      documentsReleasedDocumentUrl: getValue('documentsReleasedDocumentUrl'),
     });
   }
 
@@ -886,13 +930,27 @@ export class ShipmentFormComponent implements OnDestroy {
             receiver: [actualData?.receiver || (data.shipment?.bankName ? 'Bank' : ''), Validators.required],
             bankName: [actualData?.bankName || data.shipment?.bankName || ''],
             inwardCollectionAdviceDate: [actualData?.inwardCollectionAdviceDate ? new Date(actualData.inwardCollectionAdviceDate) : null],
+            inwardCollectionAdviceReceivedAt: [(actualData as any)?.inwardCollectionAdviceReceivedAt ? new Date((actualData as any).inwardCollectionAdviceReceivedAt) : null],
+            inwardCollectionAdviceSubmittedAt: [(actualData as any)?.inwardCollectionAdviceSubmittedAt ? new Date((actualData as any).inwardCollectionAdviceSubmittedAt) : null],
             inwardCollectionAdviceDocumentUrl: [actualData?.inwardCollectionAdviceDocumentUrl || ''],
             inwardCollectionAdviceDocumentName: [actualData?.inwardCollectionAdviceDocumentName || ''],
+            bankSubmittedToBank: [actualData?.bankSubmittedToBank || false],
+            daSignedDocumentUrl: [actualData?.daSignedDocumentUrl || ''],
+            daSignedDocumentName: [actualData?.daSignedDocumentName || ''],
+            dnSignedDocumentUrl: [actualData?.dnSignedDocumentUrl || ''],
+            dnSignedDocumentName: [actualData?.dnSignedDocumentName || ''],
+            skipMurabaha: [actualData?.skipMurabaha || false],
             murabahaContractReleasedDate: [actualData?.murabahaContractReleasedDate ? new Date(actualData.murabahaContractReleasedDate) : null],
             murabahaContractApprovedDate: [murabahaProcessDate ? new Date(murabahaProcessDate) : null],
+            murabahaContractDocumentUrl: [actualData?.murabahaContractDocumentUrl || ''],
+            murabahaContractDocumentName: [actualData?.murabahaContractDocumentName || ''],
             murabahaContractSubmittedDate: [actualData?.murabahaContractSubmittedDate ? new Date(actualData.murabahaContractSubmittedDate) : null],
             murabahaContractSubmittedDocumentUrl: [actualData?.murabahaContractSubmittedDocumentUrl || ''],
             murabahaContractSubmittedDocumentName: [actualData?.murabahaContractSubmittedDocumentName || ''],
+            daSubmittedToBank: [actualData?.daSubmittedToBank || false],
+            murabahaSubmittedToBank: [actualData?.murabahaSubmittedToBank || false],
+            submissionPackageDocumentUrl: [actualData?.submissionPackageDocumentUrl || ''],
+            submissionPackageDocumentName: [actualData?.submissionPackageDocumentName || ''],
             documentsReleasedDate: [actualData?.documentsReleasedDate ? new Date(actualData.documentsReleasedDate) : null],
             documentsReleasedDocumentUrl: [actualData?.documentsReleasedDocumentUrl || ''],
             documentsReleasedDocumentName: [actualData?.documentsReleasedDocumentName || ''],
@@ -915,7 +973,16 @@ export class ShipmentFormComponent implements OnDestroy {
         this.arrivalTimeSplits.push(
           this.fb.group({
             containerId: [plannedContainer?.containerId],
+            // Milestone 1 - Port & Customs Clearance
+            commercialDocumentReceivedDate: [(actualData as any)?.commercialDocumentReceivedDate ? new Date((actualData as any).commercialDocumentReceivedDate) : null],
+            commercialDocumentDocumentUrl: [(actualData as any)?.commercialDocumentDocumentUrl || ''],
+            commercialDocumentDocumentName: [(actualData as any)?.commercialDocumentDocumentName || ''],
             arrivalOn: [actualData?.arrivalOn ? new Date(actualData.arrivalOn) : null],
+            freeDetentionDays: [(actualData as any)?.freeDetentionDays ?? 10],
+            freeStorageDays: [(actualData as any)?.freeStorageDays ?? 14],
+            shippingLineFreeDetentionDate: [null],
+            portFreeStorageDate: [null],
+            clearanceRemarks: [(actualData as any)?.clearanceRemarks || ''],
             shipmentFreeRetentionDate: [actualData?.shipmentFreeRetentionDate ? new Date(actualData.shipmentFreeRetentionDate) : null],
             portRetentionWithPenaltyDate: [actualData?.portRetentionWithPenaltyDate ? new Date(actualData.portRetentionWithPenaltyDate) : null],
             maximumRetentionDate: [actualData?.maximumRetentionDate ? new Date(actualData.maximumRetentionDate) : null],
@@ -969,8 +1036,18 @@ export class ShipmentFormComponent implements OnDestroy {
             ],
             municipalityStatus: [(actualData as any)?.municipalityStatus || 'open'],
             municipalityStatusComment: [(actualData as any)?.municipalityStatusComment || ''],
+            municipalityReleasedDate: [(actualData as any)?.municipalityReleasedDate ? new Date((actualData as any).municipalityReleasedDate) : null],
+            municipalityResponseRemarks: [(actualData as any)?.municipalityResponseRemarks || ''],
+            municipalityComments: [(actualData as any)?.municipalityComments || ''],
             municipalityClearanceCertificateUrl: [(actualData as any)?.municipalityClearanceCertificateUrl || ''],
             municipalityClearanceCertificateName: [(actualData as any)?.municipalityClearanceCertificateName || ''],
+            // Customer Inspection
+            customerInspectionRequired: [(actualData as any)?.customerInspectionRequired === true],
+            customerInspectionDate: [(actualData as any)?.customerInspectionDate ? new Date((actualData as any).customerInspectionDate) : null],
+            customerInspectionDocumentUrl: [(actualData as any)?.customerInspectionDocumentUrl || ''],
+            customerInspectionDocumentName: [(actualData as any)?.customerInspectionDocumentName || ''],
+            customerInspectionStatus: [(actualData as any)?.customerInspectionStatus || ''],
+            customerInspectionComments: [(actualData as any)?.customerInspectionComments || ''],
             dmBarcode: [(actualData as any)?.dmBarcode || ''],
             // Customs Original Documents
             customsDocBoeSubmissionDate: [(actualData as any)?.customsOriginalDocuments?.boe?.submissionDate ? new Date((actualData as any).customsOriginalDocuments.boe.submissionDate) : null],
@@ -997,6 +1074,32 @@ export class ShipmentFormComponent implements OnDestroy {
               existingTransportationBooked,
               extractedContainerSource,
               (actualData as any)?.tokenReceivedDate || actualData?.tokenDate
+            ),
+            transportationTransactions: this.fb.array(
+              ((actualData as any)?.transportationTransactions || []).map((txn: any) =>
+                this.fb.group({
+                  _id: [txn._id || null],
+                  transactionNo: [txn.transactionNo || ''],
+                  containerSerials: [txn.containerSerials || []],
+                  transportCompany: [txn.transportCompany || ''],
+                  warehouse: [txn.warehouse || ''],
+                  transportDate: [txn.transportDate ? new Date(txn.transportDate) : null],
+                  createdAt: [txn.createdAt ? new Date(txn.createdAt) : new Date()],
+                })
+              )
+            ),
+            additionalDocuments: this.fb.array(
+              ((actualData as any)?.additionalDocuments || []).map((doc: any) =>
+                this.fb.group({
+                  _id: [doc._id || null],
+                  documentType: [doc.documentType || 'General'],
+                  description: [doc.description || ''],
+                  documentUrl: [doc.fileUrl || doc.documentUrl || ''],
+                  documentName: [doc.fileName || doc.documentName || ''],
+                  uploadedOn: [doc.uploadedAt ? new Date(doc.uploadedAt) : new Date()],
+                  uploadedBy: [doc.uploadedBy || 'System User'],
+                })
+              )
             ),
           })
         );
@@ -1228,13 +1331,27 @@ export class ShipmentFormComponent implements OnDestroy {
           receiver: ['', Validators.required],
           bankName: [''],
           inwardCollectionAdviceDate: [null],
+          inwardCollectionAdviceReceivedAt: [null],
+          inwardCollectionAdviceSubmittedAt: [null],
           inwardCollectionAdviceDocumentUrl: [''],
           inwardCollectionAdviceDocumentName: [''],
+          bankSubmittedToBank: [false],
+          daSignedDocumentUrl: [''],
+          daSignedDocumentName: [''],
+          dnSignedDocumentUrl: [''],
+          dnSignedDocumentName: [''],
+          skipMurabaha: [false],
           murabahaContractReleasedDate: [null],
           murabahaContractApprovedDate: [null],
+          murabahaContractDocumentUrl: [''],
+          murabahaContractDocumentName: [''],
           murabahaContractSubmittedDate: [null],
           murabahaContractSubmittedDocumentUrl: [''],
           murabahaContractSubmittedDocumentName: [''],
+          daSubmittedToBank: [false],
+          murabahaSubmittedToBank: [false],
+          submissionPackageDocumentUrl: [''],
+          submissionPackageDocumentName: [''],
           documentsReleasedDate: [null],
           documentsReleasedDocumentUrl: [''],
           documentsReleasedDocumentName: [''],
@@ -1428,7 +1545,46 @@ export class ShipmentFormComponent implements OnDestroy {
         actualData?.storageAllocations,
         extractedContainerSource
       ),
+      storageAllocationDecision: this.fb.group({
+        similarItems: [(actualData as any)?.storageAllocationDecision?.similarItems ?? true],
+        splitRequired: [(actualData as any)?.storageAllocationDecision?.splitRequired ?? false],
+        splitQuantity: [
+          (actualData as any)?.storageAllocationDecision?.splitQuantity ??
+          ((actualData as any)?.storageAllocationSplits?.length || 0)
+        ],
+        singleItem: [(actualData as any)?.storageAllocationDecision?.singleItem ?? true],
+        allocateSameWarehouse: [(actualData as any)?.storageAllocationDecision?.allocateSameWarehouse ?? true],
+        warehousesSelected: [(actualData as any)?.storageAllocationDecision?.warehousesSelected || []],
+        itemAllocations: [(actualData as any)?.storageAllocationDecision?.itemAllocations || []],
+      }),
+      storageAllocationSplits: this.createStorageAllocationSplitRows(
+        (actualData as any)?.storageAllocationSplits,
+        actualData,
+        shipmentIndex
+      ),
     });
+  }
+
+  private createStorageAllocationSplitRows(existingRows?: any[], actualData?: any, shipmentIndex: number = 0): FormArray {
+    const rows = new FormArray<FormGroup>([]);
+    const sourceRows = Array.isArray(existingRows) && existingRows.length ? existingRows : [{}];
+    const fallbackItem =
+      this.getLineItemByShipmentIndex(this.shipmentData() ?? undefined, shipmentIndex)?.itemDescription ||
+      this.shipmentData()?.shipment?.itemDescription ||
+      this.shipmentData()?.shipment?.item ||
+      'Similar Item Set';
+    const fallbackQuantity = Number(actualData?.quantityByMt ?? actualData?.qtyMT ?? 0) || null;
+
+    sourceRows.forEach((row, index) => {
+      rows.push(this.fb.group({
+        sn: [Number(row?.sn) || index + 1],
+        itemName: [row?.itemName || (existingRows && existingRows.length ? fallbackItem : 'Similar Item Set')],
+        quantity: [row?.quantity ?? fallbackQuantity],
+        warehouse: [row?.warehouse || ''],
+      }));
+    });
+
+    return rows;
   }
 
   private getLineItemByShipmentIndex(data: ShipmentDetailsResponse | undefined, shipmentIndex: number): any | null {
@@ -1520,6 +1676,7 @@ export class ShipmentFormComponent implements OnDestroy {
           bookingTime: [this.parseTimeValue(existing?.bookingTime) || defaultTime],
           transportDate: [existing?.transportDate ? new Date(existing.transportDate) : defaultDate],
           transportTime: [this.parseTimeValue(existing?.transportTime) || defaultTime],
+          warehouse: [existing?.warehouse || ''],
           delayHours: [existing?.delayHours ?? null],
           storageStartDate: [existing?.storageStartDate ? new Date(existing.storageStartDate) : null],
           storageEndDate: [existing?.storageEndDate ? new Date(existing.storageEndDate) : null],
@@ -1983,9 +2140,7 @@ export class ShipmentFormComponent implements OnDestroy {
       if (receiver !== 'Bank') return null;
 
       const requiredFields = [
-        'bankName',
-        'inwardCollectionAdviceDate',
-        'murabahaContractApprovedDate',
+        'bankName'
       ];
 
       const missing = requiredFields.some((field) => !control.get(field)?.value);

@@ -94,6 +94,8 @@ export class ShipmentPaymentCostingComponent {
   readonly paymentCostingFiles = signal<Record<number, File | null>>({});
   readonly statusModalVisible = signal(false);
   readonly statusModalShipmentIndex = signal<number | null>(null);
+  readonly paymentAllocationInfoModalVisible = signal(false);
+  readonly paymentAllocationInfoIndex = signal<number | null>(null);
   readonly paymentToOptions = [
     { label: 'MOFA', value: 'MOFA' },
     { label: 'Shipping line', value: 'Shipping line' },
@@ -193,6 +195,25 @@ export class ShipmentPaymentCostingComponent {
       month: '2-digit',
       year: 'numeric',
     }).format(date);
+  }
+
+  formatDateTimeForDisplay(value: unknown): string {
+    if (!value) return '—';
+    const date = new Date(value as string | Date);
+    if (Number.isNaN(date.getTime())) return '—';
+    return new Intl.DateTimeFormat('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
+  }
+
+  private getUserDisplay(user: any): string {
+    if (!user) return '—';
+    if (typeof user === 'string') return user || '—';
+    return String(user.name || user.email || user._id || '—');
   }
 
   private getDownloadedByLabel(): string {
@@ -977,7 +998,7 @@ export class ShipmentPaymentCostingComponent {
 
   private getPaymentApprovalStatus(index: number): 'draft' | 'pending_fas_manager' | 'approved' {
     const shipment = this.shipmentData()?.actual?.[index];
-    const rawStatus = shipment?.paymentCostingApproval?.status || 'draft';
+    const rawStatus = shipment?.paymentAllocationApproval?.status || shipment?.paymentCostingApproval?.status || 'draft';
     if (rawStatus === 'pending_fas_manager' || rawStatus === 'approved') return rawStatus;
     return this.isAllocationSaved(index) ? 'pending_fas_manager' : 'draft';
   }
@@ -1011,6 +1032,34 @@ export class ShipmentPaymentCostingComponent {
   startEditingAllocation(index: number): void {
     if (this.isAllocationApproved(index)) return;
     this.editingAllocations.update((current) => ({ ...current, [index]: true }));
+  }
+
+  private isFasManagerRole(): boolean {
+    const role = this.authService.getCurrentUser()?.role || '';
+    return role === 'FasManager' || role === 'Fas manager';
+  }
+
+  canApproveAllocation(index: number): boolean {
+    return this.getPaymentApprovalStatus(index) === 'pending_fas_manager' &&
+      (this.authService.isAdminLevelRole() || this.isFasManagerRole());
+  }
+
+  openPaymentAllocationInfo(index: number): void {
+    this.paymentAllocationInfoIndex.set(index);
+    this.paymentAllocationInfoModalVisible.set(true);
+  }
+
+  getPaymentAllocationInfoRows(index: number): Array<{ label: string; value: string }> {
+    const actual = this.shipmentData()?.actual?.[index] as any;
+    const approval = actual?.paymentAllocationApproval || actual?.paymentCostingApproval || {};
+    return [
+      { label: 'Requested By', value: this.getUserDisplay(approval.submittedBy || approval.requestedBy) },
+      { label: 'Requested To', value: 'FAS Manager' },
+      { label: 'Requested At', value: this.formatDateTimeForDisplay(approval.submittedAt || approval.requestedAt) },
+      { label: 'Approved By', value: this.getUserDisplay(approval.fasManagerApprovedBy || approval.approvedBy) },
+      { label: 'Approved At', value: this.formatDateTimeForDisplay(approval.fasManagerApprovedAt || approval.approvedAt) },
+      { label: 'Status', value: this.getPaymentApprovalLabel(index) },
+    ];
   }
 
   isCostingSaved(index: number): boolean {
@@ -1422,6 +1471,39 @@ export class ShipmentPaymentCostingComponent {
     });
   }
 
+  async approvePaymentAllocation(index: number): Promise<void> {
+    if (!this.canApproveAllocation(index)) return;
+    const group = this.formArray.at(index) as FormGroup | null;
+    const shipmentId = this.shipmentData()?.shipment?._id;
+    if (!group || !shipmentId) return;
+
+    const containerId = group.get('containerId')?.value;
+    if (!containerId) {
+      this.notificationService.warn('Missing container', 'This shipment row is not linked to a container yet.');
+      return;
+    }
+
+    const confirmed = await this.confirmDialog.ask({
+      message: `Approve payment allocation for Shipment ${index + 1}?`,
+      header: 'Approve Payment Allocation',
+      acceptLabel: 'Yes, Approve',
+    });
+    if (!confirmed) return;
+
+    this.savingRowIndex.set(index);
+    this.shipmentService.approvePaymentAllocation(containerId).subscribe({
+      next: (response) => {
+        this.savingRowIndex.set(null);
+        this.notificationService.success('Approved', response.message || 'Payment allocation approved successfully.');
+        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+      },
+      error: (error) => {
+        this.savingRowIndex.set(null);
+        this.notificationService.error('Approval failed', error.error?.message || 'Could not approve payment allocation.');
+      },
+    });
+  }
+
   async saveCosting(index: number): Promise<void> {
     const group = this.formArray.at(index) as FormGroup | null;
     const shipmentId = this.shipmentData()?.shipment?._id;
@@ -1540,6 +1622,22 @@ export class ShipmentPaymentCostingComponent {
 
   getAllocationTotal(group: AbstractControl, field: 'requestAmount' | 'paidAmount'): string {
     return this.sumFormArrayField(this.getPaymentAllocations(group), field, true);
+  }
+
+  getAllocationDifference(row: AbstractControl): string {
+    const paidAmount = Number(row.get('paidAmount')?.value) || 0;
+    const requestAmount = Number(row.get('requestAmount')?.value) || 0;
+    return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(paidAmount - requestAmount);
+  }
+
+  getAllocationDifferenceTotal(group: AbstractControl): string {
+    const allocations = this.getPaymentAllocations(group);
+    const total = allocations.controls.filter((row) => this.canCurrentUserSeeBlRow(row)).reduce((sum, row) => {
+      const paidAmount = Number(row.get('paidAmount')?.value) || 0;
+      const requestAmount = Number(row.get('requestAmount')?.value) || 0;
+      return sum + (paidAmount - requestAmount);
+    }, 0);
+    return new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(total);
   }
 
   getPaymentCostingTotal(group: AbstractControl, field: 'requestAmount' | 'paidAmount' | 'actualPaid'): string {

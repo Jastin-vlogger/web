@@ -1,7 +1,7 @@
 <div class="page-transition-wrapper flex flex-col gap-6 px-3 sm:px-5 md:px-6 lg:px-8 xl:px-10 2xl:px-12 overflow-x-hidden">
 
   <!-- Loading Skeleton -->
-  @if (loading()) {
+  @if (loading() && !shipmentData()) {
     <div class="flex flex-col gap-6 animate-pulse">
       <div class="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
         <div class="flex items-center gap-4">
@@ -62,11 +62,11 @@
           </div>
           @for (row of [1,2,3]; track row) {
             <div class="flex gap-4 mb-4 items-center">
-              <p-skeleton width="3rem" height="2rem"></p-skeleton>
-              @for (col of [1,2,3,4,5]; track col) {
-                <p-skeleton width="12rem" height="2.5rem"></p-skeleton>
-              }
-              <p-skeleton width="5rem" height="2rem" shape="circle"></p-skeleton>
+               <p-skeleton width="3rem" height="2rem"></p-skeleton>
+               @for (col of [1,2,3,4,5]; track col) {
+                 <p-skeleton width="12rem" height="2.5rem"></p-skeleton>
+               }
+               <p-skeleton width="5rem" height="2rem" shape="circle"></p-skeleton>
             </div>
           }
         </div>
@@ -74,6 +74,14 @@
     </div>
 
   } @else {
+    @if (loading()) {
+      <div class="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-[9999] flex flex-col items-center justify-center gap-3">
+        <div class="flex items-center justify-center h-16 w-16 rounded-2xl bg-white shadow-xl">
+          <i class="pi pi-spin pi-spinner text-blue-600 text-3xl"></i>
+        </div>
+        <span class="text-white font-bold text-xs uppercase tracking-widest bg-slate-900/80 px-4 py-2 rounded-full shadow-lg">Refreshing data...</span>
+      </div>
+    }
     <!-- Header -->
     <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
       <div class="flex items-center gap-3 md:gap-4">
@@ -103,6 +111,22 @@
           </div>
         </div>
       </div>
+
+      <!-- Supplier info in top right -->
+      @if (getSupplierName() || getSupplierEmail()) {
+        <div class="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm sm:self-center">
+          <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-[11px] font-black uppercase text-white shadow-sm">
+            {{ getSupplierInitials() }}
+          </span>
+          <div class="min-w-0">
+            <div class="text-[10px] font-black uppercase tracking-wider text-slate-400">Supplier</div>
+            <div class="truncate text-xs font-black text-slate-900 leading-tight">{{ getSupplierName() || 'Name not available' }}</div>
+            @if (getSupplierEmail()) {
+              <div class="truncate text-[10px] font-semibold text-slate-500 leading-tight">{{ getSupplierEmail() }}</div>
+            }
+          </div>
+        </div>
+      }
     </header>
 
     @if (trackerAccessDenied()) {
