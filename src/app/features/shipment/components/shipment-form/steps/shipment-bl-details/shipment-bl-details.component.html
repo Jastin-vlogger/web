@@ -701,145 +701,215 @@
                   </div>
                   <div class="grid grid-cols-1 gap-4 bg-white p-4">
                     <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4" [formGroup]="getStorageDecision(group)">
-                      <div class="mb-4 flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2">
-                          <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-white">
-                            <i class="pi pi-sliders-h text-[13px]"></i>
-                          </span>
-                          <span class="text-[11px] font-black uppercase tracking-wider text-slate-700">Allocation Decision</span>
-                        </div>
+                      <div class="mb-4 flex items-center gap-2">
+                        <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-white">
+                          <i class="pi pi-sliders-h text-[13px]"></i>
+                        </span>
+                        <span class="text-[11px] font-black uppercase tracking-wider text-slate-700">Allocation Decision</span>
                       </div>
-                      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div class="rounded-xl border border-slate-200 bg-white px-4 py-3">
-                          <div class="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">Similar Items</div>
-                          <div class="flex items-center gap-3">
-                            <p-toggleswitch formControlName="similarItems" (onChange)="onStorageSimilarItemsChange(group, $any($event).checked, i)"></p-toggleswitch>
-                            <span class="text-xs font-black" [class.text-emerald-600]="getStorageDecision(group).get('similarItems')?.value" [class.text-slate-500]="!getStorageDecision(group).get('similarItems')?.value">
-                              {{ getStorageDecision(group).get('similarItems')?.value ? 'Yes' : 'No' }}
+                      
+                      <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 flex flex-col gap-1.5">
+                          <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Single Item</div>
+                          <div class="flex items-center gap-3 h-10">
+                            <p-toggleswitch 
+                              [ngModel]="getStorageDecision(group).get('singleItem')?.value" 
+                              [ngModelOptions]="{standalone: true}" 
+                              (onChange)="onSingleItemChange(group, $event.checked, i)">
+                            </p-toggleswitch>
+                            <span class="text-xs font-bold" 
+                              [class.text-blue-600]="getStorageDecision(group).get('singleItem')?.value === true" 
+                              [class.text-slate-500]="getStorageDecision(group).get('singleItem')?.value !== true">
+                              {{ getStorageDecision(group).get('singleItem')?.value === true ? 'Yes' : 'No' }}
                             </span>
                           </div>
                         </div>
-                        <div class="rounded-xl border border-slate-200 bg-white px-4 py-3">
-                          <div class="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">Split Required</div>
-                          <div class="flex items-center gap-3">
-                            <p-toggleswitch formControlName="splitRequired" (onChange)="onStorageSplitRequiredChange(group, $any($event).checked, i)"></p-toggleswitch>
-                            <span class="text-xs font-black" [class.text-emerald-600]="getStorageDecision(group).get('splitRequired')?.value" [class.text-slate-500]="!getStorageDecision(group).get('splitRequired')?.value">
-                              {{ getStorageDecision(group).get('splitRequired')?.value ? 'Yes' : 'No' }}
+                        
+                        <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 flex flex-col gap-1.5">
+                          <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Allocate Same Warehouse</div>
+                          <div class="flex items-center gap-3 h-10">
+                            <p-toggleswitch 
+                              [ngModel]="getStorageDecision(group).get('allocateSameWarehouse')?.value" 
+                              [ngModelOptions]="{standalone: true}" 
+                              (onChange)="onAllocateSameWarehouseChange(group, $event.checked, i)">
+                            </p-toggleswitch>
+                            <span class="text-xs font-bold" 
+                              [class.text-blue-600]="getStorageDecision(group).get('allocateSameWarehouse')?.value === true" 
+                              [class.text-slate-500]="getStorageDecision(group).get('allocateSameWarehouse')?.value !== true">
+                              {{ getStorageDecision(group).get('allocateSameWarehouse')?.value === true ? 'Yes' : 'No' }}
                             </span>
+                          </div>
+                        </div>
+
+                        <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 flex flex-col gap-1.5">
+                          <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Destination Warehouse(s)</div>
+                          @if (getStorageDecision(group).get('allocateSameWarehouse')?.value) {
+                            <p-select 
+                              [options]="warehouseOptions()" 
+                              optionLabel="label" 
+                              optionValue="value" 
+                              placeholder="Select Warehouse" 
+                              styleClass="w-full"
+                              appendTo="body"
+                              [ngModel]="getStorageDecision(group).get('warehousesSelected')?.value?.[0]" 
+                              [ngModelOptions]="{standalone: true}" 
+                              (onChange)="onWarehouseSelectedChange(group, $event.value, i)">
+                            </p-select>
+                          } @else {
+                            <p-multiselect 
+                              formControlName="warehousesSelected"
+                              [options]="warehouseOptions()" 
+                              optionLabel="label" 
+                              optionValue="value" 
+                              placeholder="Select Warehouses" 
+                              display="chip" 
+                              styleClass="w-full" 
+                              appendTo="body"
+                              (onChange)="onWarehousesSelectedChange(group, $event.value, i)">
+                            </p-multiselect>
+                          }
+                        </div>
+
+                        <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 flex flex-col gap-1.5 justify-between">
+                          <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Warehouse Count</div>
+                          <div class="text-xl font-black text-slate-800 my-1">
+                            {{ getWarehouseCount(group) }}
+                          </div>
+                          <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                            Read Only
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <div class="rounded-xl border border-slate-200 bg-white p-4">
-                      <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div class="flex items-center gap-2">
-                          <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                            <i class="pi pi-sitemap text-[13px]"></i>
-                          </span>
-                          <span class="text-[11px] font-black uppercase tracking-wider text-slate-700">Split Configuration</span>
-                        </div>
-                        <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                          <button
-                            type="button"
-                            (click)="addStorageSplitRow(group, i)"
-                            class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-blue-700 shrink-0"
-                          >
-                            <i class="pi pi-plus text-[10px]"></i>
-                            Add Split Item
-                          </button>
-                          <div class="flex flex-col gap-1.5 w-full md:w-56" [formGroup]="getStorageDecision(group)">
-                            <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Split Quantity</label>
-                            <p-inputNumber
-                              formControlName="splitQuantity"
-                              styleClass="w-full"
-                              inputStyleClass="table-input w-full"
-                              [useGrouping]="false"
-                              [min]="0"
-                              placeholder="0"
-                              (onInput)="onStorageSplitQuantityChange(group, $any($event).value, i)"
-                              (onBlur)="onStorageSplitQuantityChange(group, getStorageDecision(group).get('splitQuantity')?.value, i)" />
-                          </div>
-                        </div>
-                      </div>
-
-                      @if (getStorageSplitRows(group).length) {
-                        <div class="rounded-xl border border-slate-200 overflow-hidden">
-                          <div class="hidden md:grid md:grid-cols-[60px_minmax(180px,1.2fr)_120px_minmax(180px,1fr)_50px] gap-3 bg-slate-50/80 px-4 py-2.5">
-                            <span class="text-[9px] font-black uppercase tracking-wider text-slate-400">SN</span>
-                            <span class="text-[9px] font-black uppercase tracking-wider text-slate-400">Item Name<span class="ml-0.5 text-red-500">*</span></span>
-                            <span class="text-[9px] font-black uppercase tracking-wider text-slate-400">Quantity<span class="ml-0.5 text-red-500">*</span></span>
-                            <span class="text-[9px] font-black uppercase tracking-wider text-slate-400">Warehouse<span class="ml-0.5 text-red-500">*</span></span>
-                            <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 text-center">Action</span>
-                          </div>
-                          <div class="flex flex-col">
-                            @for (splitRow of getStorageSplitRows(group).controls; track $index) {
-                              <div [formGroup]="$any(splitRow)" class="border-t border-slate-100 p-4 first:border-t-0">
-                                <div class="grid grid-cols-1 gap-3 md:grid-cols-[60px_minmax(180px,1.2fr)_120px_minmax(180px,1fr)_50px] md:items-start">
-                                  <div class="flex h-10 items-center text-sm font-black text-slate-700">{{ splitRow.get('sn')?.value }}</div>
-                                  <div class="flex flex-col gap-1.5">
-                                    <label class="md:hidden text-[10px] font-bold uppercase tracking-wider text-slate-500">Item Name</label>
-                                    <p-select
-                                      formControlName="itemName"
-                                      [options]="getStorageItemOptions(i)"
-                                      optionLabel="label"
-                                      optionValue="value"
-                                      placeholder="Select item"
-                                      styleClass="w-full"
-                                      appendTo="body"
-                                      [disabled]="getStorageDecision(group).get('similarItems')?.value">
-                                    </p-select>
-                                  </div>
-                                  <div class="flex flex-col gap-1.5">
-                                    <label class="md:hidden text-[10px] font-bold uppercase tracking-wider text-slate-500">Quantity</label>
-                                    <p-inputNumber
-                                      formControlName="quantity"
-                                      styleClass="w-full"
-                                      inputStyleClass="table-input w-full"
-                                      [minFractionDigits]="0"
-                                      [maxFractionDigits]="3"
-                                      [useGrouping]="false"
-                                      placeholder="0"
-                                      [readonly]="!getStorageDecision(group).get('splitRequired')?.value" />
-                                  </div>
-                                  <div class="flex flex-col gap-1.5">
-                                    <label class="md:hidden text-[10px] font-bold uppercase tracking-wider text-slate-500">Warehouse</label>
-                                    <p-select
-                                      formControlName="warehouse"
-                                      [options]="warehouseOptions()"
-                                      optionLabel="label"
-                                      optionValue="value"
-                                      placeholder="Select warehouse"
-                                      styleClass="w-full"
-                                      appendTo="body">
-                                    </p-select>
-                                  </div>
-                                  <div class="flex h-10 items-center justify-center">
-                                    <button
-                                      type="button"
-                                      (click)="removeStorageSplitRow(group, $index, i)"
-                                      [disabled]="getStorageSplitRows(group).length <= 1"
-                                      class="rbac-allow-interaction flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                                      title="Delete Split Item"
-                                    >
-                                      <i class="pi pi-trash text-xs"></i>
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            }
-                          </div>
-                          <div class="border-t border-slate-100 bg-slate-50/70 px-4 py-3 text-right">
-                            <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">Total Quantity: </span>
-                            <span class="text-sm font-black text-slate-800">{{ getStorageSplitTotal(group) }}</span>
+                    <!-- SCENARIO 1 PANEL -->
+                    @if (getStorageDecision(group).get('allocateSameWarehouse')?.value) {
+                      @let selectedWh = getStorageDecision(group).get('warehousesSelected')?.value?.[0];
+                      @if (selectedWh) {
+                        <div class="p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-3">
+                          <i class="pi pi-check-circle text-emerald-600 text-lg"></i>
+                          <div class="text-xs text-emerald-800">
+                            <strong>All containers will be allocated to:</strong> <span class="font-bold underline">{{ selectedWh }}</span>. No manual split is required.
                           </div>
                         </div>
                       } @else {
-                        <div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-xs font-semibold text-slate-400">
-                          Enable Split Required or enter a Split Quantity to generate rows.
+                        <div class="p-4 bg-amber-50 border border-amber-100 rounded-xl flex items-center gap-3">
+                          <i class="pi pi-exclamation-triangle text-amber-600 text-lg"></i>
+                          <div class="text-xs text-amber-800">
+                            Please select a destination warehouse above.
+                          </div>
                         </div>
                       }
-                    </div>
+                    }
+
+                    <!-- SCENARIO 2 PANEL -->
+                    @if (!getStorageDecision(group).get('allocateSameWarehouse')?.value) {
+                      <div class="flex flex-col gap-4">
+                        <div class="rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-3 flex items-center gap-3">
+                          <i class="pi pi-info-circle text-blue-600 text-base"></i>
+                          <div class="text-xs text-blue-800 font-medium">
+                            Containers will be divided among the selected warehouses for each item.
+                          </div>
+                        </div>
+
+                        <div class="text-[11px] font-black uppercase tracking-wider text-slate-700 mt-2">
+                          Warehouse Allocation by Item
+                        </div>
+
+                        @let itemAllocations = getStorageDecision(group).get('itemAllocations')?.value || [];
+                        @for (item of itemAllocations; track item.itemName; let itemIdx = $index) {
+                          <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+                            <!-- Collapsible Header -->
+                            <div 
+                              (click)="toggleItemCollapse(i, itemIdx)"
+                              class="cursor-pointer bg-slate-50 hover:bg-slate-100/80 px-4 py-3 flex items-center justify-between border-b border-slate-200 select-none transition-colors"
+                            >
+                              <div class="flex items-center gap-2 text-slate-700">
+                                <i 
+                                  class="pi text-[11px] text-slate-400 font-bold transition-transform duration-200"
+                                  [class.pi-chevron-down]="isItemCollapsed(i, itemIdx)"
+                                  [class.pi-chevron-up]="!isItemCollapsed(i, itemIdx)"
+                                ></i>
+                                <span class="text-xs font-bold text-slate-800">
+                                  Item {{ itemIdx + 1 }}: {{ item.itemName }}
+                                </span>
+                              </div>
+                              <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-black uppercase text-slate-700 bg-blue-50/80 border border-blue-100/60 px-2.5 py-1 rounded-md">
+                                  Expected Containers: {{ item.expectedContainers }}
+                                </span>
+                              </div>
+                            </div>
+
+                            <!-- Body Content -->
+                            @if (!isItemCollapsed(i, itemIdx)) {
+                              <div class="p-4 bg-white flex flex-col gap-3">
+                                @if (getWarehouseCount(group) > 1) {
+                                  <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                                    <table class="w-full text-left border-collapse">
+                                      <thead>
+                                        <tr class="bg-slate-50 border-b border-slate-200">
+                                          <th class="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-wider w-16">SN</th>
+                                          <th class="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-wider">Warehouse Name</th>
+                                          <th class="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-wider w-44">Containers Assigned</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        @for (alloc of item.allocations; track alloc.warehouse; let allocIdx = $index) {
+                                          <tr class="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50">
+                                            <td class="px-4 py-2 text-xs font-bold text-slate-700">{{ allocIdx + 1 }}</td>
+                                            <td class="px-4 py-2 text-xs font-medium text-slate-700">{{ alloc.warehouse }}</td>
+                                            <td class="px-4 py-2">
+                                              <p-inputNumber
+                                                [ngModel]="alloc.containersAssigned"
+                                                [ngModelOptions]="{standalone: true}"
+                                                (onInput)="onItemAllocationSpinnerChange(group, itemIdx, alloc.warehouse, $event.value ?? 0, i)"
+                                                styleClass="w-full"
+                                                inputStyleClass="table-input w-full"
+                                                [min]="0"
+                                                [max]="item.expectedContainers"
+                                                [showButtons]="true"
+                                                [useGrouping]="false"
+                                                placeholder="0">
+                                              </p-inputNumber>
+                                            </td>
+                                          </tr>
+                                        }
+                                      </tbody>
+                                    </table>
+                                  </div>
+                                  
+                                  <!-- Total Row inside item card matching screenshot style -->
+                                  <div class="rounded-lg bg-blue-50/30 border border-blue-100/50 px-4 py-2.5 flex justify-between items-center">
+                                    <span class="text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                                      Total Assigned for Item {{ itemIdx + 1 }}
+                                    </span>
+                                    @let totalAllocated = getItemAllocationTotal(item);
+                                    <span class="text-xs font-black text-blue-600">
+                                      {{ totalAllocated }} / {{ item.expectedContainers }}
+                                    </span>
+                                  </div>
+                                } @else {
+                                  <div class="p-6 text-center text-xs text-slate-400 italic">
+                                    Please select at least 2 warehouses from the dropdown above to distribute allocations.
+                                  </div>
+                                }
+                              </div>
+                            }
+                          </div>
+                        }
+
+                        <!-- Total Assigned for all items row -->
+                        <div class="rounded-xl bg-blue-50/50 border border-blue-100 px-4 py-3 flex justify-between items-center mt-2">
+                          <span class="text-[11px] font-black uppercase text-slate-600 tracking-wider">
+                            Total Assigned (All Items)
+                          </span>
+                          <span class="text-xs font-black text-blue-600">
+                            {{ getAllItemsAllocationTotal(group) }} / {{ shipmentData()?.shipment?.assumedContainerCount || 0 }}
+                          </span>
+                        </div>
+                      </div>
+                    }
                   </div>
                 </div>
               }

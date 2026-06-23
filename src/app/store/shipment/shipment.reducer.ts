@@ -152,6 +152,18 @@ export const shipmentReducer = createReducer<ShipmentState>(
     submittingRowIndex: null,
   })),
 
+  // Patch actual container data after section save
+  on(ShipmentActions.patchActualContainerData, (state, { containerId, actual }) => {
+    if (!state.shipmentData) return state;
+    const updatedActual = (state.shipmentData.actual || []).map((a: any) =>
+      String(a.containerId) === String(containerId) ? { ...a, ...actual } : a
+    );
+    return {
+      ...state,
+      shipmentData: { ...state.shipmentData, actual: updatedActual },
+    };
+  }),
+
   // Reset
   on(ShipmentActions.resetShipmentFormState, () => ({ ...initialShipmentState }))
 );

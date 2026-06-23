@@ -464,4 +464,41 @@ export class ShipmentService {
       { bankName }
     );
   }
+
+  /**
+   * Upload additional document to repository
+   * POST /shipment/container/:id/additional-document
+   */
+  uploadAdditionalRepositoryDocument(containerId: string, formData: FormData): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/container/${containerId}/additional-document`, formData);
+  }
+
+  /**
+   * Delete document from repository
+   * DELETE /shipment/container/:id/additional-document/:docId
+   */
+  deleteAdditionalRepositoryDocument(containerId: string, docId: string): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/container/${containerId}/additional-document/${docId}`);
+  }
+
+  /**
+   * Create transportation transaction
+   * POST /shipment/container/:id/transportation-transaction
+   */
+  createTransportationTransaction(containerId: string, payload: {
+    containerSerials: string[];
+    transportCompany: string;
+    warehouse: string;
+    transportDate: string;
+  }): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/container/${containerId}/transportation-transaction`, payload);
+  }
+
+  /**
+   * Delete transportation transaction
+   * DELETE /shipment/container/:id/transportation-transaction/:txnId
+   */
+  deleteTransportationTransaction(containerId: string, txnId: string): Observable<any> {
+    return this.http.delete<any>(`${this.apiUrl}/container/${containerId}/transportation-transaction/${txnId}`);
+  }
 }

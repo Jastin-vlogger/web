@@ -8,19 +8,19 @@
       </div>
 
       <div class="extraction-video-container">
-        <video 
-          src="royalai.mp4" 
-          autoplay 
-          loop 
-          muted 
-          playsinline 
+        <video
+          src="royalai.mp4"
+          autoplay
+          loop
+          muted
+          playsinline
           class="extraction-video"
         ></video>
       </div>
 
       <h3 class="extraction-overlay__title">{{ extractionTitle() }}</h3>
       <p class="extraction-overlay__message">{{ currentExtractionMessage() }}</p>
-      
+
       <div class="extraction-progress">
         <div class="extraction-progress__bar" [style.width.%]="extractionProgress()"></div>
       </div>
@@ -64,7 +64,6 @@
                 Shipment No: {{ getShipmentNoLabel(i) }}
               </span>
             </div>
-            <!-- POINT 11: Bulk Save button for Port and Clearance -->
             @if (!isRowSubmitted(i) && hasPendingEditableBulkSections(i)) {
               <button
                 type="button"
@@ -81,1062 +80,677 @@
         <p-accordion-content styleClass="bg-white">
           <div [formGroup]="$any(group)" class="arrival-table-shell px-4 sm:px-6 pb-8 pt-4 flex flex-col gap-0 overflow-x-hidden w-full min-w-0">
             <div class="relative flex flex-col gap-8 ml-6 before:content-[''] before:absolute before:left-[-25px] before:top-4 before:bottom-4 before:w-0.5 before:bg-slate-100 before:rounded-full">
-              @if (canViewLogisticsSection('arrivalNotice')) {
+
+              <!-- ===== MILESTONE 1: PORT & CUSTOMS CLEARANCE ===== -->
+              @if (canViewLogisticsSection('portClearance')) {
               <div class="relative group">
                 <div class="absolute left-[-29px] top-4 w-2 h-2 rounded-full border-2 border-slate-300 bg-white group-hover:border-blue-500 transition-colors z-10"></div>
 
                 <div class="rounded-2xl border border-slate-100 bg-slate-50/40 p-5 hover:border-slate-200 transition-all shadow-sm">
-	              <div class="mb-4 flex items-center justify-between gap-3">
-	                <div class="flex flex-col min-w-0">
-	                  <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Milestone 1</span>
-	                  <h3 class="text-xs font-bold text-slate-700">Port and Clearance</h3>
-	                </div>
-	                <div class="flex items-center gap-2 shrink-0">
-                  @if (isLogisticsSectionLocked(i, 'arrivalNotice')) {
-                    <span class="text-[9px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-full shrink-0">
-                      <i class="pi pi-lock text-[10px]"></i> Saved
-                    </span>
-                    @if (canEditLogisticsSection('arrivalNotice')) {
-                    <button
-                      type="button"
-                      (click)="unlockLogisticsSection(i, 'arrivalNotice')"
-                      [disabled]="isSectionEditLocked(i, 'arrivalNotice')"
-                      class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-50"
-                      title="Edit section"
-                    >
-                      <i class="pi pi-pencil text-[11px]"></i>
-                    </button>
-                    }
-                  } @else {
-                    @if (canEditLogisticsSection('arrivalNotice')) {
-                    <button
-                      type="button"
-                      (click)="saveLogisticsSection(i, 'arrivalNotice')"
-                      [disabled]="isSectionSaving(i, 'arrivalNotice') || isSectionEditLocked(i, 'arrivalNotice')"
-                      class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:bg-emerald-100 disabled:opacity-50"
-                    >
-                      @if (isSectionSaving(i, 'arrivalNotice')) {
-                        <i class="pi pi-spin pi-spinner text-[10px]"></i>
-                        Saving...
+                  <div class="mb-4 flex items-center justify-between gap-3">
+                    <div class="flex flex-col min-w-0">
+                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Milestone 1</span>
+                      <h3 class="text-xs font-bold text-slate-700">Port &amp; Customs Clearance</h3>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                      @if (isLogisticsSectionLocked(i, 'portClearance')) {
+                        <span class="text-[9px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-full shrink-0">
+                          <i class="pi pi-lock text-[10px]"></i> Saved
+                        </span>
+                        @if (canEditLogisticsSection('portClearance')) {
+                        <button type="button" (click)="unlockLogisticsSection(i, 'portClearance')" [disabled]="isSectionEditLocked(i, 'portClearance')"
+                          class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-50" title="Edit section">
+                          <i class="pi pi-pencil text-[11px]"></i>
+                        </button>
+                        }
                       } @else {
-                        <i class="pi pi-check text-[10px]"></i>
-                        Save Section
-                      }
-                    </button>
-                    }
-                  }
-                </div>
-              </div>
-              <div class="flex flex-col gap-4">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div class="flex flex-col gap-1.5">
-                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Arrival Notice Date</label>
-                    <div class="flex flex-col gap-2">
-                      <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-                        <p-datepicker formControlName="arrivalNoticeDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" />
-                        <div class="flex items-center gap-2 sm:shrink-0">
-                          @if (canEditLogisticsSection('arrivalNotice')) {
-                          <button
-                            type="button"
-                            (click)="clickFileInput(i, 'arrivalNotice')"
-                            [disabled]="isSectionEditLocked(i, 'arrivalNotice') || isLogisticsSectionLocked(i, 'arrivalNotice') || extractingArrivalNoticeRowIndex() === i"
-                            class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-blue-600 cursor-pointer shrink-0 disabled:opacity-50"
-                          >
-                            @if (extractingArrivalNoticeRowIndex() === i) {
-                              <i class="pi pi-spin pi-spinner"></i>
-                            } @else {
-                              <i class="pi pi-upload"></i>
-                            }
-                          </button>
+                        @if (canEditLogisticsSection('portClearance')) {
+                        <button type="button" (click)="saveLogisticsSection(i, 'portClearance')"
+                          [disabled]="isSectionSaving(i, 'portClearance') || isSectionEditLocked(i, 'portClearance')"
+                          class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:bg-emerald-100 disabled:opacity-50">
+                          @if (isSectionSaving(i, 'portClearance')) {
+                            <i class="pi pi-spin pi-spinner text-[10px]"></i> Saving...
+                          } @else {
+                            <i class="pi pi-check text-[10px]"></i> Save Section
                           }
-                          @if (getFile(i, 'arrivalNotice')) {
-                            <button
-                              type="button"
-                              (click)="openDocumentPreview(getFile(i, 'arrivalNotice')!, 'Arrival Notice Document')"
-                              class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0"
-                            >
-                              <i class="pi pi-eye"></i>
-                            </button>
-                            @if (canEditLogisticsSection('arrivalNotice')) {
-                            <button
-                              type="button"
-                              (click)="clearFile(i, 'arrivalNotice')"
-                              [disabled]="isSectionEditLocked(i, 'arrivalNotice')"
-                              class="w-10 h-10 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 shrink-0 disabled:opacity-50"
-                            >
-                              <i class="pi pi-trash"></i>
-                            </button>
-                            }
-                          } @else if (getSavedFileUrl(group, 'arrivalNotice')) {
-                            <button
-                              type="button"
-                              (click)="openRemoteDocumentPreview(getSavedFileUrl(group, 'arrivalNotice'), getSavedFileName(group, 'arrivalNotice') || 'Arrival Notice Document')"
-                              class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0"
-                            >
-                              <i class="pi pi-eye"></i>
-                            </button>
-                          }
-                        </div>
-                      </div>
-                      @if (getFile(i, 'arrivalNotice')) {
-                        <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getFile(i, 'arrivalNotice')?.name }}</p>
-                      } @else if (getSavedFileName(group, 'arrivalNotice')) {
-                        <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getSavedFileName(group, 'arrivalNotice') }}</p>
-                      }
-                    </div>
-                  </div>
-                  <div class="flex flex-col gap-1.5">
-                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">ETD</label>
-                    <p-datepicker formControlName="arrivalOn" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" (onSelect)="onArrivalDateChange(i)" [readonlyInput]="true" [showIcon]="true" />
-                  </div>
-                </div>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div class="flex flex-col gap-1.5">
-                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Shipment Free Retention Date</label>
-                    <p-datepicker formControlName="shipmentFreeRetentionDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [readonlyInput]="true" [showIcon]="true" />
-                  </div>
-                  <div class="flex flex-col gap-1.5">
-                    <!-- POINT 12: Renamed Maximum Retention Date → Port Free Retention Date (always fixed 10 days) -->
-                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Port Free Retention Date <span class="text-slate-400 normal-case font-normal">(+10 days)</span></label>
-                    <p-datepicker formControlName="maximumRetentionDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [readonlyInput]="true" [showIcon]="true" />
-                  </div>
-                  @if (false) {
-                  <div class="flex flex-col gap-1.5 lg:col-span-2">
-                    <!-- POINT 12: Renamed Port Retention Date → Port Demurrage Start Date (day 11 = arrival + 10 days) -->
-                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Port Demurrage Start Date <span class="text-slate-400 normal-case font-normal">(day 11)</span></label>
-                    <p-datepicker formControlName="portRetentionWithPenaltyDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [readonlyInput]="true" [showIcon]="true" />
-                  </div>
-                  }
-                  <div class="flex flex-col gap-1.5 lg:col-span-2 rounded-xl border border-slate-200 bg-white p-3">
-                    <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Custom clearance required</label>
-                    <div class="flex items-center gap-3 h-10">
-                      <p-toggleswitch formControlName="customClearanceRequired"></p-toggleswitch>
-                      <span
-                        class="text-xs font-bold"
-                        [class.text-green-600]="group.get('customClearanceRequired')?.value === true"
-                        [class.text-slate-500]="group.get('customClearanceRequired')?.value !== true">
-                        {{ group.get('customClearanceRequired')?.value === true ? 'Required' : 'Not required' }}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-	            </div>
-	          </div>
-              }
-	            @for (doc of visibleSecondaryStep5DocConfig(); track doc.kind; let d = $index) {
-                @if (doc.kind !== 'customsClearance' || isCustomClearanceRequired(i)) {
-	              <div class="relative group" [style.order]="getLogisticsSectionOrder(doc.kind)">
-	                <div class="absolute left-[-29px] top-4 w-2 h-2 rounded-full border-2 border-slate-300 bg-white group-hover:border-blue-500 transition-colors z-10"></div>
-
-	                <div class="rounded-2xl border border-slate-100 bg-white p-5 hover:border-slate-200 transition-all shadow-sm flex flex-col gap-3">
-	                  <div class="flex items-center justify-between gap-3">
-	                    <div class="flex flex-col min-w-0">
-	                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Milestone {{ getLogisticsMilestoneNumber(doc.kind) }}</span>
-	                      <h3 class="text-xs font-bold text-slate-700 truncate">{{ doc.label }}</h3>
-	                    </div>
-	                    <div class="flex items-center gap-2 shrink-0">
-	                      @if (isLogisticsSectionLocked(i, doc.kind)) {
-	                        <span class="text-[9px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-full shrink-0">
-	                          <i class="pi pi-lock text-[10px]"></i> Saved
-	                        </span>
-                          @if (canEditLogisticsSection(doc.kind)) {
-	                        <button
-	                          type="button"
-	                          (click)="unlockLogisticsSection(i, doc.kind)"
-	                          [disabled]="isSectionEditLocked(i, doc.kind)"
-	                          class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-50"
-	                          title="Edit section"
-	                        >
-	                          <i class="pi pi-pencil text-[11px]"></i>
-	                        </button>
-                          }
-	                      } @else {
-                          @if (canEditLogisticsSection(doc.kind)) {
-	                        <button
-	                          type="button"
-	                          (click)="saveLogisticsSection(i, doc.kind)"
-	                          [disabled]="isSectionSaving(i, doc.kind) || isSectionEditLocked(i, doc.kind)"
-	                          class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:bg-emerald-100 disabled:opacity-50"
-	                        >
-	                          @if (isSectionSaving(i, doc.kind)) {
-	                            <i class="pi pi-spin pi-spinner text-[10px]"></i>
-	                            Saving...
-	                          } @else {
-	                            <i class="pi pi-check text-[10px]"></i>
-	                            Save
-	                          }
-	                        </button>
-                          }
-	                      }
-	                    </div>
-	                  </div>
-
-	                  <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-	                    <p-datepicker [formControlName]="doc.dateControl" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [readonlyInput]="true" [showIcon]="true" />
-	                    <div class="flex items-center gap-2 sm:shrink-0">
-                        @if (canEditLogisticsSection(doc.kind)) {
-	                      <button
-	                        type="button"
-	                        (click)="clickFileInput(i, doc.kind)"
-	                        [disabled]="isSectionEditLocked(i, doc.kind) || isLogisticsSectionLocked(i, doc.kind)"
-	                        class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-blue-600 cursor-pointer shrink-0 disabled:opacity-50"
-	                      >
-	                        <i class="pi pi-upload"></i>
-	                      </button>
+                        </button>
                         }
-	                      @if (getFile(i, doc.kind)) {
-	                        <button
-	                          type="button"
-	                          (click)="openDocumentPreview(getFile(i, doc.kind)!, doc.label + ' Document')"
-	                          class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0"
-	                        >
-	                          <i class="pi pi-eye"></i>
-	                        </button>
-                          @if (canEditLogisticsSection(doc.kind)) {
-	                        <button
-	                          type="button"
-	                          (click)="clearFile(i, doc.kind)"
-	                          [disabled]="isSectionEditLocked(i, doc.kind)"
-	                          class="w-10 h-10 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 shrink-0 disabled:opacity-50"
-	                        >
-	                          <i class="pi pi-trash"></i>
-	                        </button>
-                          }
-	                      } @else if (getSavedFileUrl(group, doc.kind)) {
-	                        <button
-	                          type="button"
-	                          (click)="openRemoteDocumentPreview(getSavedFileUrl(group, doc.kind), getSavedFileName(group, doc.kind) || (doc.label + ' Document'))"
-	                          class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0"
-	                        >
-	                          <i class="pi pi-eye"></i>
-	                        </button>
-	                      }
-	                    </div>
-	                  </div>
+                      }
+                    </div>
+                  </div>
 
-	                  @if (getFile(i, doc.kind)) {
-	                    <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getFile(i, doc.kind)?.name }}</p>
-	                  } @else if (getSavedFileName(group, doc.kind)) {
-	                    <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getSavedFileName(group, doc.kind) }}</p>
-	                  }
-
-	                  @if (doc.remarksControl) {
-	                    <div class="flex flex-col gap-1.5">
-	                      <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Remarks</label>
-	                      <input pInputText [formControlName]="doc.remarksControl" class="table-input-text w-full" placeholder="Add remarks" />
-	                    </div>
-	                  }
-	                  @if (doc.kind === 'boePassingDate') {
-                      <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 flex flex-col gap-3">
-                        <div class="flex items-center justify-between gap-3">
-                          <div class="flex flex-col gap-1 min-w-0">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">DP Invoice <span class="text-red-500">*</span></label>
-                            <span class="text-[11px] text-slate-500">Upload DP invoice to extract container storage dates.</span>
+                  <div class="flex flex-col gap-4">
+                    <!-- Row 1: Commercial Document Received Date + Arrival Date -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Commercial Document Received Date</label>
+                        <div class="flex flex-col gap-2">
+                          <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                            <p-datepicker formControlName="commercialDocumentReceivedDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [disabled]="isLogisticsSectionLocked(i, 'portClearance')" />
+                            <div class="flex items-center gap-2 sm:shrink-0">
+                              @if (canEditLogisticsSection('portClearance') && !isLogisticsSectionLocked(i, 'portClearance')) {
+                              <label class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-blue-600 cursor-pointer shrink-0">
+                                <i class="pi pi-upload"></i>
+                                <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png" (change)="onCommercialDocumentSelected($event, i)" />
+                              </label>
+                              }
+                              @if (getCommercialDocumentFile(i)) {
+                                <button type="button" (click)="openDocumentPreview(getCommercialDocumentFile(i)!, 'Commercial Document')"
+                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0">
+                                  <i class="pi pi-eye"></i>
+                                </button>
+                                <button type="button" (click)="clearCommercialDocumentFile(i)"
+                                  class="w-10 h-10 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 shrink-0">
+                                  <i class="pi pi-trash"></i>
+                                </button>
+                              } @else if (group.get('commercialDocumentDocumentUrl')?.value) {
+                                <button type="button" (click)="openRemoteDocumentPreview(group.get('commercialDocumentDocumentUrl')?.value, group.get('commercialDocumentDocumentName')?.value || 'Commercial Document')"
+                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0">
+                                  <i class="pi pi-eye"></i>
+                                </button>
+                              }
+                            </div>
                           </div>
-                          @if (group.get('dpwCargoExtraction')?.value) {
-                            <button
-                              type="button"
-                              (click)="openSavedDpwExtraction(i)"
-                              class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100 shrink-0"
-                            >
-                              <i class="pi pi-eye text-[10px]"></i>
-                              View Extracted Data
-                            </button>
+                          @if (getCommercialDocumentFile(i)) {
+                            <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getCommercialDocumentFile(i)?.name }}</p>
+                          } @else if (group.get('commercialDocumentDocumentName')?.value) {
+                            <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ group.get('commercialDocumentDocumentName')?.value }}</p>
                           }
                         </div>
-                        <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-                          @if (canEditLogisticsSection('boePassingDate')) {
-                          <button
-                            type="button"
-                            (click)="clickDpInvoiceFileInput(i)"
-                            [disabled]="isSectionEditLocked(i, 'boePassingDate') || isLogisticsSectionLocked(i, 'boePassingDate') || extractingDpwCargoRowIndex() === i"
-                            class="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-50"
-                          >
-                            @if (extractingDpwCargoRowIndex() === i) {
-                              <i class="pi pi-spin pi-spinner"></i>
-                              Extracting...
-                            } @else {
-                              <i class="pi pi-upload"></i>
-                              Upload DP Invoice
-                            }
-                          </button>
-                          }
-                          @if (getDpInvoiceFile(i)) {
-                            <button
-                              type="button"
-                              (click)="openDocumentPreview(getDpInvoiceFile(i)!, 'DP Invoice')"
-                              class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0"
-                            >
-                              <i class="pi pi-eye"></i>
-                            </button>
-                            @if (canEditLogisticsSection('boePassingDate')) {
-                            <button
-                              type="button"
-                              (click)="clearDpInvoiceFile(i)"
-                              [disabled]="isSectionEditLocked(i, 'boePassingDate')"
-                              class="w-10 h-10 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 shrink-0 disabled:opacity-50"
-                            >
-                              <i class="pi pi-trash"></i>
-                            </button>
-                            }
-                          } @else if (group.get('dpInvoiceDocumentUrl')?.value) {
-                            <button
-                              type="button"
-                              (click)="openRemoteDocumentPreview(group.get('dpInvoiceDocumentUrl')?.value, group.get('dpInvoiceDocumentName')?.value || 'DP Invoice')"
-                              class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0"
-                            >
-                              <i class="pi pi-eye"></i>
-                            </button>
-                          }
-                        </div>
-                        @if (getDpInvoiceFile(i)) {
-                          <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getDpInvoiceFile(i)?.name }}</p>
-                        } @else if (group.get('dpInvoiceDocumentName')?.value) {
-                          <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ group.get('dpInvoiceDocumentName')?.value }}</p>
-                        }
                       </div>
-	                  }
-	                  <!-- @if (doc.kind === 'boePassingDate') {
-	                    <div class="flex flex-col gap-1.5">
-	                      <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">DM Barcode</label>
-	                      <input pInputText formControlName="dmBarcode" class="table-input-text w-full" placeholder="Enter DM Barcode" />
-	                    </div>
-	                  } -->
-	                  @if (false && doc.kind === 'customsClearance') {
-                      <div class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
-                        <div class="flex flex-col gap-1">
-                          <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Document Submission</span>
-                          <p class="text-[11px] text-slate-500">Upload the required customs-supporting documents.</p>
+                      <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Arrival Date</label>
+                        <p-datepicker formControlName="arrivalOn" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [disabled]="isLogisticsSectionLocked(i, 'portClearance')" />
+                      </div>
+                    </div>
+
+                    <!-- Row 2: Shipping Line Free Detention Days + Port Free Storage Days -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Shipping Line Free Detention Days</label>
+                        <input pInputText formControlName="freeDetentionDays" type="number" class="table-input-text w-full" placeholder="10" [readonly]="isLogisticsSectionLocked(i, 'portClearance')" />
+                      </div>
+                      <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Port Free Storage Days</label>
+                        <input pInputText formControlName="freeStorageDays" type="number" class="table-input-text w-full" placeholder="14" [readonly]="isLogisticsSectionLocked(i, 'portClearance')" />
+                      </div>
+                    </div>
+
+                    <!-- Row 3: Remarks -->
+                    <div class="flex flex-col gap-1.5">
+                      <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Remarks</label>
+                      <textarea pInputTextarea formControlName="clearanceRemarks" rows="2" class="table-input-text w-full resize-none" placeholder="Remarks..." [readonly]="isLogisticsSectionLocked(i, 'portClearance')"></textarea>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              }
+
+              <!-- ===== MILESTONE 2: REGULATORY & INSPECTION (SUB-ACCORDIONS) ===== -->
+              @if (canViewLogisticsSection('doReleased') || canViewLogisticsSection('boePassingDate') || canViewLogisticsSection('municipality') || canViewLogisticsSection('customerInspection')) {
+              <div class="relative group">
+                <div class="absolute left-[-29px] top-4 w-2 h-2 rounded-full border-2 border-slate-300 bg-white group-hover:border-blue-500 transition-colors z-10"></div>
+
+                <div class="rounded-2xl border border-slate-100 bg-white p-5 hover:border-slate-200 transition-all shadow-sm">
+                  <div class="mb-4 flex items-center justify-between gap-3">
+                    <div class="flex flex-col min-w-0">
+                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Milestone 2</span>
+                      <h3 class="text-xs font-bold text-slate-700">Regulatory &amp; Inspection</h3>
+                    </div>
+                  </div>
+
+                  <p-accordion [multiple]="true" styleClass="flex flex-col gap-2">
+                    <!-- DO (Delivery Order) Sub-Accordion -->
+                    @if (canViewLogisticsSection('doReleased')) {
+                    <p-accordion-panel [value]="'do-' + i" styleClass="border border-slate-100 rounded-lg">
+                      <p-accordion-header styleClass="bg-slate-50 hover:bg-slate-100 px-3 py-2">
+                        <div class="flex items-center justify-between w-full gap-2 pr-2">
+                          <span class="text-xs font-bold text-slate-700">DO (Delivery Order)</span>
+                          <div class="flex items-center gap-2">
+                            @if (isLogisticsSectionLocked(i, 'doReleased')) {
+                              <span class="text-[9px] text-blue-600 uppercase font-bold flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded">
+                                <i class="pi pi-lock text-[9px]"></i> Saved
+                              </span>
+                            } @else if (canEditLogisticsSection('doReleased')) {
+                              <button type="button" (click)="$event.stopPropagation(); saveLogisticsSection(i, 'doReleased')"
+                                [disabled]="isSectionSaving(i, 'doReleased')"
+                                class="inline-flex items-center gap-1 rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase text-emerald-600 hover:bg-emerald-100 disabled:opacity-50">
+                                @if (isSectionSaving(i, 'doReleased')) { <i class="pi pi-spin pi-spinner text-[9px]"></i> } @else { <i class="pi pi-check text-[9px]"></i> }
+                                Save
+                              </button>
+                            }
+                          </div>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                          @for (customsDoc of customsSubmissionDocs; track customsDoc.type) {
-                            <div class="rounded-xl border border-slate-200 bg-white p-3 flex flex-col gap-2">
-                              <span class="text-[10px] font-bold text-slate-600 uppercase tracking-wider">{{ customsDoc.label }}</span>
+                      </p-accordion-header>
+                      <p-accordion-content styleClass="bg-white">
+                        <div class="flex flex-col gap-3 p-1">
+                          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            <div class="flex flex-col gap-1.5">
+                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">DO Date</label>
+                              <p-datepicker formControlName="doReleasedDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [disabled]="isLogisticsSectionLocked(i, 'doReleased')" />
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">DO Attachment</label>
                               <div class="flex items-center gap-2">
-                                @if (canEditLogisticsSection('customsClearance')) {
-                                <button
-                                  type="button"
-                                  (click)="clickCustomsDocFileInput(i, customsDoc.type)"
-                                  [disabled]="isSectionEditLocked(i, 'customsClearance') || isLogisticsSectionLocked(i, 'customsClearance')"
-                                  class="inline-flex h-10 items-center gap-2 px-3 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-blue-600 text-[10px] font-semibold disabled:opacity-50"
-                                >
-                                  <i class="pi pi-upload"></i>
-                                  Upload
+                                @if (canEditLogisticsSection('doReleased') && !isLogisticsSectionLocked(i, 'doReleased')) {
+                                <button type="button" (click)="clickFileInput(i, 'doReleased')"
+                                  class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-600">
+                                  <i class="pi pi-upload text-[10px]"></i> Upload
                                 </button>
                                 }
-                                @if (getCustomsDocFile(i, customsDoc.type)) {
-                                  <button
-                                    type="button"
-                                    (click)="openDocumentPreview(getCustomsDocFile(i, customsDoc.type)!, customsDoc.label)"
-                                    class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                                  >
+                                @if (getFile(i, 'doReleased')) {
+                                  <button type="button" (click)="openDocumentPreview(getFile(i, 'doReleased')!, 'DO Document')"
+                                    class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0">
                                     <i class="pi pi-eye"></i>
                                   </button>
-                                  @if (canEditLogisticsSection('customsClearance')) {
-                                  <button
-                                    type="button"
-                                    (click)="clearCustomsDocFile(i, customsDoc.type)"
-                                    [disabled]="isSectionEditLocked(i, 'customsClearance') || isLogisticsSectionLocked(i, 'customsClearance')"
-                                    class="w-10 h-10 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 disabled:opacity-50"
-                                  >
+                                  <button type="button" (click)="clearFile(i, 'doReleased')"
+                                    class="h-9 w-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 shrink-0">
                                     <i class="pi pi-trash"></i>
                                   </button>
-                                  }
-                                } @else if (getSavedCustomsDocUrl(group, customsDoc.type)) {
-                                  <button
-                                    type="button"
-                                    (click)="openRemoteDocumentPreview(getSavedCustomsDocUrl(group, customsDoc.type), getSavedCustomsDocName(group, customsDoc.type) || customsDoc.label)"
-                                    class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                                  >
+                                } @else if (getSavedFileUrl(group, 'doReleased')) {
+                                  <button type="button" (click)="openRemoteDocumentPreview(getSavedFileUrl(group, 'doReleased'), getSavedFileName(group, 'doReleased') || 'DO Document')"
+                                    class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0">
                                     <i class="pi pi-eye"></i>
                                   </button>
                                 }
                               </div>
-                              @if (getCustomsDocFile(i, customsDoc.type)) {
-                                <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getCustomsDocFile(i, customsDoc.type)?.name }}</p>
-                              } @else if (getSavedCustomsDocName(group, customsDoc.type)) {
-                                <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getSavedCustomsDocName(group, customsDoc.type) }}</p>
-                              } @else {
-                                <p class="text-[11px] text-slate-300">No document uploaded</p>
+                              @if (getFile(i, 'doReleased')) {
+                                <p class="text-[10px] text-slate-400 truncate">{{ getFile(i, 'doReleased')?.name }}</p>
+                              } @else if (getSavedFileName(group, 'doReleased')) {
+                                <p class="text-[10px] text-slate-400 truncate">{{ getSavedFileName(group, 'doReleased') }}</p>
                               }
                             </div>
-                          }
-                        </div>
-                      </div>
-	                  }
-                    @if (doc.kind === 'municipality') {
-                      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <div class="flex flex-col gap-1.5">
-                          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Status</label>
-                          <p-select
-                            formControlName="municipalityStatus"
-                            [options]="municipalityStatusOptions"
-                            optionLabel="label"
-                            optionValue="value"
-                            placeholder="Select status"
-                            styleClass="w-full"
-                            appendTo="body">
-                          </p-select>
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Comment</label>
-                          <input pInputText formControlName="municipalityStatusComment" class="table-input-text w-full" placeholder="Add comment" />
-                        </div>
-                      </div>
-                      @if (isMunicipalityClosed(group)) {
-                        <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 flex flex-col gap-3">
-                          <div class="flex flex-col gap-1">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Municipality Clearance Certificate</label>
-                            <span class="text-[11px] text-slate-500">Optional certificate upload for closed municipality clearance.</span>
                           </div>
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Remarks</label>
+                            <input pInputText formControlName="doRemarks" class="table-input-text w-full" placeholder="Add remarks" [readonly]="isLogisticsSectionLocked(i, 'doReleased')" />
+                          </div>
+                        </div>
+                      </p-accordion-content>
+                    </p-accordion-panel>
+                    }
+
+                    <!-- Bill Processing Sub-Accordion -->
+                    @if (canViewLogisticsSection('boePassingDate')) {
+                    <p-accordion-panel [value]="'boe-' + i" styleClass="border border-slate-100 rounded-lg">
+                      <p-accordion-header styleClass="bg-slate-50 hover:bg-slate-100 px-3 py-2">
+                        <div class="flex items-center justify-between w-full gap-2 pr-2">
+                          <span class="text-xs font-bold text-slate-700">Bill Processing</span>
                           <div class="flex items-center gap-2">
-                            @if (canEditLogisticsSection('municipality')) {
-                            <button
-                              type="button"
-                              (click)="clickMunicipalityCertificateFileInput(i)"
-                              [disabled]="isSectionEditLocked(i, 'municipality') || isLogisticsSectionLocked(i, 'municipality')"
-                              class="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-50"
-                            >
-                              <i class="pi pi-upload"></i>
-                              Upload Certificate
-                            </button>
-                            }
-                            @if (getMunicipalityCertificateFile(i)) {
-                              <button
-                                type="button"
-                                (click)="openDocumentPreview(getMunicipalityCertificateFile(i)!, 'Municipality Clearance Certificate')"
-                                class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                              >
-                                <i class="pi pi-eye"></i>
-                              </button>
-                              @if (canEditLogisticsSection('municipality')) {
-                              <button
-                                type="button"
-                                (click)="clearMunicipalityCertificateFile(i)"
-                                [disabled]="isSectionEditLocked(i, 'municipality')"
-                                class="w-10 h-10 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 disabled:opacity-50"
-                              >
-                                <i class="pi pi-trash"></i>
-                              </button>
-                              }
-                            } @else if (group.get('municipalityClearanceCertificateUrl')?.value) {
-                              <button
-                                type="button"
-                                (click)="openRemoteDocumentPreview(group.get('municipalityClearanceCertificateUrl')?.value, group.get('municipalityClearanceCertificateName')?.value || 'Municipality Clearance Certificate')"
-                                class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                              >
-                                <i class="pi pi-eye"></i>
+                            @if (isLogisticsSectionLocked(i, 'boePassingDate')) {
+                              <span class="text-[9px] text-blue-600 uppercase font-bold flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded">
+                                <i class="pi pi-lock text-[9px]"></i> Saved
+                              </span>
+                            } @else if (canEditLogisticsSection('boePassingDate')) {
+                              <button type="button" (click)="$event.stopPropagation(); saveLogisticsSection(i, 'boePassingDate')"
+                                [disabled]="isSectionSaving(i, 'boePassingDate')"
+                                class="inline-flex items-center gap-1 rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase text-emerald-600 hover:bg-emerald-100 disabled:opacity-50">
+                                @if (isSectionSaving(i, 'boePassingDate')) { <i class="pi pi-spin pi-spinner text-[9px]"></i> } @else { <i class="pi pi-check text-[9px]"></i> }
+                                Save
                               </button>
                             }
                           </div>
-                          @if (getMunicipalityCertificateFile(i)) {
-                            <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getMunicipalityCertificateFile(i)?.name }}</p>
-                          } @else if (group.get('municipalityClearanceCertificateName')?.value) {
-                            <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ group.get('municipalityClearanceCertificateName')?.value }}</p>
+                        </div>
+                      </p-accordion-header>
+                      <p-accordion-content styleClass="bg-white">
+                        <div class="flex flex-col gap-3 p-1">
+                          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            <div class="flex flex-col gap-1.5">
+                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">BOE Number</label>
+                              <input pInputText formControlName="dmBarcode" class="table-input-text w-full" placeholder="Enter BOE Number" [readonly]="isLogisticsSectionLocked(i, 'boePassingDate')" />
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">BOE Date</label>
+                              <p-datepicker formControlName="boePassingDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [disabled]="isLogisticsSectionLocked(i, 'boePassingDate')" />
+                            </div>
+                          </div>
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">BOE Attachment</label>
+                            <div class="flex items-center gap-2">
+                              @if (canEditLogisticsSection('boePassingDate') && !isLogisticsSectionLocked(i, 'boePassingDate')) {
+                              <button type="button" (click)="clickFileInput(i, 'boePassingDate')"
+                                class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-600">
+                                <i class="pi pi-upload text-[10px]"></i> Upload
+                              </button>
+                              }
+                              @if (getFile(i, 'boePassingDate')) {
+                                <button type="button" (click)="openDocumentPreview(getFile(i, 'boePassingDate')!, 'BOE Document')"
+                                  class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0">
+                                  <i class="pi pi-eye"></i>
+                                </button>
+                                <button type="button" (click)="clearFile(i, 'boePassingDate')"
+                                  class="h-9 w-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 shrink-0">
+                                  <i class="pi pi-trash"></i>
+                                </button>
+                              } @else if (getSavedFileUrl(group, 'boePassingDate')) {
+                                <button type="button" (click)="openRemoteDocumentPreview(getSavedFileUrl(group, 'boePassingDate'), getSavedFileName(group, 'boePassingDate') || 'BOE Document')"
+                                  class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0">
+                                  <i class="pi pi-eye"></i>
+                                </button>
+                              }
+                            </div>
+                            @if (getFile(i, 'boePassingDate')) {
+                              <p class="text-[10px] text-slate-400 truncate">{{ getFile(i, 'boePassingDate')?.name }}</p>
+                            } @else if (getSavedFileName(group, 'boePassingDate')) {
+                              <p class="text-[10px] text-slate-400 truncate">{{ getSavedFileName(group, 'boePassingDate') }}</p>
+                            }
+                          </div>
+                          <!-- Customer Inspection Required Toggle -->
+                          <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex items-center justify-between gap-3">
+                            <div class="flex flex-col gap-0.5">
+                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Customer Inspection Required</label>
+                              <span class="text-[11px]" [class.text-green-600]="group.get('customerInspectionRequired')?.value === true" [class.text-slate-400]="group.get('customerInspectionRequired')?.value !== true">
+                                {{ group.get('customerInspectionRequired')?.value === true ? 'Yes — Inspection Required' : 'No Inspection Required' }}
+                              </span>
+                            </div>
+                            <p-toggleswitch formControlName="customerInspectionRequired" [disabled]="isLogisticsSectionLocked(i, 'boePassingDate')"></p-toggleswitch>
+                          </div>
+                          <!-- DP Invoice Upload Section -->
+                          <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4 flex flex-col gap-3">
+                            <div class="flex items-center justify-between gap-3">
+                              <div class="flex flex-col gap-1 min-w-0">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">DP Invoice <span class="text-slate-400 normal-case font-normal">(optional — extracts storage dates)</span></label>
+                              </div>
+                              @if (group.get('dpwCargoExtraction')?.value) {
+                                <button type="button" (click)="openSavedDpwExtraction(i)"
+                                  class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100 shrink-0">
+                                  <i class="pi pi-eye text-[10px]"></i> View Extracted Data
+                                </button>
+                              }
+                            </div>
+                            <div class="flex items-center gap-2">
+                              @if (canEditLogisticsSection('boePassingDate') && !isLogisticsSectionLocked(i, 'boePassingDate')) {
+                              <button type="button" (click)="clickDpInvoiceFileInput(i)" [disabled]="extractingDpwCargoRowIndex() === i"
+                                class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-50">
+                                @if (extractingDpwCargoRowIndex() === i) { <i class="pi pi-spin pi-spinner"></i> Extracting... } @else { <i class="pi pi-upload"></i> Upload DP Invoice }
+                              </button>
+                              }
+                              @if (getDpInvoiceFile(i)) {
+                                <button type="button" (click)="openDocumentPreview(getDpInvoiceFile(i)!, 'DP Invoice')"
+                                  class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0"><i class="pi pi-eye"></i></button>
+                                <button type="button" (click)="clearDpInvoiceFile(i)"
+                                  class="h-9 w-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 shrink-0"><i class="pi pi-trash"></i></button>
+                              } @else if (group.get('dpInvoiceDocumentUrl')?.value) {
+                                <button type="button" (click)="openRemoteDocumentPreview(group.get('dpInvoiceDocumentUrl')?.value, group.get('dpInvoiceDocumentName')?.value || 'DP Invoice')"
+                                  class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0"><i class="pi pi-eye"></i></button>
+                              }
+                            </div>
+                            @if (getDpInvoiceFile(i)) {
+                              <p class="text-[10px] text-slate-400 truncate">{{ getDpInvoiceFile(i)?.name }}</p>
+                            } @else if (group.get('dpInvoiceDocumentName')?.value) {
+                              <p class="text-[10px] text-slate-400 truncate">{{ group.get('dpInvoiceDocumentName')?.value }}</p>
+                            }
+                          </div>
+                        </div>
+                      </p-accordion-content>
+                    </p-accordion-panel>
+                    }
+
+                    <!-- Municipality Sub-Accordion -->
+                    @if (canViewLogisticsSection('municipality')) {
+                    <p-accordion-panel [value]="'municipality-' + i" styleClass="border border-slate-100 rounded-lg">
+                      <p-accordion-header styleClass="bg-slate-50 hover:bg-slate-100 px-3 py-2">
+                        <div class="flex items-center justify-between w-full gap-2 pr-2">
+                          <span class="text-xs font-bold text-slate-700">Municipality</span>
+                          <div class="flex items-center gap-2">
+                            @if (isLogisticsSectionLocked(i, 'municipality')) {
+                              <span class="text-[9px] text-blue-600 uppercase font-bold flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded">
+                                <i class="pi pi-lock text-[9px]"></i> Saved
+                              </span>
+                            } @else if (canEditLogisticsSection('municipality')) {
+                              <button type="button" (click)="$event.stopPropagation(); saveLogisticsSection(i, 'municipality')"
+                                [disabled]="isSectionSaving(i, 'municipality')"
+                                class="inline-flex items-center gap-1 rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase text-emerald-600 hover:bg-emerald-100 disabled:opacity-50">
+                                @if (isSectionSaving(i, 'municipality')) { <i class="pi pi-spin pi-spinner text-[9px]"></i> } @else { <i class="pi pi-check text-[9px]"></i> }
+                                Save
+                              </button>
+                            }
+                          </div>
+                        </div>
+                      </p-accordion-header>
+                      <p-accordion-content styleClass="bg-white">
+                        <div class="flex flex-col gap-3 p-1">
+                          <!-- Row 1: Ref No + Inspection Date -->
+                          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            <div class="flex flex-col gap-1.5">
+                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Municipality Ref No</label>
+                              <input pInputText formControlName="municipalityRemarks" class="table-input-text w-full" placeholder="Enter reference number" [readonly]="isLogisticsSectionLocked(i, 'municipality')" />
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Municipality Inspection Date</label>
+                              <p-datepicker formControlName="municipalityDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [disabled]="isLogisticsSectionLocked(i, 'municipality')" />
+                            </div>
+                          </div>
+                          <!-- Row 2: Attachment -->
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Attachment</label>
+                            <div class="flex items-center gap-2">
+                              @if (canEditLogisticsSection('municipality') && !isLogisticsSectionLocked(i, 'municipality')) {
+                              <button type="button" (click)="clickFileInput(i, 'municipality')"
+                                class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-600">
+                                <i class="pi pi-upload text-[10px]"></i> Upload
+                              </button>
+                              }
+                              @if (getFile(i, 'municipality')) {
+                                <button type="button" (click)="openDocumentPreview(getFile(i, 'municipality')!, 'Municipality Document')"
+                                  class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0"><i class="pi pi-eye"></i></button>
+                                <button type="button" (click)="clearFile(i, 'municipality')"
+                                  class="h-9 w-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 shrink-0"><i class="pi pi-trash"></i></button>
+                              } @else if (getSavedFileUrl(group, 'municipality')) {
+                                <button type="button" (click)="openRemoteDocumentPreview(getSavedFileUrl(group, 'municipality'), getSavedFileName(group, 'municipality') || 'Municipality Document')"
+                                  class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0"><i class="pi pi-eye"></i></button>
+                              }
+                            </div>
+                            @if (getFile(i, 'municipality')) {
+                              <p class="text-[10px] text-slate-400 truncate">{{ getFile(i, 'municipality')?.name }}</p>
+                            } @else if (getSavedFileName(group, 'municipality')) {
+                              <p class="text-[10px] text-slate-400 truncate">{{ getSavedFileName(group, 'municipality') }}</p>
+                            }
+                          </div>
+                          <!-- Row 3: Status + Released Date -->
+                          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            <div class="flex flex-col gap-1.5">
+                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Status</label>
+                              <p-select formControlName="municipalityStatus" [options]="municipalityStatusOptions" optionLabel="label" optionValue="value" placeholder="Select status" styleClass="w-full" appendTo="body" [disabled]="isLogisticsSectionLocked(i, 'municipality')"></p-select>
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Released Date</label>
+                              <p-datepicker formControlName="municipalityReleasedDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [disabled]="isLogisticsSectionLocked(i, 'municipality')" />
+                            </div>
+                          </div>
+                          <!-- Row 4: Response/Approval Remarks + Comments -->
+                          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            <div class="flex flex-col gap-1.5">
+                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Response / Approval Remarks</label>
+                              <input pInputText formControlName="municipalityResponseRemarks" class="table-input-text w-full" placeholder="Add response remarks" [readonly]="isLogisticsSectionLocked(i, 'municipality')" />
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Comments</label>
+                              <input pInputText formControlName="municipalityComments" class="table-input-text w-full" placeholder="Add comments" [readonly]="isLogisticsSectionLocked(i, 'municipality')" />
+                            </div>
+                          </div>
+                          <!-- Certificate upload if released/closed -->
+                          @if (isMunicipalityClosed(group)) {
+                            <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex flex-col gap-2">
+                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Municipality Clearance Certificate</label>
+                              <div class="flex items-center gap-2">
+                                @if (canEditLogisticsSection('municipality') && !isLogisticsSectionLocked(i, 'municipality')) {
+                                <button type="button" (click)="clickMunicipalityCertificateFileInput(i)"
+                                  class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-600">
+                                  <i class="pi pi-upload text-[10px]"></i> Upload
+                                </button>
+                                }
+                                @if (getMunicipalityCertificateFile(i)) {
+                                  <button type="button" (click)="openDocumentPreview(getMunicipalityCertificateFile(i)!, 'Municipality Certificate')"
+                                    class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"><i class="pi pi-eye"></i></button>
+                                  <button type="button" (click)="clearMunicipalityCertificateFile(i)"
+                                    class="h-9 w-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"><i class="pi pi-trash"></i></button>
+                                } @else if (group.get('municipalityClearanceCertificateUrl')?.value) {
+                                  <button type="button" (click)="openRemoteDocumentPreview(group.get('municipalityClearanceCertificateUrl')?.value, group.get('municipalityClearanceCertificateName')?.value || 'Municipality Certificate')"
+                                    class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"><i class="pi pi-eye"></i></button>
+                                }
+                              </div>
+                            </div>
                           }
                         </div>
-                      }
-	                  }
-	                </div>
-	              </div>
-                }
-	            }
+                      </p-accordion-content>
+                    </p-accordion-panel>
+                    }
 
-              <!-- Customs Original Document Submission Section -->
-              @if (false) {
-                <div class="relative group">
-                  <div class="absolute left-[-29px] top-4 w-2 h-2 rounded-full border-2 border-purple-300 bg-white group-hover:border-purple-500 transition-colors z-10"></div>
+                    <!-- Customer Inspection Sub-Accordion (conditional on BOE toggle) -->
+                    @if (isCustomerInspectionRequired(i) && canViewLogisticsSection('customerInspection')) {
+                    <p-accordion-panel [value]="'customerInspection-' + i" styleClass="border border-amber-100 rounded-lg">
+                      <p-accordion-header styleClass="bg-amber-50 hover:bg-amber-100 px-3 py-2">
+                        <div class="flex items-center justify-between w-full gap-2 pr-2">
+                          <span class="text-xs font-bold text-amber-800">Customer Inspection</span>
+                          <div class="flex items-center gap-2">
+                            @if (isLogisticsSectionLocked(i, 'customerInspection')) {
+                              <span class="text-[9px] text-blue-600 uppercase font-bold flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded">
+                                <i class="pi pi-lock text-[9px]"></i> Saved
+                              </span>
+                            } @else if (canEditLogisticsSection('customerInspection')) {
+                              <button type="button" (click)="$event.stopPropagation(); saveLogisticsSection(i, 'customerInspection')"
+                                [disabled]="isSectionSaving(i, 'customerInspection')"
+                                class="inline-flex items-center gap-1 rounded border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase text-emerald-600 hover:bg-emerald-100 disabled:opacity-50">
+                                @if (isSectionSaving(i, 'customerInspection')) { <i class="pi pi-spin pi-spinner text-[9px]"></i> } @else { <i class="pi pi-check text-[9px]"></i> }
+                                Save
+                              </button>
+                            }
+                          </div>
+                        </div>
+                      </p-accordion-header>
+                      <p-accordion-content styleClass="bg-white">
+                        <div class="flex flex-col gap-3 p-1">
+                          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            <div class="flex flex-col gap-1.5">
+                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Inspection Date</label>
+                              <p-datepicker formControlName="customerInspectionDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [disabled]="isLogisticsSectionLocked(i, 'customerInspection')" />
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Status</label>
+                              <p-select formControlName="customerInspectionStatus" [options]="customerInspectionStatusOptions" optionLabel="label" optionValue="value" placeholder="Select status" styleClass="w-full" appendTo="body" [disabled]="isLogisticsSectionLocked(i, 'customerInspection')"></p-select>
+                            </div>
+                          </div>
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Inspection Attachment</label>
+                            <div class="flex items-center gap-2">
+                              @if (canEditLogisticsSection('customerInspection') && !isLogisticsSectionLocked(i, 'customerInspection')) {
+                              <label class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-600 cursor-pointer">
+                                <i class="pi pi-upload text-[10px]"></i> Upload
+                                <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png" (change)="onCustomerInspectionFileSelected($event, i)" />
+                              </label>
+                              }
+                              @if (getCustomerInspectionFile(i)) {
+                                <button type="button" (click)="openDocumentPreview(getCustomerInspectionFile(i)!, 'Inspection Document')"
+                                  class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0"><i class="pi pi-eye"></i></button>
+                                <button type="button" (click)="clearCustomerInspectionFile(i)"
+                                  class="h-9 w-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 shrink-0"><i class="pi pi-trash"></i></button>
+                              } @else if (getSavedCustomerInspectionUrl(group)) {
+                                <button type="button" (click)="openRemoteDocumentPreview(getSavedCustomerInspectionUrl(group), getSavedCustomerInspectionName(group) || 'Inspection Document')"
+                                  class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0"><i class="pi pi-eye"></i></button>
+                              }
+                            </div>
+                            @if (getCustomerInspectionFile(i)) {
+                              <p class="text-[10px] text-slate-400 truncate">{{ getCustomerInspectionFile(i)?.name }}</p>
+                            } @else if (getSavedCustomerInspectionName(group)) {
+                              <p class="text-[10px] text-slate-400 truncate">{{ getSavedCustomerInspectionName(group) }}</p>
+                            }
+                          </div>
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Comments</label>
+                            <textarea pInputTextarea formControlName="customerInspectionComments" rows="2" class="table-input-text w-full resize-none" placeholder="Add comments..." [readonly]="isLogisticsSectionLocked(i, 'customerInspection')"></textarea>
+                          </div>
+                        </div>
+                      </p-accordion-content>
+                    </p-accordion-panel>
+                    }
+                  </p-accordion>
+                </div>
+              </div>
+              }
 
-                  <div class="rounded-2xl border border-purple-100 bg-gradient-to-br from-purple-50/50 to-white p-5 hover:border-purple-200 transition-all shadow-sm">
-                    <div class="mb-4 flex items-center justify-between gap-3">
-                      <div class="flex flex-col min-w-0">
-                        <span class="text-[9px] font-black text-purple-400 uppercase tracking-widest">Document Submission</span>
-                        <h3 class="text-xs font-bold text-slate-700">Customs Original Document Submission</h3>
-                        <p class="text-[10px] text-slate-500 mt-1">Submit original documents to third party for customs clearance</p>
-                      </div>
+              <!-- ===== MILESTONE 3: ALL DOCUMENTS REPOSITORY ===== -->
+              <div class="relative group">
+                <div class="absolute left-[-29px] top-4 w-2 h-2 rounded-full border-2 border-slate-300 bg-white group-hover:border-blue-500 transition-colors z-10"></div>
+
+                <div class="rounded-2xl border border-slate-100 bg-white p-5 hover:border-slate-200 transition-all shadow-sm">
+                  <div class="mb-4 flex items-center justify-between gap-3">
+                    <div class="flex flex-col min-w-0">
+                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Milestone 3</span>
+                      <h3 class="text-xs font-bold text-slate-700">All Documents Repository</h3>
                     </div>
+                    <button
+                      type="button"
+                      (click)="openRepositoryDocumentsModal(i)"
+                      [disabled]="isRowEditLocked(i)"
+                      class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100 disabled:opacity-50"
+                    >
+                      <i class="pi pi-plus text-[10px]"></i>
+                      Upload Document
+                    </button>
+                  </div>
 
-                    <div class="flex flex-col gap-3">
-                      <!-- BOE Copy -->
-                      <div class="flex flex-col gap-2 p-3 rounded-lg bg-white border border-slate-100">
-                        <label class="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
-                          <i class="pi pi-file text-purple-500"></i>
-                          BOE - Copy
-                        </label>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[9px] text-slate-500">Submission Date</label>
-                            <p-datepicker 
-                              formControlName="customsDocBoeSubmissionDate"
-                              appendTo="body" 
-                              inputStyleClass="table-input" 
-                              placeholder="Select date" 
-                              styleClass="w-full" 
-                              dateFormat="dd/mm/yy" />
-                          </div>
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[9px] text-slate-500">Document</label>
-                            <div class="flex items-center gap-2">
-                              <button
-                                type="button"
-                                (click)="clickCustomsDocFileInput(i, 'boe')"
-                                class="inline-flex h-10 items-center gap-2 px-3 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-purple-600 text-[10px] font-semibold"
-                              >
-                                <i class="pi pi-upload"></i>
-                                Upload
-                              </button>
-                              @if (getCustomsDocFile(i, 'boe')) {
-                                <button
-                                  type="button"
-                                  (click)="openDocumentPreview(getCustomsDocFile(i, 'boe')!, 'BOE Copy')"
-                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                                >
-                                  <i class="pi pi-eye"></i>
-                                </button>
-                                <button
-                                  type="button"
-                                  (click)="clearCustomsDocFile(i, 'boe')"
-                                  class="w-10 h-10 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"
-                                >
-                                  <i class="pi pi-trash"></i>
-                                </button>
-                              } @else if (getSavedCustomsDocUrl(group, 'boe')) {
-                                <button
-                                  type="button"
-                                  (click)="openRemoteDocumentPreview(getSavedCustomsDocUrl(group, 'boe'), getSavedCustomsDocName(group, 'boe') || 'BOE Copy')"
-                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                                >
-                                  <i class="pi pi-eye"></i>
-                                </button>
-                              }
-                            </div>
-                            @if (getCustomsDocFile(i, 'boe')) {
-                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getCustomsDocFile(i, 'boe')?.name }}</p>
-                            } @else if (getSavedCustomsDocName(group, 'boe')) {
-                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getSavedCustomsDocName(group, 'boe') }}</p>
-                            }
-                          </div>
-                        </div>
-                      </div>
+                  @if (getRepositoryDocumentsCount(group) > 0) {
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-[11px]">
+                        <thead>
+                          <tr class="border-b border-slate-200">
+                            <th class="text-left px-2 py-2 font-bold text-slate-600">Document Type</th>
+                            <th class="text-left px-2 py-2 font-bold text-slate-600">Description</th>
+                            <th class="text-left px-2 py-2 font-bold text-slate-600">Uploaded On</th>
+                            <th class="text-left px-2 py-2 font-bold text-slate-600">Uploaded By</th>
+                            <th class="text-center px-2 py-2 font-bold text-slate-600">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          @for (doc of getAdditionalDocuments(group).controls; track $index; let docIdx = $index) {
+                            <tr class="border-b border-slate-100 hover:bg-slate-50">
+                              <td class="px-2 py-2 text-slate-600">{{ doc.get('documentType')?.value || 'General' }}</td>
+                              <td class="px-2 py-2 text-slate-600 truncate">{{ doc.get('description')?.value }}</td>
+                              <td class="px-2 py-2 text-slate-500">{{ doc.get('uploadedOn')?.value | date: 'dd/MM/yy' }}</td>
+                              <td class="px-2 py-2 text-slate-500">{{ doc.get('uploadedBy')?.value }}</td>
+                              <td class="px-2 py-2 text-center">
+                                <div class="flex items-center justify-center gap-2">
+                                  <button
+                                    type="button"
+                                    (click)="openRemoteDocumentPreview(doc.get('documentUrl')?.value, doc.get('documentName')?.value || 'Document')"
+                                    class="inline-flex h-8 w-8 items-center justify-center rounded border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                  >
+                                    <i class="pi pi-eye text-[10px]"></i>
+                                  </button>
+                                  @if (!isRowEditLocked(i)) {
+                                  <button
+                                    type="button"
+                                    (click)="deleteRepositoryDocument(i, docIdx)"
+                                    class="inline-flex h-8 w-8 items-center justify-center rounded border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"
+                                  >
+                                    <i class="pi pi-trash text-[10px]"></i>
+                                  </button>
+                                  }
+                                </div>
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  } @else {
+                    <div class="text-center py-6">
+                      <p class="text-[11px] text-slate-400">No documents uploaded yet. Click "Upload Document" to add documents to the repository.</p>
+                    </div>
+                  }
+                </div>
+              </div>
 
-                      <!-- DO Copy -->
-                      <div class="flex flex-col gap-2 p-3 rounded-lg bg-white border border-slate-100">
-                        <label class="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
-                          <i class="pi pi-file text-purple-500"></i>
-                          DO Copy
-                        </label>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[9px] text-slate-500">Submission Date</label>
-                            <p-datepicker 
-                              formControlName="customsDocDoSubmissionDate"
-                              appendTo="body" 
-                              inputStyleClass="table-input" 
-                              placeholder="Select date" 
-                              styleClass="w-full" 
-                              dateFormat="dd/mm/yy" />
-                          </div>
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[9px] text-slate-500">Document</label>
-                            <div class="flex items-center gap-2">
-                              <button
-                                type="button"
-                                (click)="clickCustomsDocFileInput(i, 'do')"
-                                class="inline-flex h-10 items-center gap-2 px-3 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-purple-600 text-[10px] font-semibold"
-                              >
-                                <i class="pi pi-upload"></i>
-                                Upload
-                              </button>
-                              @if (getCustomsDocFile(i, 'do')) {
-                                <button
-                                  type="button"
-                                  (click)="openDocumentPreview(getCustomsDocFile(i, 'do')!, 'DO Copy')"
-                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                                >
-                                  <i class="pi pi-eye"></i>
-                                </button>
-                                <button
-                                  type="button"
-                                  (click)="clearCustomsDocFile(i, 'do')"
-                                  class="w-10 h-10 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"
-                                >
-                                  <i class="pi pi-trash"></i>
-                                </button>
-                              } @else if (getSavedCustomsDocUrl(group, 'do')) {
-                                <button
-                                  type="button"
-                                  (click)="openRemoteDocumentPreview(getSavedCustomsDocUrl(group, 'do'), getSavedCustomsDocName(group, 'do') || 'DO Copy')"
-                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                                >
-                                  <i class="pi pi-eye"></i>
-                                </button>
-                              }
-                            </div>
-                            @if (getCustomsDocFile(i, 'do')) {
-                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getCustomsDocFile(i, 'do')?.name }}</p>
-                            } @else if (getSavedCustomsDocName(group, 'do')) {
-                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getSavedCustomsDocName(group, 'do') }}</p>
-                            }
-                          </div>
-                        </div>
-                      </div>
+              <!-- ===== MILESTONE 4: TRANSPORTATION ARRANGEMENT ===== -->
+              @if (canViewLogisticsSection('transportation')) {
+              <div class="relative group">
+                <div class="absolute left-[-29px] top-4 w-2 h-2 rounded-full border-2 border-slate-300 bg-white group-hover:border-blue-500 transition-colors z-10"></div>
 
-                      <!-- BL Original -->
-                      <div class="flex flex-col gap-2 p-3 rounded-lg bg-white border border-slate-100">
-                        <label class="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
-                          <i class="pi pi-file text-purple-500"></i>
-                          BL Original
-                        </label>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[9px] text-slate-500">Submission Date</label>
-                            <p-datepicker 
-                              formControlName="customsDocBlOriginalSubmissionDate"
-                              appendTo="body" 
-                              inputStyleClass="table-input" 
-                              placeholder="Select date" 
-                              styleClass="w-full" 
-                              dateFormat="dd/mm/yy" />
-                          </div>
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[9px] text-slate-500">Document</label>
-                            <div class="flex items-center gap-2">
-                              <button
-                                type="button"
-                                (click)="clickCustomsDocFileInput(i, 'blOriginal')"
-                                class="inline-flex h-10 items-center gap-2 px-3 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-purple-600 text-[10px] font-semibold"
-                              >
-                                <i class="pi pi-upload"></i>
-                                Upload
-                              </button>
-                              @if (getCustomsDocFile(i, 'blOriginal')) {
-                                <button
-                                  type="button"
-                                  (click)="openDocumentPreview(getCustomsDocFile(i, 'blOriginal')!, 'BL Original')"
-                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                                >
-                                  <i class="pi pi-eye"></i>
-                                </button>
-                                <button
-                                  type="button"
-                                  (click)="clearCustomsDocFile(i, 'blOriginal')"
-                                  class="w-10 h-10 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"
-                                >
-                                  <i class="pi pi-trash"></i>
-                                </button>
-                              } @else if (getSavedCustomsDocUrl(group, 'blOriginal')) {
-                                <button
-                                  type="button"
-                                  (click)="openRemoteDocumentPreview(getSavedCustomsDocUrl(group, 'blOriginal'), getSavedCustomsDocName(group, 'blOriginal') || 'BL Original')"
-                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                                >
-                                  <i class="pi pi-eye"></i>
-                                </button>
-                              }
-                            </div>
-                            @if (getCustomsDocFile(i, 'blOriginal')) {
-                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getCustomsDocFile(i, 'blOriginal')?.name }}</p>
-                            } @else if (getSavedCustomsDocName(group, 'blOriginal')) {
-                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getSavedCustomsDocName(group, 'blOriginal') }}</p>
-                            }
-                          </div>
-                        </div>
-                      </div>
-
-                      <!-- Invoice -->
-                      <div class="flex flex-col gap-2 p-3 rounded-lg bg-white border border-slate-100">
-                        <label class="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
-                          <i class="pi pi-file text-purple-500"></i>
-                          Invoice
-                        </label>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[9px] text-slate-500">Submission Date</label>
-                            <p-datepicker 
-                              formControlName="customsDocInvoiceSubmissionDate"
-                              appendTo="body" 
-                              inputStyleClass="table-input" 
-                              placeholder="Select date" 
-                              styleClass="w-full" 
-                              dateFormat="dd/mm/yy" />
-                          </div>
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[9px] text-slate-500">Document</label>
-                            <div class="flex items-center gap-2">
-                              <button
-                                type="button"
-                                (click)="clickCustomsDocFileInput(i, 'invoice')"
-                                class="inline-flex h-10 items-center gap-2 px-3 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-purple-600 text-[10px] font-semibold"
-                              >
-                                <i class="pi pi-upload"></i>
-                                Upload
-                              </button>
-                              @if (getCustomsDocFile(i, 'invoice')) {
-                                <button
-                                  type="button"
-                                  (click)="openDocumentPreview(getCustomsDocFile(i, 'invoice')!, 'Invoice')"
-                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                                >
-                                  <i class="pi pi-eye"></i>
-                                </button>
-                                <button
-                                  type="button"
-                                  (click)="clearCustomsDocFile(i, 'invoice')"
-                                  class="w-10 h-10 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"
-                                >
-                                  <i class="pi pi-trash"></i>
-                                </button>
-                              } @else if (getSavedCustomsDocUrl(group, 'invoice')) {
-                                <button
-                                  type="button"
-                                  (click)="openRemoteDocumentPreview(getSavedCustomsDocUrl(group, 'invoice'), getSavedCustomsDocName(group, 'invoice') || 'Invoice')"
-                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                                >
-                                  <i class="pi pi-eye"></i>
-                                </button>
-                              }
-                            </div>
-                            @if (getCustomsDocFile(i, 'invoice')) {
-                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getCustomsDocFile(i, 'invoice')?.name }}</p>
-                            } @else if (getSavedCustomsDocName(group, 'invoice')) {
-                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getSavedCustomsDocName(group, 'invoice') }}</p>
-                            }
-                          </div>
-                        </div>
-                      </div>
-
-                      <!-- Packing List -->
-                      <div class="flex flex-col gap-2 p-3 rounded-lg bg-white border border-slate-100">
-                        <label class="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
-                          <i class="pi pi-file text-purple-500"></i>
-                          Packing List
-                        </label>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[9px] text-slate-500">Submission Date</label>
-                            <p-datepicker 
-                              formControlName="customsDocPackingListSubmissionDate"
-                              appendTo="body" 
-                              inputStyleClass="table-input" 
-                              placeholder="Select date" 
-                              styleClass="w-full" 
-                              dateFormat="dd/mm/yy" />
-                          </div>
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[9px] text-slate-500">Document</label>
-                            <div class="flex items-center gap-2">
-                              <button
-                                type="button"
-                                (click)="clickCustomsDocFileInput(i, 'packingList')"
-                                class="inline-flex h-10 items-center gap-2 px-3 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-purple-600 text-[10px] font-semibold"
-                              >
-                                <i class="pi pi-upload"></i>
-                                Upload
-                              </button>
-                              @if (getCustomsDocFile(i, 'packingList')) {
-                                <button
-                                  type="button"
-                                  (click)="openDocumentPreview(getCustomsDocFile(i, 'packingList')!, 'Packing List')"
-                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                                >
-                                  <i class="pi pi-eye"></i>
-                                </button>
-                                <button
-                                  type="button"
-                                  (click)="clearCustomsDocFile(i, 'packingList')"
-                                  class="w-10 h-10 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"
-                                >
-                                  <i class="pi pi-trash"></i>
-                                </button>
-                              } @else if (getSavedCustomsDocUrl(group, 'packingList')) {
-                                <button
-                                  type="button"
-                                  (click)="openRemoteDocumentPreview(getSavedCustomsDocUrl(group, 'packingList'), getSavedCustomsDocName(group, 'packingList') || 'Packing List')"
-                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                                >
-                                  <i class="pi pi-eye"></i>
-                                </button>
-                              }
-                            </div>
-                            @if (getCustomsDocFile(i, 'packingList')) {
-                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getCustomsDocFile(i, 'packingList')?.name }}</p>
-                            } @else if (getSavedCustomsDocName(group, 'packingList')) {
-                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getSavedCustomsDocName(group, 'packingList') }}</p>
-                            }
-                          </div>
-                        </div>
-                      </div>
-
-                      <!-- COO (Certificate of Origin) -->
-                      <div class="flex flex-col gap-2 p-3 rounded-lg bg-white border border-slate-100">
-                        <label class="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-2">
-                          <i class="pi pi-file text-purple-500"></i>
-                          COO (Certificate of Origin)
-                        </label>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[9px] text-slate-500">Submission Date</label>
-                            <p-datepicker 
-                              formControlName="customsDocCooSubmissionDate"
-                              appendTo="body" 
-                              inputStyleClass="table-input" 
-                              placeholder="Select date" 
-                              styleClass="w-full" 
-                              dateFormat="dd/mm/yy" />
-                          </div>
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[9px] text-slate-500">Document</label>
-                            <div class="flex items-center gap-2">
-                              <button
-                                type="button"
-                                (click)="clickCustomsDocFileInput(i, 'coo')"
-                                class="inline-flex h-10 items-center gap-2 px-3 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-purple-600 text-[10px] font-semibold"
-                              >
-                                <i class="pi pi-upload"></i>
-                                Upload
-                              </button>
-                              @if (getCustomsDocFile(i, 'coo')) {
-                                <button
-                                  type="button"
-                                  (click)="openDocumentPreview(getCustomsDocFile(i, 'coo')!, 'COO')"
-                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                                >
-                                  <i class="pi pi-eye"></i>
-                                </button>
-                                <button
-                                  type="button"
-                                  (click)="clearCustomsDocFile(i, 'coo')"
-                                  class="w-10 h-10 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"
-                                >
-                                  <i class="pi pi-trash"></i>
-                                </button>
-                              } @else if (getSavedCustomsDocUrl(group, 'coo')) {
-                                <button
-                                  type="button"
-                                  (click)="openRemoteDocumentPreview(getSavedCustomsDocUrl(group, 'coo'), getSavedCustomsDocName(group, 'coo') || 'COO')"
-                                  class="w-10 h-10 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                                >
-                                  <i class="pi pi-eye"></i>
-                                </button>
-                              }
-                            </div>
-                            @if (getCustomsDocFile(i, 'coo')) {
-                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getCustomsDocFile(i, 'coo')?.name }}</p>
-                            } @else if (getSavedCustomsDocName(group, 'coo')) {
-                              <p class="text-[11px] text-slate-400 break-all sm:truncate">{{ getSavedCustomsDocName(group, 'coo') }}</p>
-                            }
-                          </div>
-                        </div>
-                      </div>
-
-                      <div class="mt-2 p-3 rounded-lg bg-blue-50 border border-blue-100">
-                        <p class="text-[10px] text-blue-700 flex items-start gap-2">
-                          <i class="pi pi-info-circle text-blue-500 mt-0.5"></i>
-                          <span>These documents are handled by a third party based on BOE clearance. Upload original documents for customs submission tracking.</span>
-                        </p>
-                      </div>
+                <div class="rounded-2xl border border-slate-100 bg-white p-5 hover:border-slate-200 transition-all shadow-sm">
+                  <div class="mb-4 flex items-center justify-between gap-3">
+                    <div class="flex flex-col min-w-0">
+                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Milestone 4</span>
+                      <h3 class="text-xs font-bold text-slate-700">Transportation Arrangement</h3>
+                      <p class="text-[10px] text-slate-500">{{ getTransportationContainerCount(group) }} container(s)</p>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                      @if (canEditLogisticsSection('transportation') && !isRowEditLocked(i)) {
+                        <button type="button" (click)="openBulkDateModal(i)"
+                          class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100">
+                          <i class="pi pi-list-check text-[10px]"></i> Bulk Update
+                        </button>
+                        <button type="button" (click)="saveLogisticsSection(i, 'transportation')"
+                          [disabled]="isSectionSaving(i, 'transportation')"
+                          class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-emerald-700 hover:bg-emerald-100 disabled:opacity-50">
+                          @if (isSectionSaving(i, 'transportation')) {
+                            <i class="pi pi-spin pi-spinner text-[10px]"></i>
+                          } @else {
+                            <i class="pi pi-check text-[10px]"></i>
+                          }
+                          Save
+                        </button>
+                      }
                     </div>
                   </div>
+
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-[11px]">
+                      <thead>
+                        <tr class="border-b border-slate-200 bg-slate-50">
+                          <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[120px]">Container</th>
+                          <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[180px]">Transport Company</th>
+                          <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[180px]">Warehouse</th>
+                          <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[160px]">Booked Date</th>
+                          <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[160px]">Transport Date</th>
+                          <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[160px]">Token Date</th>
+                          <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[160px]">Storage Start</th>
+                          <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[160px]">Storage End</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (row of getTransportationRows(group).controls; track $index) {
+                          <tr [formGroup]="$any(row)" class="border-b border-slate-100 hover:bg-slate-50">
+                            <td class="px-2 py-2 font-mono text-slate-700 font-bold text-[10px] whitespace-nowrap">{{ row.get('containerSerialNo')?.value }}</td>
+                            <td class="px-2 py-2 min-w-[150px]">
+                              @if (!isRowEditLocked(i)) {
+                                <p-select formControlName="transportCompanyName" [options]="transportCompanyOptions()" optionLabel="label" optionValue="value" placeholder="Select company" styleClass="w-full" appendTo="body" [showClear]="true"></p-select>
+                              } @else {
+                                <span class="text-slate-600">{{ row.get('transportCompanyName')?.value || '—' }}</span>
+                              }
+                            </td>
+                            <td class="px-2 py-2 min-w-[150px]">
+                              @if (!isRowEditLocked(i)) {
+                                <p-select formControlName="warehouse" [options]="warehouseOptions()" optionLabel="label" optionValue="value" placeholder="Select warehouse" styleClass="w-full" appendTo="body" [showClear]="true"></p-select>
+                              } @else {
+                                <span class="text-slate-600">{{ row.get('warehouse')?.value || '—' }}</span>
+                              }
+                            </td>
+                            <td class="px-2 py-2 min-w-[160px]">
+                              @if (!isRowEditLocked(i)) {
+                                <p-datepicker formControlName="bookedDate" appendTo="body" inputStyleClass="table-input text-[11px]" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" />
+                              } @else {
+                                <span class="text-slate-600">{{ row.get('bookedDate')?.value | date:'dd/MM/yy' }}</span>
+                              }
+                            </td>
+                            <td class="px-2 py-2 min-w-[160px]">
+                              @if (!isRowEditLocked(i)) {
+                                <p-datepicker formControlName="transportDate" appendTo="body" inputStyleClass="table-input text-[11px]" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" />
+                              } @else {
+                                <span class="text-slate-600">{{ row.get('transportDate')?.value | date:'dd/MM/yy' }}</span>
+                              }
+                            </td>
+                            <td class="px-2 py-2 min-w-[160px]">
+                              @if (!isRowEditLocked(i)) {
+                                <p-datepicker formControlName="tokenReceivedDate" appendTo="body" inputStyleClass="table-input text-[11px]" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" />
+                              } @else {
+                                <span class="text-slate-600">{{ row.get('tokenReceivedDate')?.value | date:'dd/MM/yy' }}</span>
+                              }
+                            </td>
+                            <td class="px-2 py-2 min-w-[160px]">
+                              @if (!isRowEditLocked(i)) {
+                                <p-datepicker formControlName="storageStartDate" appendTo="body" inputStyleClass="table-input text-[11px]" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" />
+                              } @else {
+                                <span class="text-slate-600">{{ row.get('storageStartDate')?.value | date:'dd/MM/yy' }}</span>
+                              }
+                            </td>
+                            <td class="px-2 py-2 min-w-[160px]">
+                              @if (!isRowEditLocked(i)) {
+                                <p-datepicker formControlName="storageEndDate" appendTo="body" inputStyleClass="table-input text-[11px]" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" />
+                              } @else {
+                                <span class="text-slate-600">{{ row.get('storageEndDate')?.value | date:'dd/MM/yy' }}</span>
+                              }
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
+              </div>
               }
-
-              @if (canViewLogisticsSection('transportation')) {
-	            <div class="relative group" [style.order]="getLogisticsSectionOrder('transportation')">
-	              <div class="absolute left-[-29px] top-4 w-2 h-2 rounded-full border-2 border-slate-300 bg-white group-hover:border-blue-500 transition-colors z-10"></div>
-
-	              <div class="rounded-2xl border border-slate-200 overflow-hidden shadow-sm bg-white">
-	                <div class="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-100">
-		                  <div class="flex flex-col gap-1">
-                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Milestone {{ getLogisticsMilestoneNumber('transportation') }}</span>
-		                    <span class="text-xs font-bold text-slate-700">Transportation Arranged</span>
-		                  </div>
-	                  <div class="flex items-center gap-2">
-                      @if (canEditLogisticsSection('transportation')) {
-                      <button
-                        type="button"
-                        (click)="openBulkDateModal(i)"
-                        [disabled]="isSectionEditLocked(i, 'transportation') || isLogisticsSectionLocked(i, 'transportation')"
-                        class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100 disabled:opacity-50"
-                      >
-                        <i class="pi pi-list-check text-[10px]"></i>
-                        Bulk Update
-                      </button>
-                      }
-	                    <span class="text-[9px] font-semibold text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200">
-	                      {{ getTransportationContainerCount(group) }} Container(s)
-	                    </span>
-	                    @if (isLogisticsSectionLocked(i, 'transportation')) {
-	                      <span class="text-[9px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-full shrink-0">
-	                        <i class="pi pi-lock text-[10px]"></i> Saved
-	                      </span>
-                        @if (canEditLogisticsSection('transportation')) {
-	                      <button
-	                        type="button"
-	                        (click)="unlockLogisticsSection(i, 'transportation')"
-	                        [disabled]="isSectionEditLocked(i, 'transportation')"
-	                        class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-blue-600 disabled:opacity-50"
-	                        title="Edit section"
-	                      >
-	                        <i class="pi pi-pencil text-[11px]"></i>
-	                      </button>
-                        }
-	                    } @else {
-                        @if (canEditLogisticsSection('transportation')) {
-	                      <button
-	                        type="button"
-	                        (click)="saveLogisticsSection(i, 'transportation')"
-	                        [disabled]="isSectionSaving(i, 'transportation') || isSectionEditLocked(i, 'transportation')"
-	                        class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:bg-emerald-100 disabled:opacity-50"
-	                      >
-	                        @if (isSectionSaving(i, 'transportation')) {
-	                          <i class="pi pi-spin pi-spinner text-[10px]"></i>
-	                          Saving...
-	                        } @else {
-	                          <i class="pi pi-check text-[10px]"></i>
-	                          Save Section
-	                        }
-	                      </button>
-                        }
-	                    }
-	                  </div>
-	                </div>
-
-		                <!-- Desktop: only the table area scrolls horizontally -->
-		                <div class="hidden md:block arrival-scroll-viewport custom-scrollbar">
-		                  <div class="arrival-scroll-table">
-	                    <div class="grid grid-cols-[70px_240px_280px_140px_120px_140px_120px_140px_140px_140px_110px] gap-3 px-4 py-2.5 bg-slate-50/70 border-b border-slate-100">
-	                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">SN</span>
-	                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Container No</span>
-	                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Transport Company Name</span>
-	                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Arranged Date</span>
-	                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Booking Time</span>
-	                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Transportation Date</span>
-	                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Transportation Time</span>
-	                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Storage Start</span>
-	                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Storage End</span>
-	                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Token Received</span>
-	                      <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Delay Hours</span>
-	                    </div>
-
-	                    <div class="flex flex-col">
-	                      @for (row of getVisibleTransportationRows(group, i); track $index) {
-	                        <div [formGroup]="$any(row)" class="border-b last:border-b-0 border-slate-100 p-4">
-	                          <div class="grid grid-cols-[70px_240px_280px_140px_120px_140px_120px_140px_140px_140px_110px] gap-3 items-start">
-	                            <div class="flex items-center min-h-10 text-sm font-bold text-slate-700">{{ row.get('sn')?.value }}</div>
-	                            <input pInputText formControlName="containerSerialNo" class="table-input-text w-full" placeholder="Container No" />
-	                            <p-select
-	                              formControlName="transportCompanyName"
-	                              [options]="transportCompanyOptions()"
-	                              optionLabel="label"
-	                              optionValue="value"
-	                              placeholder="Select company"
-	                              styleClass="w-full"
-	                              appendTo="body"
-	                              [editable]="true">
-	                            </p-select>
-	                            <p-datepicker formControlName="bookedDate" appendTo="body" inputStyleClass="table-input w-full" placeholder="Arranged date" styleClass="w-full" dateFormat="dd/mm/yy" (onSelect)="onTransportationTimeChange(i)" />
-	                            <p-datepicker formControlName="bookingTime" appendTo="body" inputStyleClass="table-input w-full" placeholder="HH:MM" styleClass="w-full" [timeOnly]="true" hourFormat="24" />
-	                            <p-datepicker formControlName="transportDate" appendTo="body" inputStyleClass="table-input w-full" placeholder="Transportation date" styleClass="w-full" dateFormat="dd/mm/yy" (onSelect)="onTransportationTimeChange(i)" />
-	                            <p-datepicker formControlName="transportTime" appendTo="body" inputStyleClass="table-input w-full" placeholder="HH:MM" styleClass="w-full" [timeOnly]="true" hourFormat="24" (onSelect)="onTransportationTimeChange(i)" />
-	                            <p-datepicker formControlName="storageStartDate" appendTo="body" inputStyleClass="table-input w-full" placeholder="Start" styleClass="w-full" dateFormat="dd/mm/yy" [readonlyInput]="true" [showIcon]="true" />
-	                            <p-datepicker formControlName="storageEndDate" appendTo="body" inputStyleClass="table-input w-full" placeholder="End" styleClass="w-full" dateFormat="dd/mm/yy" [readonlyInput]="true" [showIcon]="true" />
-	                            <p-datepicker formControlName="tokenReceivedDate" appendTo="body" inputStyleClass="table-input w-full" placeholder="Token" styleClass="w-full" dateFormat="dd/mm/yy" [readonlyInput]="true" [showIcon]="true" />
-	                            <p-inputNumber formControlName="delayHours" styleClass="w-full" inputStyleClass="table-input w-full bg-slate-50" [useGrouping]="false" placeholder="0" [readonly]="true" />
-	                          </div>
-	                        </div>
-	                      }
-	                    </div>
-	                  </div>
-	                </div>
-
-	                <!-- Mobile: stacked rows (no horizontal scrolling needed) -->
-	                <div class="md:hidden flex flex-col">
-	                  @for (row of getVisibleTransportationRows(group, i); track $index) {
-	                    <div [formGroup]="$any(row)" class="border-b last:border-b-0 border-slate-100 p-4">
-	                      <div class="flex flex-col gap-3">
-	                        <div class="flex items-center justify-between gap-3">
-                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">SN {{ row.get('sn')?.value }}</span>
-                          </div>
-	                        <div class="grid grid-cols-1 gap-3">
-	                          <div class="flex flex-col gap-1.5">
-	                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Container No</label>
-	                            <input pInputText formControlName="containerSerialNo" class="table-input-text w-full" placeholder="Container No" />
-	                          </div>
-	                          <div class="flex flex-col gap-1.5">
-	                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Transport Company Name</label>
-	                            <p-select
-	                              formControlName="transportCompanyName"
-	                              [options]="transportCompanyOptions()"
-	                              optionLabel="label"
-	                              optionValue="value"
-	                              placeholder="Select company"
-	                              styleClass="w-full"
-	                              appendTo="body"
-	                              [editable]="true">
-	                            </p-select>
-	                          </div>
-	                          <div class="grid grid-cols-2 gap-3">
-	                            <div class="flex flex-col gap-1.5">
-	                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Arranged Date</label>
-	                              <p-datepicker formControlName="bookedDate" appendTo="body" inputStyleClass="table-input w-full" placeholder="Date" styleClass="w-full" dateFormat="dd/mm/yy" (onSelect)="onTransportationTimeChange(i)" />
-	                            </div>
-	                            <div class="flex flex-col gap-1.5">
-	                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Booking Time</label>
-	                              <p-datepicker formControlName="bookingTime" appendTo="body" inputStyleClass="table-input w-full" placeholder="HH:MM" styleClass="w-full" [timeOnly]="true" hourFormat="24" />
-	                            </div>
-	                          </div>
-	                          <div class="grid grid-cols-2 gap-3">
-	                            <div class="flex flex-col gap-1.5">
-	                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Transportation Date</label>
-	                              <p-datepicker formControlName="transportDate" appendTo="body" inputStyleClass="table-input w-full" placeholder="Date" styleClass="w-full" dateFormat="dd/mm/yy" (onSelect)="onTransportationTimeChange(i)" />
-	                            </div>
-	                            <div class="flex flex-col gap-1.5">
-	                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Transportation Time</label>
-	                              <p-datepicker formControlName="transportTime" appendTo="body" inputStyleClass="table-input w-full" placeholder="HH:MM" styleClass="w-full" [timeOnly]="true" hourFormat="24" (onSelect)="onTransportationTimeChange(i)" />
-	                            </div>
-	                          </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                              <div class="flex flex-col gap-1.5">
-                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Storage Start</label>
-                                <p-datepicker formControlName="storageStartDate" appendTo="body" inputStyleClass="table-input w-full" placeholder="Date" styleClass="w-full" dateFormat="dd/mm/yy" [readonlyInput]="true" [showIcon]="true" />
-                              </div>
-                              <div class="flex flex-col gap-1.5">
-                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Storage End</label>
-                                <p-datepicker formControlName="storageEndDate" appendTo="body" inputStyleClass="table-input w-full" placeholder="Date" styleClass="w-full" dateFormat="dd/mm/yy" [readonlyInput]="true" [showIcon]="true" />
-                              </div>
-                              <div class="flex flex-col gap-1.5">
-                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Token Received</label>
-                                <p-datepicker formControlName="tokenReceivedDate" appendTo="body" inputStyleClass="table-input w-full" placeholder="Date" styleClass="w-full" dateFormat="dd/mm/yy" [readonlyInput]="true" [showIcon]="true" />
-                              </div>
-                            </div>
-	                          <div class="flex flex-col gap-1.5">
-	                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Delay Hours</label>
-	                            <p-inputNumber formControlName="delayHours" styleClass="w-full" inputStyleClass="table-input w-full bg-slate-50" [useGrouping]="false" placeholder="0" [readonly]="true" />
-	                          </div>
-	                        </div>
-	                      </div>
-	                    </div>
-	                  }
-	                </div>
-
-	                @if (hasHiddenTransportationRows(group)) {
-	                  <div class="border-t border-slate-100 px-4 py-3 flex justify-center sm:justify-start">
-	                    <button
-	                      type="button"
-	                      (click)="toggleTransportation(i)"
-	                      class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50"
-	                    >
-	                      <i class="pi" [class.pi-angle-down]="!expandedTransportation()[i]" [class.pi-angle-up]="expandedTransportation()[i]"></i>
-	                      {{ expandedTransportation()[i] ? 'Show Less' : 'Show More' }}
-	                    </button>
-	                  </div>
-	                }
-	              </div>
-	            </div>
-              }
-	          </div>
-	        </div>
+            </div>
+          </div>
         </p-accordion-content>
       </p-accordion-panel>
       }
@@ -1144,325 +758,392 @@
   </p-accordion>
 }
 
-<p-confirmDialog breakpoints="{'960px': '75vw', '640px': '90vw'}" [closable]="false"></p-confirmDialog>
+<!-- Hidden file inputs -->
+<input #arrivalNoticeInput type="file" class="hidden" (change)="onFileInputChange($event, 'arrivalNotice')" />
+<input #advanceRequestInput type="file" class="hidden" (change)="onFileInputChange($event, 'advanceRequest')" />
+<input #doReleasedInput type="file" class="hidden" (change)="onFileInputChange($event, 'doReleased')" />
+<input #boePassingDateInput type="file" class="hidden" (change)="onFileInputChange($event, 'boePassingDate')" />
+<input #customsClearanceInput type="file" class="hidden" (change)="onFileInputChange($event, 'customsClearance')" />
+<input #municipalityInput type="file" class="hidden" (change)="onFileInputChange($event, 'municipality')" />
+<input #dpInvoiceInput type="file" class="hidden" (change)="onDpInvoiceInputChange($event)" />
+<input #municipalityCertificateInput type="file" class="hidden" (change)="onMunicipalityCertificateInputChange($event)" />
 
-<input #arrivalNoticeInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onFileInputChange($event, 'arrivalNotice')" />
-<input #advanceRequestInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onFileInputChange($event, 'advanceRequest')" />
-<input #doReleasedInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onFileInputChange($event, 'doReleased')" />
-<input #boePassingDateInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onFileInputChange($event, 'boePassingDate')" />
-<input #customsClearanceInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onFileInputChange($event, 'customsClearance')" />
-<input #municipalityInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onFileInputChange($event, 'municipality')" />
-<input #dpInvoiceInput type="file" class="!hidden" accept=".pdf,.jpg,.jpeg,.png" (change)="onDpInvoiceInputChange($event)" />
-<input #municipalityCertificateInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onMunicipalityCertificateInputChange($event)" />
-
-<!-- Customs Documents File Inputs -->
-<input #customsDocBoeInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onCustomsDocFileInputChange($event, 'boe')" />
-<input #customsDocDoInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onCustomsDocFileInputChange($event, 'do')" />
-<input #customsDocBlOriginalInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onCustomsDocFileInputChange($event, 'blOriginal')" />
-<input #customsDocInvoiceInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onCustomsDocFileInputChange($event, 'invoice')" />
-<input #customsDocPackingListInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onCustomsDocFileInputChange($event, 'packingList')" />
-<input #customsDocCooInput type="file" class="!hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onCustomsDocFileInputChange($event, 'coo')" />
-
-<p-dialog
-  [header]="previewTitle()"
-  [visible]="showPreviewModal()"
-  (visibleChange)="onPreviewVisibleChange($event)"
-  [modal]="true"
-  [dismissableMask]="true"
-  [style]="{ width: '90vw', maxWidth: '900px' }"
-  [contentStyle]="{ overflow: 'auto', padding: '0' }"
-  [draggable]="false"
-  [resizable]="true"
-  appendTo="body"
->
-  <div class="flex items-center justify-end gap-2 border-b border-slate-200 bg-white px-4 py-3">
-    <button type="button" (click)="zoomOutPreview()" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600">
-      <i class="pi pi-minus"></i>
-    </button>
-    <button type="button" (click)="zoomInPreview()" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600">
-      <i class="pi pi-plus"></i>
-    </button>
-    <button type="button" (click)="resetPreviewZoom()" class="inline-flex rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-blue-600">
-      Reset
-    </button>
-  </div>
-  <div class="document-preview-content flex items-center justify-center min-h-[70vh] bg-slate-100 p-4 overflow-auto">
-    @if (previewUrl(); as url) {
+<!-- Preview modal -->
+@if (showPreviewModal()) {
+  <p-dialog
+    [visible]="showPreviewModal()"
+    (visibleChange)="showPreviewModal.set($event)"
+    (onHide)="closeDocumentPreview()"
+    [modal]="true"
+    [header]="previewTitle()"
+    [style]="{ width: '90vw', height: '90vh' }"
+    styleClass="max-w-7xl"
+  >
+    <div class="w-full h-full flex items-center justify-center bg-slate-50 rounded-lg">
       @if (previewIsImage()) {
-        <div class="overflow-auto rounded-xl border-2 border-dashed border-blue-100 bg-white/70 p-2">
-          <img [src]="url" [alt]="previewTitle()" class="max-w-full max-h-[80vh] object-contain rounded shadow-lg transition-transform duration-200 cursor-zoom-in" [style.transform]="'scale(' + previewZoom() + ')'" [style.transformOrigin]="previewTransformOrigin()" (dblclick)="onPreviewImageDoubleClick($event)" />
-        </div>
+        <img
+          [src]="previewUrl()"
+          [style.transform]="'scale(' + previewZoom() + ')'"
+          [style.transform-origin]="previewTransformOrigin()"
+          (dblclick)="onPreviewImageDoubleClick($event)"
+          class="max-w-full max-h-full transition-transform cursor-zoom-in"
+        />
       } @else {
-        <iframe [src]="previewSafeUrl()" class="w-full h-[80vh] min-h-[500px] rounded border-0 bg-white shadow-lg" title="Document preview"></iframe>
+        <iframe
+          [src]="previewSafeUrl()"
+          class="w-full h-full rounded-lg border border-slate-200"
+        ></iframe>
       }
+    </div>
+    @if (previewIsImage()) {
+      <ng-template pTemplate="footer">
+        <div class="flex items-center justify-center gap-3">
+          <button
+            type="button"
+            (click)="zoomOutPreview()"
+            [disabled]="previewZoom() <= 1"
+            class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-50"
+          >
+            <i class="pi pi-minus"></i>
+          </button>
+          <span class="text-sm font-bold text-slate-600">{{ (previewZoom() * 100).toFixed(0) }}%</span>
+          <button
+            type="button"
+            (click)="zoomInPreview()"
+            [disabled]="previewZoom() >= 4"
+            class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-50"
+          >
+            <i class="pi pi-plus"></i>
+          </button>
+          <button
+            type="button"
+            (click)="resetPreviewZoom()"
+            class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+          >
+            <i class="pi pi-refresh"></i>
+          </button>
+        </div>
+      </ng-template>
     }
-  </div>
-</p-dialog>
+  </p-dialog>
+}
 
-<p-dialog
-  header="DP Invoice Extraction Results"
-  [visible]="dpwExtractionDialogVisible()"
-  (visibleChange)="$event ? dpwExtractionDialogVisible.set(true) : closeDpwExtractionDialog()"
-  [modal]="true"
-  [dismissableMask]="true"
-  [style]="{ width: '92vw', maxWidth: '760px' }"
-  [draggable]="false"
-  [resizable]="false"
-  appendTo="body">
-  @if (activeDpwExtraction(); as extraction) {
+<!-- Bulk Save Modal -->
+@if (bulkSaveModalVisible()) {
+  <p-dialog
+    [visible]="bulkSaveModalVisible()"
+    (visibleChange)="bulkSaveModalVisible.set($event)"
+    (onHide)="closeBulkSaveModal()"
+    [modal]="true"
+    header="Bulk Save Port & Clearance"
+    [style]="{ width: '500px' }"
+  >
     <div class="flex flex-col gap-4">
-      <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
-        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Receipt No</span>
-          <div class="mt-1 text-sm font-bold text-slate-800">{{ extraction.receiptNo || 'N/A' }}</div>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Date</span>
-          <div class="mt-1 text-sm font-bold text-slate-800">{{ extraction.date || 'N/A' }}</div>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Containers</span>
-          <div class="mt-1 text-sm font-bold text-slate-800">{{ extraction.totalContainers || 0 }}</div>
-        </div>
-        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Pages</span>
-          <div class="mt-1 text-sm font-bold text-slate-800">{{ extraction.pagesProcessed || 'N/A' }}</div>
-        </div>
-      </div>
-
-      @if (extraction.error) {
-        <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
-          {{ extraction.error }}
-        </div>
-      }
-
-      <div class="overflow-x-auto rounded-xl border border-slate-200">
-        <table class="min-w-full text-left text-xs">
-          <thead class="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400">
-            <tr>
-              <th class="px-4 py-3">Container</th>
-              <th class="px-4 py-3">Storage Start</th>
-              <th class="px-4 py-3">Storage End</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100">
-            @for (row of extraction.containers || []; track $index) {
-              <tr>
-                <td class="px-4 py-3 font-bold text-slate-700">{{ row.container || 'N/A' }}</td>
-                <td class="px-4 py-3 text-slate-600">{{ row.from || 'N/A' }}</td>
-                <td class="px-4 py-3 text-slate-600">{{ row.to || 'N/A' }}</td>
-              </tr>
-            } @empty {
-              <tr>
-                <td colspan="3" class="px-4 py-6 text-center text-slate-400">No container rows extracted.</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-
-      <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
+      <p class="text-sm text-slate-600">This will save all pending sections for this shipment in one request.</p>
+      <div class="flex gap-3">
         <button
           type="button"
-          (click)="closeDpwExtractionDialog()"
-          class="rounded-lg border border-slate-200 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:bg-slate-50"
+          (click)="closeBulkSaveModal()"
+          [disabled]="bulkSaving()"
+          class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
         >
-          Close
+          Cancel
         </button>
         <button
           type="button"
-          (click)="applyActiveDpwExtraction()"
-          class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-blue-700"
+          (click)="executeBulkSave(bulkSaveRowIndex()!)"
+          [disabled]="bulkSaving() || !bulkSaveRowIndex()"
+          class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-600 hover:bg-emerald-100 disabled:opacity-50"
         >
-          <i class="pi pi-check text-[10px]"></i>
-          Close and Apply Dates
+          @if (bulkSaving()) {
+            <i class="pi pi-spin pi-spinner text-sm"></i>
+            Saving...
+          } @else {
+            <i class="pi pi-check text-sm"></i>
+            Save All Sections
+          }
         </button>
       </div>
     </div>
-  }
-</p-dialog>
+  </p-dialog>
+}
 
-<p-dialog
-  header="Bulk Transportation Update"
-  [visible]="bulkDateModalVisible()"
-  (visibleChange)="$event ? bulkDateModalVisible.set(true) : closeBulkDateModal()"
-  [modal]="true"
-  [dismissableMask]="true"
-  [style]="{ width: '94vw', maxWidth: '860px' }"
-  [draggable]="false"
-  [resizable]="false"
-  appendTo="body">
-  @if (bulkDateRowIndex() !== null) {
-    @let idx = bulkDateRowIndex()!;
-    <div class="flex flex-col gap-4" [formGroup]="bulkDateForm">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <div class="flex flex-col gap-1.5 sm:col-span-2">
-          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Transport Company</label>
-          <p-select
-            formControlName="transportCompanyName"
-            [options]="transportCompanyOptions()"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Optional company"
-            styleClass="w-full"
-            appendTo="body"
-            [editable]="true">
-          </p-select>
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Arranged Date</label>
-          <p-datepicker formControlName="bookedDate" appendTo="body" inputStyleClass="table-input" placeholder="Current date" styleClass="w-full" dateFormat="dd/mm/yy" [readonlyInput]="true" [showIcon]="true" />
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Booking Time</label>
-          <p-datepicker formControlName="bookingTime" appendTo="body" inputStyleClass="table-input" placeholder="Current time" styleClass="w-full" [timeOnly]="true" hourFormat="24" />
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Transportation Date</label>
-          <p-datepicker formControlName="transportDate" appendTo="body" inputStyleClass="table-input" placeholder="Current date" styleClass="w-full" dateFormat="dd/mm/yy" [readonlyInput]="true" [showIcon]="true" />
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Transportation Time</label>
-          <p-datepicker formControlName="transportTime" appendTo="body" inputStyleClass="table-input" placeholder="Current time" styleClass="w-full" [timeOnly]="true" hourFormat="24" />
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Storage Start</label>
-          <p-datepicker formControlName="storageStartDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [readonlyInput]="true" [showIcon]="true" />
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Storage End</label>
-          <p-datepicker formControlName="storageEndDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [readonlyInput]="true" [showIcon]="true" />
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Token Received</label>
-          <p-datepicker formControlName="tokenReceivedDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [readonlyInput]="true" [showIcon]="true" />
-        </div>
+<!-- Repository Documents Modal -->
+@if (repositoryDocumentsModalVisible()) {
+  <p-dialog
+    [visible]="repositoryDocumentsModalVisible()"
+    (visibleChange)="repositoryDocumentsModalVisible.set($event)"
+    (onHide)="closeRepositoryDocumentsModal()"
+    [modal]="true"
+    header="Upload Document to Repository"
+    [style]="{ width: '400px' }"
+  >
+    <div class="flex flex-col gap-4">
+      <div class="rounded-lg border-2 border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+        <input
+          type="file"
+          #repositoryDocumentUpload
+          class="hidden"
+          (change)="uploadRepositoryDocument(repositoryDocumentsForRow()!, $any($event.target).files[0])"
+        />
+        <button
+          type="button"
+          (click)="repositoryDocumentUpload.click()"
+          [disabled]="uploadingRepositoryDocument()"
+          class="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+        >
+          @if (uploadingRepositoryDocument()) {
+            <i class="pi pi-spin pi-spinner"></i>
+            Uploading...
+          } @else {
+            <i class="pi pi-upload"></i>
+            Choose File
+          }
+        </button>
+        <p class="mt-3 text-xs text-slate-500">Click to upload any supporting document</p>
+      </div>
+      <button
+        type="button"
+        (click)="closeRepositoryDocumentsModal()"
+        class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50"
+      >
+        Close
+      </button>
+    </div>
+  </p-dialog>
+}
+
+<!-- Bulk Date Modal for Transportation -->
+@if (bulkDateModalVisible()) {
+  <p-dialog
+    [visible]="bulkDateModalVisible()"
+    (visibleChange)="bulkDateModalVisible.set($event)"
+    (onHide)="closeBulkDateModal()"
+    [modal]="true"
+    header="Bulk Update Transportation"
+    [style]="{ width: '600px' }"
+  >
+    <div [formGroup]="bulkDateForm" class="flex flex-col gap-4">
+      <div class="rounded-lg bg-blue-50 border border-blue-200 p-3">
+        <p class="text-sm font-bold text-blue-600">Select containers below, then update with common values</p>
       </div>
 
-      <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
-        <label class="inline-flex items-center gap-3 text-[11px] font-black uppercase tracking-wider text-slate-600">
+      <div class="flex flex-col gap-2">
+        <div class="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white">
           <input
             type="checkbox"
-            class="h-4 w-4 rounded border-slate-300 text-blue-600"
-            [checked]="areAllBulkTransportationRowsSelected(idx)"
-            (change)="toggleAllBulkTransportationRows(idx, $event)"
+            [checked]="areAllBulkTransportationRowsSelected(bulkDateRowIndex()!)"
+            (change)="toggleAllBulkTransportationRows(bulkDateRowIndex()!, $event)"
+            class="rounded"
           />
-          Select all containers
-        </label>
-        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-          {{ selectedTransportationCount(idx) }} selected
-        </span>
+          <span class="text-sm font-bold text-slate-600">Select All ({{ getTransportationContainerCount(formArray.at(bulkDateRowIndex()!)!) }} containers)</span>
+        </div>
+
+        <div class="max-h-60 overflow-y-auto">
+          @for (row of getTransportationRows(formArray.at(bulkDateRowIndex()!)).controls; track $index) {
+            <div [formGroup]="$any(row)" class="flex items-center gap-2 px-3 py-2 rounded border border-slate-100 hover:bg-slate-50">
+              <input
+                type="checkbox"
+                formControlName="checked"
+                class="rounded"
+              />
+              <span class="text-sm text-slate-600">{{ row.get('containerSerialNo')?.value }}</span>
+            </div>
+          }
+        </div>
       </div>
 
-      <div class="max-h-72 overflow-auto rounded-xl border border-slate-200">
-        @for (row of getTransportationRows(formArray.at(idx)).controls; track $index) {
-          <div [formGroup]="$any(row)" class="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 last:border-b-0">
-            <label class="inline-flex items-center gap-3 min-w-0">
-              <input type="checkbox" formControlName="checked" class="h-4 w-4 rounded border-slate-300 text-blue-600" />
-              <span class="truncate text-xs font-bold text-slate-700">{{ row.get('containerSerialNo')?.value || 'Container' }}</span>
-            </label>
-            <span class="text-[10px] font-bold uppercase text-slate-400">SN {{ row.get('sn')?.value }}</span>
+      <div class="border-t border-slate-200 pt-4">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Transport Company</label>
+            <p-select
+              formControlName="transportCompanyName"
+              [options]="transportCompanyOptions()"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select company"
+              styleClass="w-full"
+              appendTo="body"
+              [showClear]="true">
+            </p-select>
           </div>
-        }
+          <div class="flex flex-col gap-1">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Warehouse</label>
+            <p-select
+              formControlName="warehouse"
+              [options]="warehouseOptions()"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Select warehouse"
+              styleClass="w-full"
+              appendTo="body"
+              [showClear]="true">
+            </p-select>
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Booked Date</label>
+            <p-datepicker
+              formControlName="bookedDate"
+              appendTo="body"
+              inputStyleClass="table-input text-[11px]"
+              styleClass="w-full"
+              dateFormat="dd/mm/yy"
+              [showIcon]="true" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Booking Time</label>
+            <p-datepicker
+              formControlName="bookingTime"
+              appendTo="body"
+              inputStyleClass="table-input text-[11px]"
+              styleClass="w-full"
+              timeOnly="true"
+              hourFormat="24"
+              [showIcon]="true" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Transport Date</label>
+            <p-datepicker
+              formControlName="transportDate"
+              appendTo="body"
+              inputStyleClass="table-input text-[11px]"
+              styleClass="w-full"
+              dateFormat="dd/mm/yy"
+              [showIcon]="true" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Transport Time</label>
+            <p-datepicker
+              formControlName="transportTime"
+              appendTo="body"
+              inputStyleClass="table-input text-[11px]"
+              styleClass="w-full"
+              timeOnly="true"
+              hourFormat="24"
+              [showIcon]="true" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Storage Start</label>
+            <p-datepicker
+              formControlName="storageStartDate"
+              appendTo="body"
+              inputStyleClass="table-input text-[11px]"
+              styleClass="w-full"
+              dateFormat="dd/mm/yy"
+              [showIcon]="true" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Storage End</label>
+            <p-datepicker
+              formControlName="storageEndDate"
+              appendTo="body"
+              inputStyleClass="table-input text-[11px]"
+              styleClass="w-full"
+              dateFormat="dd/mm/yy"
+              [showIcon]="true" />
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Token Received</label>
+            <p-datepicker
+              formControlName="tokenReceivedDate"
+              appendTo="body"
+              inputStyleClass="table-input text-[11px]"
+              styleClass="w-full"
+              dateFormat="dd/mm/yy"
+              [showIcon]="true" />
+          </div>
+        </div>
       </div>
 
-      <div class="flex justify-end gap-3 border-t border-slate-100 pt-4">
+      <div class="flex gap-3">
         <button
           type="button"
           (click)="closeBulkDateModal()"
-          class="rounded-lg border border-slate-200 px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-600 hover:bg-slate-50"
+          [disabled]="bulkTransportationSaving()"
+          class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
         >
           Cancel
         </button>
         <button
           type="button"
           (click)="saveBulkTransportationSelection()"
-          [disabled]="bulkTransportationSaving()"
-          class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-blue-700 disabled:opacity-50"
+          [disabled]="bulkTransportationSaving() || selectedTransportationCount(bulkDateRowIndex()!) === 0"
+          class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-600 hover:bg-emerald-100 disabled:opacity-50"
         >
           @if (bulkTransportationSaving()) {
-            <i class="pi pi-spin pi-spinner text-[10px]"></i>
+            <i class="pi pi-spin pi-spinner text-sm"></i>
             Saving...
           } @else {
-            <i class="pi pi-save text-[10px]"></i>
-            Save Selected
+            <i class="pi pi-check text-sm"></i>
+            Save {{ selectedTransportationCount(bulkDateRowIndex()!) }} Selected
           }
         </button>
       </div>
     </div>
-  }
-</p-dialog>
+  </p-dialog>
+}
 
-<!-- POINT 11: Bulk Save Modal for Port and Clearance -->
-<p-dialog
-  header="Bulk Save — Port and Clearance"
-  [visible]="bulkSaveModalVisible()"
-  (visibleChange)="bulkSaveModalVisible.set($event)"
-  [modal]="true"
-  [dismissableMask]="true"
-  [style]="{ width: '92vw', maxWidth: '640px' }"
-  [draggable]="false"
-  [resizable]="false"
-  appendTo="body">
-  @if (bulkSaveRowIndex() !== null) {
-    @let idx = bulkSaveRowIndex()!;
-    <div class="flex flex-col gap-4 pb-2">
-      <p class="text-sm text-slate-600">
-        Save all unsaved sections for <strong>{{ getShipmentNoLabel(idx) }}</strong> at once.
-      </p>
 
-      <!-- Section rows preview -->
-      <div class="flex flex-col gap-2">
-        @for (section of getVisibleBulkSectionsForRow(idx); track section) {
-          <div class="flex items-center justify-between rounded-xl border px-4 py-3"
-            [class.border-emerald-200]="isLogisticsSectionLocked(idx, $any(section))"
-            [class.bg-emerald-50]="isLogisticsSectionLocked(idx, $any(section))"
-            [class.border-slate-200]="!isLogisticsSectionLocked(idx, $any(section))"
-            [class.bg-white]="!isLogisticsSectionLocked(idx, $any(section))">
-            <div class="flex items-center gap-3">
-              <i class="pi text-sm"
-                [class.pi-check-circle]="isLogisticsSectionLocked(idx, $any(section))"
-                [class.text-emerald-500]="isLogisticsSectionLocked(idx, $any(section))"
-                [class.pi-circle]="!isLogisticsSectionLocked(idx, $any(section))"
-                [class.text-slate-300]="!isLogisticsSectionLocked(idx, $any(section))"></i>
-              <span class="text-xs font-semibold text-slate-700">
-                {{ getLogisticsSectionLabel($any(section)) }}
-              </span>
-            </div>
-            <span class="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full"
-              [class.text-emerald-600]="isLogisticsSectionLocked(idx, $any(section))"
-              [class.bg-emerald-100]="isLogisticsSectionLocked(idx, $any(section))"
-              [class.text-amber-600]="!isLogisticsSectionLocked(idx, $any(section))"
-              [class.bg-amber-100]="!isLogisticsSectionLocked(idx, $any(section))">
-              {{ isLogisticsSectionLocked(idx, $any(section)) ? 'Saved' : 'Pending' }}
-            </span>
+<!-- DPW Cargo Extraction Dialog -->
+@if (dpwExtractionDialogVisible()) {
+  <p-dialog
+    [visible]="dpwExtractionDialogVisible()"
+    (visibleChange)="dpwExtractionDialogVisible.set($event)"
+    (onHide)="closeDpwExtractionDialog()"
+    [modal]="true"
+    header="DP Invoice Extraction Results"
+    [style]="{ width: '600px' }"
+  >
+    <div class="flex flex-col gap-4">
+      @if (activeDpwExtraction()?.error) {
+        <div class="rounded-lg bg-amber-50 border border-amber-200 p-3">
+          <p class="text-sm text-amber-800">{{ activeDpwExtraction()?.error }}</p>
+        </div>
+      }
+
+      @if (activeDpwExtraction()?.containers; as containers) {
+        @if (containers.length > 0) {
+          <div class="max-h-64 overflow-y-auto">
+            <table class="w-full text-xs">
+              <thead>
+                <tr class="border-b border-slate-200">
+                  <th class="text-left px-2 py-1 font-bold text-slate-600">Container</th>
+                  <th class="text-left px-2 py-1 font-bold text-slate-600">Storage From</th>
+                  <th class="text-left px-2 py-1 font-bold text-slate-600">Storage To</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of containers; track item.container) {
+                  <tr class="border-b border-slate-100">
+                    <td class="px-2 py-1 text-slate-600">{{ item.container }}</td>
+                    <td class="px-2 py-1 text-slate-500">{{ item.from }}</td>
+                    <td class="px-2 py-1 text-slate-500">{{ item.to }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
           </div>
         }
-      </div>
+      }
 
-      <div class="flex justify-end gap-3 pt-2 border-t border-slate-100">
+      <div class="flex gap-3">
         <button
           type="button"
-          (click)="closeBulkSaveModal()"
-          class="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 text-[10px] font-bold uppercase hover:bg-slate-50"
+          (click)="closeDpwExtractionDialog()"
+          class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50"
         >
           Cancel
         </button>
         <button
           type="button"
-          (click)="executeBulkSave(idx)"
-          [disabled]="bulkSaving()"
-          class="px-5 py-2 rounded-lg bg-violet-600 text-white text-[10px] font-bold uppercase hover:bg-violet-700 disabled:opacity-50 flex items-center gap-2"
+          (click)="applyActiveDpwExtraction()"
+          class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-600 hover:bg-emerald-100"
         >
-          @if (bulkSaving()) {
-            <i class="pi pi-spin pi-spinner text-[10px]"></i>
-            Saving...
-          } @else {
-            <i class="pi pi-list-check text-[10px]"></i>
-            Save All Pending
-          }
+          <i class="pi pi-check text-sm"></i>
+          Apply Extraction
         </button>
       </div>
     </div>
-  }
-</p-dialog>
+  </p-dialog>
+}

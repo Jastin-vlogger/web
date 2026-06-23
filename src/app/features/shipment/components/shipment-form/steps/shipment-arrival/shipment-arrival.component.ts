@@ -13,7 +13,9 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { SelectModule } from 'primeng/select';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { TextareaModule } from 'primeng/textarea';
 import { ShipmentService } from '../../../../../../core/services/shipment.service';
+import { WarehouseService } from '../../../../../../core/services/warehouse.service';
 import { ExtractDpwCargoResponse } from '../../../../../../core/models/shipment.model';
 import { NotificationService } from '../../../../../../core/services/notification.service';
 import { ConfirmDialogService } from '../../../../../../core/services/confirm-dialog.service';
@@ -36,7 +38,9 @@ type Step5DocKind =
   | 'doReleased'
   | 'boePassingDate'
   | 'customsClearance'
-  | 'municipality';
+  | 'municipality'
+  | 'portClearance'
+  | 'customerInspection';
 
 type LogisticsSectionKey = Step5DocKind | 'transportation';
 type CustomsDocType = 'boe' | 'do' | 'blOriginal' | 'invoice' | 'packingList' | 'coo';
@@ -76,6 +80,7 @@ const STEP5_DOC_CONFIG: {
     DialogModule,
     SelectModule,
     ToggleSwitchModule,
+    TextareaModule,
   ],
   providers: [ConfirmationService],
   templateUrl: './shipment-arrival.component.html',
@@ -88,6 +93,7 @@ export class ShipmentArrivalComponent {
   readonly customsSubmissionDocs = CUSTOMS_SUBMISSION_DOCS;
   readonly municipalityStatusOptions = [
     { label: 'Open', value: 'open' },
+    { label: 'Released', value: 'released' },
     { label: 'Closed', value: 'closed' },
   ];
   readonly secondaryStep5DocConfig = STEP5_DOC_CONFIG.filter((doc) => doc.kind !== 'arrivalNotice');
@@ -126,6 +132,7 @@ export class ShipmentArrivalComponent {
   @ViewChild('municipalityInput') municipalityInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('dpInvoiceInput') dpInvoiceInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('municipalityCertificateInput') municipalityCertificateInputRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('repositoryDocumentUpload') repositoryDocumentUploadRef?: ElementRef<HTMLInputElement>;
 
   // Customs Documents ViewChild references
   @ViewChild('customsDocBoeInput') customsDocBoeInputRef?: ElementRef<HTMLInputElement>;
@@ -171,6 +178,7 @@ export class ShipmentArrivalComponent {
   readonly bulkTransportationSaving = signal(false);
   readonly bulkDateForm = new FormGroup({
     transportCompanyName: new FormControl<string | null>(null),
+    warehouse: new FormControl<string | null>(null),
     bookedDate: new FormControl<Date | null>(null),
     bookingTime: new FormControl<Date | null>(null),
     transportDate: new FormControl<Date | null>(null),
@@ -196,6 +204,33 @@ export class ShipmentArrivalComponent {
   readonly bulkSaveRowIndex = signal<number | null>(null);
   readonly bulkSaving = signal(false);
 
+  // STEP 4: Documents Repository and Customer Inspection support
+  readonly repositoryDocumentsModalVisible = signal(false);
+  readonly repositoryDocumentsForRow = signal<number | null>(null);
+  readonly uploadingRepositoryDocument = signal(false);
+  readonly customerInspectionFile = signal<Record<number, File | null>>({});
+  readonly commercialDocumentFile = signal<Record<number, File | null>>({});
+  readonly repositoryDocumentUploadInput?: ElementRef<HTMLInputElement>;
+
+  // Transportation Transaction dialog
+  readonly newTransactionDialogVisible = signal(false);
+  readonly newTransactionRowIndex = signal<number | null>(null);
+  readonly savingTransaction = signal(false);
+  readonly deletingTransactionId = signal<string | null>(null);
+  readonly newTransactionForm = new FormGroup({
+    containerSerials: new FormControl<string>('', { nonNullable: true }),
+    transportCompany: new FormControl<string | null>(null),
+    warehouse: new FormControl<string | null>(null),
+    transportDate: new FormControl<Date | null>(null),
+  });
+
+  readonly customerInspectionStatusOptions = [
+    { label: 'Passed', value: 'passed' },
+    { label: 'Failed', value: 'failed' },
+    { label: 'Pending', value: 'pending' },
+  ];
+  readonly warehouseOptions = signal<Array<{ label: string; value: string }>>([]);
+
   openBulkSaveModal(index: number): void {
     this.bulkSaveRowIndex.set(index);
     this.bulkSaveModalVisible.set(true);
@@ -204,6 +239,16 @@ export class ShipmentArrivalComponent {
   closeBulkSaveModal(): void {
     this.bulkSaveModalVisible.set(false);
     this.bulkSaveRowIndex.set(null);
+  }
+
+  openRepositoryDocumentsModal(index: number): void {
+    this.repositoryDocumentsForRow.set(index);
+    this.repositoryDocumentsModalVisible.set(true);
+  }
+
+  closeRepositoryDocumentsModal(): void {
+    this.repositoryDocumentsModalVisible.set(false);
+    this.repositoryDocumentsForRow.set(null);
   }
 
   private normalizeAccordionValues(values: string | string[] | null | undefined): string[] {
@@ -464,6 +509,7 @@ export class ShipmentArrivalComponent {
       sn: Number(tb.sn) || 0,
       containerSerialNo: tb.containerSerialNo || '',
       transportCompanyName: tb.transportCompanyName || '',
+      warehouse: tb.warehouse || '',
       bulkSelected: tb.checked === true,
       bookedDate: toDate(tb.bookedDate),
       bookingTime: this.toTimeString(tb.bookingTime),
@@ -510,6 +556,7 @@ export class ShipmentArrivalComponent {
   private store = inject(Store);
   private sanitizer = inject(DomSanitizer);
   private shipmentService = inject(ShipmentService);
+  private warehouseService = inject(WarehouseService);
   private confirmationService = inject(ConfirmationService);
   private messageService = inject(MessageService);
   private notificationService = inject(NotificationService);
@@ -518,12 +565,14 @@ export class ShipmentArrivalComponent {
   private authService = inject(AuthService);
   private rbacService = inject(RbacService);
   private readonly logisticsPermissionMap: Record<LogisticsSectionKey, { view: string; edit: string }> = {
+    portClearance: { view: 'shipment.tab.port_customs.milestone_1.view', edit: 'shipment.tab.port_customs.milestone_1.edit' },
     arrivalNotice: { view: 'shipment.tab.port_customs.milestone_1.view', edit: 'shipment.tab.port_customs.milestone_1.edit' },
     advanceRequest: { view: 'shipment.tab.port_customs.milestone_2.view', edit: 'shipment.tab.port_customs.milestone_2.edit' },
     doReleased: { view: 'shipment.tab.port_customs.milestone_3.view', edit: 'shipment.tab.port_customs.milestone_3.edit' },
     boePassingDate: { view: 'shipment.tab.port_customs.milestone_4.view', edit: 'shipment.tab.port_customs.milestone_4.edit' },
     customsClearance: { view: 'shipment.tab.port_customs.milestone_5.view', edit: 'shipment.tab.port_customs.milestone_5.edit' },
     municipality: { view: 'shipment.tab.port_customs.milestone_6.view', edit: 'shipment.tab.port_customs.milestone_6.edit' },
+    customerInspection: { view: 'shipment.tab.port_customs.milestone_6.view', edit: 'shipment.tab.port_customs.milestone_6.edit' },
     transportation: { view: 'shipment.tab.port_customs.transportation.view', edit: 'shipment.tab.port_customs.transportation.edit' },
   };
 
@@ -562,6 +611,18 @@ export class ShipmentArrivalComponent {
           .map((c) => ({ label: c.name, value: c.name }));
         this.transportCompanyOptions.set(options);
       },
+    });
+
+    // Load warehouse options
+    this.warehouseService.getWarehouses().subscribe((whs) => {
+      const activeWarehouses = whs
+        .filter((w: any) => w.status === 'Active')
+        .map((w: any) => {
+          const codeSuffix = w.code ? ` - ${w.code}` : '';
+          const label = `${w.name}${codeSuffix}`;
+          return { label, value: label };
+        });
+      this.warehouseOptions.set(activeWarehouses);
     });
 
     effect(() => {
@@ -698,13 +759,15 @@ export class ShipmentArrivalComponent {
 
   getLogisticsSectionOrder(section: LogisticsSectionKey): number {
     const order: Record<LogisticsSectionKey, number> = {
+      portClearance: 1,
       arrivalNotice: 1,
       advanceRequest: 2,
-      doReleased: 3,
-      boePassingDate: 4,
-      transportation: 5,
-      municipality: 6,
-      customsClearance: 7,
+      doReleased: 2,
+      boePassingDate: 2,
+      municipality: 2,
+      customerInspection: 2,
+      customsClearance: 3,
+      transportation: 4,
     };
     return order[section] || 99;
   }
@@ -759,7 +822,7 @@ export class ShipmentArrivalComponent {
     this.expandedTransportation.update((cur) => ({ ...cur, [index]: !cur[index] }));
   }
 
-  getFileSignal(kind: Step5DocKind) {
+  getFileSignal(kind: Step5DocKind): ReturnType<typeof signal<Record<number, File | null>>> {
     switch (kind) {
       case 'arrivalNotice':
         return this.arrivalNoticeFile;
@@ -773,6 +836,10 @@ export class ShipmentArrivalComponent {
         return this.customsClearanceFile;
       case 'municipality':
         return this.municipalityFile;
+      case 'portClearance':
+        return this.commercialDocumentFile;
+      case 'customerInspection':
+        return this.customerInspectionFile;
     }
   }
 
@@ -785,7 +852,7 @@ export class ShipmentArrivalComponent {
     this.pendingFileRow = index;
     this.pendingDocKind = kind;
 
-    const refs: Record<Step5DocKind, ElementRef<HTMLInputElement> | undefined> = {
+    const refs: Partial<Record<Step5DocKind, ElementRef<HTMLInputElement> | undefined>> = {
       arrivalNotice: this.arrivalNoticeInputRef,
       advanceRequest: this.advanceRequestInputRef,
       doReleased: this.doReleasedInputRef,
@@ -870,27 +937,31 @@ export class ShipmentArrivalComponent {
   }
 
   getSavedFileUrl(group: AbstractControl, kind: Step5DocKind): string {
-    const map = {
+    const map: Partial<Record<Step5DocKind, string>> = {
       arrivalNotice: 'arrivalNoticeDocumentUrl',
       advanceRequest: 'advanceRequestDocumentUrl',
       doReleased: 'doReleasedDocumentUrl',
       boePassingDate: 'boePassingDocumentUrl',
       customsClearance: 'customsClearanceDocumentUrl',
       municipality: 'municipalityDocumentUrl',
-    } as const;
-    return group.get(map[kind])?.value || '';
+      portClearance: 'commercialDocumentDocumentUrl',
+      customerInspection: 'customerInspectionDocumentUrl',
+    };
+    return group.get(map[kind] ?? '')?.value || '';
   }
 
   getSavedFileName(group: AbstractControl, kind: Step5DocKind): string {
-    const map = {
+    const map: Partial<Record<Step5DocKind, string>> = {
       arrivalNotice: 'arrivalNoticeDocumentName',
       advanceRequest: 'advanceRequestDocumentName',
       doReleased: 'doReleasedDocumentName',
       boePassingDate: 'boePassingDocumentName',
       customsClearance: 'customsClearanceDocumentName',
       municipality: 'municipalityDocumentName',
-    } as const;
-    return group.get(map[kind])?.value || '';
+      portClearance: 'commercialDocumentDocumentName',
+      customerInspection: 'customerInspectionDocumentName',
+    };
+    return group.get(map[kind] ?? '')?.value || '';
   }
 
   openRemoteDocumentPreview(url: string, title: string): void {
@@ -1054,15 +1125,15 @@ export class ShipmentArrivalComponent {
     });
   }
 
-  isSectionSaving(index: number, section: 'arrivalNotice' | 'advanceRequest' | 'doReleased' | 'boePassingDate' | 'customsClearance' | 'municipality' | 'transportation'): boolean {
+  isSectionSaving(index: number, section: LogisticsSectionKey): boolean {
     return this.sectionSavingKey() === `${section}-${index}`;
   }
 
-  private sectionKey(index: number, section: 'arrivalNotice' | 'advanceRequest' | 'doReleased' | 'boePassingDate' | 'customsClearance' | 'municipality' | 'transportation'): string {
+  private sectionKey(index: number, section: LogisticsSectionKey): string {
     return `${index}:${section}`;
   }
 
-  isLogisticsSectionLocked(index: number, section: 'arrivalNotice' | 'advanceRequest' | 'doReleased' | 'boePassingDate' | 'customsClearance' | 'municipality' | 'transportation'): boolean {
+  isLogisticsSectionLocked(index: number, section: LogisticsSectionKey): boolean {
     // If the user has explicit view+edit permission for this section, the row-level
     // submitted lock does not apply — only the section's own save-lock matters.
     const rowLocked = this.hasSectionPermission(section)
@@ -1149,10 +1220,7 @@ export class ShipmentArrivalComponent {
     });
   }
 
-  unlockLogisticsSection(
-    index: number,
-    section: 'arrivalNotice' | 'advanceRequest' | 'doReleased' | 'boePassingDate' | 'customsClearance' | 'municipality' | 'transportation'
-  ): void {
+  unlockLogisticsSection(index: number, section: LogisticsSectionKey): void {
     const rowLocked = this.hasSectionPermission(section) ? false : this.isRowEditLocked(index);
     if (rowLocked || !this.canEditLogisticsSection(section)) return;
     this.lockedSections.update((current) => ({
@@ -1162,7 +1230,7 @@ export class ShipmentArrivalComponent {
     this.applySectionLocks(index);
   }
 
-  async saveLogisticsSection(index: number, section: 'arrivalNotice' | 'advanceRequest' | 'doReleased' | 'boePassingDate' | 'customsClearance' | 'municipality' | 'transportation'): Promise<void> {
+  async saveLogisticsSection(index: number, section: LogisticsSectionKey): Promise<void> {
     const group = this.formArray.at(index);
     const containerId = group?.get('containerId')?.value;
     if (!group || !containerId || !this.canEditLogisticsSection(section) || this.isLogisticsSectionLocked(index, section)) return;
@@ -1220,7 +1288,21 @@ export class ShipmentArrivalComponent {
     payload.append('sectionKey', section);
     payload.append('customClearanceRequired', String(this.isCustomClearanceRequired(index)));
 
-    if (section === 'transportation') {
+    if (section === 'portClearance') {
+      payload.append('commercialDocumentReceivedDate', toDate(group.get('commercialDocumentReceivedDate')?.value));
+      payload.append('arrivalOn', toDate(group.get('arrivalOn')?.value));
+      payload.append('freeDetentionDays', String(group.get('freeDetentionDays')?.value ?? 10));
+      payload.append('freeStorageDays', String(group.get('freeStorageDays')?.value ?? 14));
+      payload.append('clearanceRemarks', group.get('clearanceRemarks')?.value || '');
+      const commercialDoc = this.getCommercialDocumentFile(index);
+      if (commercialDoc) payload.append('commercialDocument', commercialDoc, commercialDoc.name);
+    } else if (section === 'customerInspection') {
+      payload.append('customerInspectionDate', toDate(group.get('customerInspectionDate')?.value));
+      payload.append('customerInspectionStatus', group.get('customerInspectionStatus')?.value || '');
+      payload.append('customerInspectionComments', group.get('customerInspectionComments')?.value || '');
+      const inspectionFile = this.getCustomerInspectionFile(index);
+      if (inspectionFile) payload.append('customerInspectionDocument', inspectionFile, inspectionFile.name);
+    } else if (section === 'transportation') {
       const missingFields = this.validateTransportationSection(group);
       if (missingFields.length) {
         this.messageService.add({
@@ -1240,7 +1322,7 @@ export class ShipmentArrivalComponent {
         });
         return;
       }
-      
+
       // Validate that all transport companies are selected
       const transportationData = transportationRows.getRawValue();
       const missingCompany = transportationData.some((tb: any) => !tb.transportCompanyName || tb.transportCompanyName.trim() === '');
@@ -1252,7 +1334,7 @@ export class ShipmentArrivalComponent {
         });
         return;
       }
-      
+
       this.updateDelayHours(index);
       const transportationBooked = this.buildTransportationBookedPayload(group);
       payload.append('transportationBooked', JSON.stringify(transportationBooked));
@@ -1265,7 +1347,7 @@ export class ShipmentArrivalComponent {
       payload.append('arrivalNoticeFreeRetentionDays', String(group.get('arrivalNoticeFreeRetentionDays')?.value ?? ''));
       const file = this.getFile(index, 'arrivalNotice');
       if (file) payload.append('arrivalNoticeDocument', file, file.name);
-    } else {
+    } else if (['advanceRequest', 'doReleased', 'boePassingDate', 'customsClearance', 'municipality'].includes(section)) {
       const sectionMap = {
         advanceRequest: { date: 'advanceRequestDate', remarks: null, file: 'advanceRequestDocument' },
         doReleased: { date: 'doReleasedDate', remarks: 'doReleasedRemarks', file: 'doReleasedDocument' },
@@ -1273,7 +1355,7 @@ export class ShipmentArrivalComponent {
         customsClearance: { date: 'customsClearanceDate', remarks: 'customsClearanceRemarks', file: 'customsClearanceDocument' },
         municipality: { date: 'municipalityDate', remarks: 'municipalityRemarks', file: 'municipalityDocument' },
       } as const;
-      const config = sectionMap[section];
+      const config = (sectionMap as any)[section] as { date: string; remarks: string | null; file: string };
       payload.append(config.date, toDate(group.get(config.date)?.value));
       if (config.remarks) payload.append(config.remarks, group.get(config.remarks)?.value || '');
       if (section === 'boePassingDate') {
@@ -1290,10 +1372,19 @@ export class ShipmentArrivalComponent {
       if (section === 'municipality') {
         payload.append('municipalityStatus', group.get('municipalityStatus')?.value || 'open');
         payload.append('municipalityStatusComment', group.get('municipalityStatusComment')?.value || '');
+        payload.append('municipalityReleasedDate', toDate(group.get('municipalityReleasedDate')?.value));
+        payload.append('municipalityResponseRemarks', group.get('municipalityResponseRemarks')?.value || '');
+        payload.append('municipalityComments', group.get('municipalityComments')?.value || '');
         const certificate = this.getMunicipalityCertificateFile(index);
         if (certificate) payload.append('municipalityClearanceCertificate', certificate, certificate.name);
       }
-      const file = this.getFile(index, section);
+      if (section === 'doReleased') {
+        payload.append('doRemarks', group.get('doRemarks')?.value || '');
+      }
+      if (section === 'boePassingDate') {
+        payload.append('customerInspectionRequired', String(group.get('customerInspectionRequired')?.value === true));
+      }
+      const file = this.getFile(index, section as Step5DocKind);
       if (file) payload.append(config.file, file, file.name);
     }
 
@@ -1603,6 +1694,8 @@ export class ShipmentArrivalComponent {
     const data = this.shipmentData();
     if (!data?.actual || !this.formArray) return;
 
+    console.log('[DEBUG] syncAllSectionLocks - actualData:', data.actual);
+
     this.lockedSections.update((current) => {
       const next = { ...current };
       data.actual.forEach((actualRow: any, index: number) => {
@@ -1615,6 +1708,76 @@ export class ShipmentArrivalComponent {
           const key = this.sectionKey(index, s);
           next[key] = next[key] ?? locked.includes(s);
         });
+
+        // Sync additionalDocuments if they exist in the API response
+        const existingDocs = actualRow['additionalDocuments'] || [];
+        console.log(`[DEBUG] Row ${index} additionalDocuments from API:`, existingDocs);
+        
+        if (existingDocs.length > 0) {
+          const group = this.formArray.at(index);
+          if (group) {
+            const docArray = this.getAdditionalDocuments(group);
+            const currentDocCount = docArray.length;
+            
+            console.log(`[DEBUG] Row ${index} current FormArray document count:`, currentDocCount);
+            
+            // Only repopulate if the counts don't match (avoid unnecessary updates)
+            if (currentDocCount !== existingDocs.length) {
+              console.log(`[DEBUG] Row ${index} repopulating additionalDocuments FormArray`);
+              docArray.clear();
+              existingDocs.forEach((doc: any) => {
+                docArray.push(new FormGroup({
+                  _id: new FormControl(doc._id || null),
+                  documentType: new FormControl(doc.documentType || 'General'),
+                  description: new FormControl(doc.description || ''),
+                  documentUrl: new FormControl(doc.fileUrl || doc.documentUrl || ''),
+                  documentName: new FormControl(doc.fileName || doc.documentName || ''),
+                  uploadedOn: new FormControl(doc.uploadedAt ? new Date(doc.uploadedAt) : new Date()),
+                  uploadedBy: new FormControl(doc.uploadedBy || 'System User'),
+                }));
+              });
+            }
+          }
+        }
+
+        // Sync warehouse field in transportation rows if they exist
+        const transportationBooked = actualRow['transportationBooked'] || [];
+        console.log(`[DEBUG] Row ${index} transportationBooked from API:`, transportationBooked);
+        
+        if (transportationBooked.length > 0) {
+          const group = this.formArray.at(index);
+          if (group) {
+            const transportationRows = this.getTransportationRows(group);
+            console.log(`[DEBUG] Row ${index} transportation FormArray row count:`, transportationRows.length);
+            
+            transportationRows.controls.forEach((row, rowIndex) => {
+              const saved = transportationBooked[rowIndex];
+              if (saved) {
+                const currentWarehouse = row.get('warehouse')?.value;
+                const apiWarehouse = saved.warehouse || '';
+                
+                console.log(`[DEBUG] Row ${index} Container ${rowIndex} - Current warehouse: "${currentWarehouse}", API warehouse: "${apiWarehouse}"`);
+                
+                // Patch all transportation fields to ensure they're in sync
+                if (currentWarehouse !== apiWarehouse || !row.get('transportCompanyName')?.value) {
+                  console.log(`[DEBUG] Row ${index} Container ${rowIndex} - Patching transportation data`);
+                  row.patchValue({
+                    transportCompanyName: saved.transportCompanyName || '',
+                    warehouse: apiWarehouse,
+                    bookedDate: saved.bookedDate ? new Date(saved.bookedDate) : row.get('bookedDate')?.value,
+                    bookingTime: saved.bookingTime || row.get('bookingTime')?.value,
+                    transportDate: saved.transportDate ? new Date(saved.transportDate) : row.get('transportDate')?.value,
+                    transportTime: saved.transportTime || row.get('transportTime')?.value,
+                    delayHours: saved.delayHours ?? row.get('delayHours')?.value ?? 0,
+                    storageStartDate: saved.storageStartDate ? new Date(saved.storageStartDate) : row.get('storageStartDate')?.value,
+                    storageEndDate: saved.storageEndDate ? new Date(saved.storageEndDate) : row.get('storageEndDate')?.value,
+                    tokenReceivedDate: saved.tokenReceivedDate ? new Date(saved.tokenReceivedDate) : row.get('tokenReceivedDate')?.value,
+                  }, { emitEvent: false });
+                }
+              }
+            });
+          }
+        }
       });
       return next;
     });
@@ -1668,9 +1831,33 @@ export class ShipmentArrivalComponent {
     }
   }
 
-  private patchSavedSection(index: number, section: Step5DocKind | 'transportation', actual: any): void {
+  private patchSavedSection(index: number, section: LogisticsSectionKey, actual: any): void {
     const group = this.formArray.at(index) as AbstractControl | null;
     if (!group) return;
+
+    if (section === 'portClearance') {
+      group.patchValue({
+        commercialDocumentReceivedDate: actual.commercialDocumentReceivedDate ? new Date(actual.commercialDocumentReceivedDate) : null,
+        commercialDocumentDocumentUrl: actual.commercialDocumentDocumentUrl || '',
+        commercialDocumentDocumentName: actual.commercialDocumentDocumentName || '',
+        arrivalOn: actual.arrivalOn ? new Date(actual.arrivalOn) : null,
+        freeDetentionDays: actual.freeDetentionDays ?? 10,
+        freeStorageDays: actual.freeStorageDays ?? 14,
+        clearanceRemarks: actual.clearanceRemarks || '',
+      }, { emitEvent: false });
+      return;
+    }
+
+    if (section === 'customerInspection') {
+      group.patchValue({
+        customerInspectionDate: actual.customerInspectionDate ? new Date(actual.customerInspectionDate) : null,
+        customerInspectionDocumentUrl: actual.customerInspectionDocumentUrl || '',
+        customerInspectionDocumentName: actual.customerInspectionDocumentName || '',
+        customerInspectionStatus: actual.customerInspectionStatus || '',
+        customerInspectionComments: actual.customerInspectionComments || '',
+      }, { emitEvent: false });
+      return;
+    }
 
     if (section === 'arrivalNotice') {
       group.patchValue({
@@ -1695,6 +1882,7 @@ export class ShipmentArrivalComponent {
         if (!saved) return;
         row.patchValue({
           transportCompanyName: saved.transportCompanyName || '',
+          warehouse: saved.warehouse || '',
           bookedDate: saved.bookedDate ? new Date(saved.bookedDate) : null,
           bookingTime: saved.bookingTime || '',
           transportDate: saved.transportDate ? new Date(saved.transportDate) : null,
@@ -1717,6 +1905,7 @@ export class ShipmentArrivalComponent {
       doReleased: {
         doReleasedDate: actual.doReleasedDate ? new Date(actual.doReleasedDate) : null,
         doReleasedRemarks: actual.doReleasedRemarks || '',
+        doRemarks: actual.doRemarks || '',
         doReleasedDocumentUrl: actual.doReleasedDocumentUrl || '',
         doReleasedDocumentName: actual.doReleasedDocumentName || '',
       },
@@ -1729,6 +1918,7 @@ export class ShipmentArrivalComponent {
         dpInvoiceDocumentUrl: actual.dpInvoiceDocumentUrl || '',
         dpInvoiceDocumentName: actual.dpInvoiceDocumentName || '',
         dpwCargoExtraction: actual.dpwCargoExtraction || null,
+        customerInspectionRequired: actual.customerInspectionRequired === true,
       },
       customsClearance: {
         customsClearanceDate: actual.customsClearanceDate ? new Date(actual.customsClearanceDate) : null,
@@ -1754,13 +1944,32 @@ export class ShipmentArrivalComponent {
         municipalityDocumentName: actual.municipalityDocumentName || '',
         municipalityStatus: actual.municipalityStatus || 'open',
         municipalityStatusComment: actual.municipalityStatusComment || '',
+        municipalityReleasedDate: actual.municipalityReleasedDate ? new Date(actual.municipalityReleasedDate) : null,
+        municipalityResponseRemarks: actual.municipalityResponseRemarks || '',
+        municipalityComments: actual.municipalityComments || '',
         municipalityClearanceCertificateUrl: actual.municipalityClearanceCertificateUrl || '',
         municipalityClearanceCertificateName: actual.municipalityClearanceCertificateName || '',
+      },
+      customerInspection: {
+        customerInspectionDate: actual.customerInspectionDate ? new Date(actual.customerInspectionDate) : null,
+        customerInspectionDocumentUrl: actual.customerInspectionDocumentUrl || '',
+        customerInspectionDocumentName: actual.customerInspectionDocumentName || '',
+        customerInspectionStatus: actual.customerInspectionStatus || '',
+        customerInspectionComments: actual.customerInspectionComments || '',
+      },
+      portClearance: {
+        commercialDocumentReceivedDate: actual.commercialDocumentReceivedDate ? new Date(actual.commercialDocumentReceivedDate) : null,
+        commercialDocumentDocumentUrl: actual.commercialDocumentDocumentUrl || '',
+        commercialDocumentDocumentName: actual.commercialDocumentDocumentName || '',
+        arrivalOn: actual.arrivalOn ? new Date(actual.arrivalOn) : null,
+        freeDetentionDays: actual.freeDetentionDays ?? 10,
+        freeStorageDays: actual.freeStorageDays ?? 14,
+        clearanceRemarks: actual.clearanceRemarks || '',
       },
     };
 
     if (section in patchBySection) {
-      group.patchValue(patchBySection[section as Exclude<Step5DocKind, 'arrivalNotice'>], { emitEvent: false });
+      group.patchValue((patchBySection as any)[section], { emitEvent: false });
     }
   }
 
@@ -1832,6 +2041,7 @@ export class ShipmentArrivalComponent {
     this.bulkDateRowIndex.set(index);
     this.bulkDateForm.reset({
       transportCompanyName: null,
+      warehouse: null,
       bookedDate: new Date(currentDate),
       bookingTime: new Date(currentTime),
       transportDate: new Date(currentDate),
@@ -1902,6 +2112,7 @@ export class ShipmentArrivalComponent {
     const patch: Record<string, string | Date> = {};
     const company = String(values.transportCompanyName || '').trim();
     if (company) patch['transportCompanyName'] = company;
+    if ((values as any).warehouse) patch['warehouse'] = (values as any).warehouse;
     if (values.bookedDate) patch['bookedDate'] = values.bookedDate;
     if (values.bookingTime) patch['bookingTime'] = values.bookingTime;
     if (values.transportDate) patch['transportDate'] = values.transportDate;
@@ -2058,5 +2269,286 @@ export class ShipmentArrivalComponent {
       coo: 'customsDocCooName',
     };
     return group.get(map[docType])?.value || '';
+  }
+
+  // ========== Customer Inspection Methods ==========
+
+  clickCustomerInspectionFileInput(index: number): void {
+    if (this.isRowEditLocked(index) || this.isLogisticsSectionLocked(index, 'municipality')) return;
+    this.pendingFileRow = index;
+    this.pendingDocKind = 'arrivalNotice';
+  }
+
+  onCustomerInspectionFileInputChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    const row = this.pendingFileRow;
+    if (row !== null && file) {
+      this.customerInspectionFile.update((cur) => ({ ...cur, [row]: file }));
+    }
+    this.pendingFileRow = null;
+    input.value = '';
+  }
+
+  getCustomerInspectionFile(containerIndex: number): File | null {
+    return this.customerInspectionFile()?.[containerIndex] ?? null;
+  }
+
+  clearCustomerInspectionFile(containerIndex: number): void {
+    this.customerInspectionFile.update((cur) => ({ ...cur, [containerIndex]: null }));
+  }
+
+  onCustomerInspectionFileSelected(event: Event, containerIndex: number): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (file) {
+      this.customerInspectionFile.update((cur) => ({ ...cur, [containerIndex]: file }));
+    }
+    input.value = '';
+  }
+
+  getSavedCustomerInspectionUrl(group: AbstractControl): string {
+    return group.get('customerInspectionDocumentUrl')?.value || '';
+  }
+
+  getSavedCustomerInspectionName(group: AbstractControl): string {
+    return group.get('customerInspectionDocumentName')?.value || '';
+  }
+
+  isCustomerInspectionRequired(index: number): boolean {
+    return this.formArray.at(index)?.get('customerInspectionRequired')?.value === true;
+  }
+
+  // ========== Repository Documents Methods ==========
+
+  getAdditionalDocuments(group: AbstractControl): FormArray {
+    return group.get('additionalDocuments') as FormArray;
+  }
+
+  getRepositoryDocumentsCount(group: AbstractControl): number {
+    return this.getAdditionalDocuments(group)?.length || 0;
+  }
+
+  deleteRepositoryDocument(index: number, docIndex: number): void {
+    const group = this.formArray.at(index);
+    const containerId = group?.get('containerId')?.value;
+    if (!containerId || !group) return;
+
+    const docArray = this.getAdditionalDocuments(group);
+    const doc = docArray.at(docIndex);
+    if (!doc) return;
+
+    const docId = doc.get('_id')?.value || doc.get('id')?.value;
+    if (!docId) {
+      docArray.removeAt(docIndex);
+      return;
+    }
+
+    this.confirmDialog.ask({
+      message: 'Delete this document from the repository?',
+      header: 'Confirm Delete',
+      acceptLabel: 'Yes, Delete',
+    }).then((confirmed) => {
+      if (!confirmed) return;
+      this.shipmentService.deleteAdditionalRepositoryDocument(containerId, docId).subscribe({
+        next: (response) => {
+          docArray.removeAt(docIndex);
+          const actual = response?.container?.actual;
+          if (actual) {
+            this.store.dispatch(ShipmentActions.patchActualContainerData({ containerId, actual }));
+          }
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Document Deleted',
+            detail: 'Document removed from repository successfully.',
+          });
+        },
+        error: (err) => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Delete Failed',
+            detail: err?.error?.message || 'Could not delete document.',
+          });
+        }
+      });
+    });
+  }
+
+  uploadRepositoryDocument(index: number, file: File): void {
+    const group = this.formArray.at(index);
+    const containerId = group?.get('containerId')?.value;
+    if (!containerId || !group || !file) return;
+
+    this.uploadingRepositoryDocument.set(true);
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    formData.append('documentType', 'general');
+    formData.append('description', file.name);
+
+    this.shipmentService.uploadAdditionalRepositoryDocument(containerId, formData).subscribe({
+      next: (response) => {
+        this.uploadingRepositoryDocument.set(false);
+        const actual = response?.container?.actual;
+        const docs: any[] = actual?.additionalDocuments || [];
+        const newDoc = docs[docs.length - 1];
+        const docArray = this.getAdditionalDocuments(group);
+        if (newDoc) {
+          docArray.push(new FormGroup({
+            _id: new FormControl(newDoc._id || null),
+            documentType: new FormControl(newDoc.documentType || 'general'),
+            description: new FormControl(newDoc.description || file.name),
+            documentUrl: new FormControl(newDoc.fileUrl || newDoc.documentUrl || ''),
+            documentName: new FormControl(newDoc.fileName || newDoc.documentName || file.name),
+            uploadedOn: new FormControl(new Date(newDoc.uploadedAt || new Date())),
+            uploadedBy: new FormControl(newDoc.uploadedBy || 'System User'),
+          }));
+        }
+        if (actual) {
+          this.store.dispatch(ShipmentActions.patchActualContainerData({ containerId, actual }));
+        }
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Document Uploaded',
+          detail: 'Document added to repository successfully.',
+        });
+      },
+      error: (err) => {
+        this.uploadingRepositoryDocument.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Upload Failed',
+          detail: err?.error?.message || 'Could not upload document.',
+        });
+      }
+    });
+  }
+
+  // ========== Commercial Document Methods ==========
+
+  getCommercialDocumentFile(index: number): File | null {
+    return this.commercialDocumentFile()[index] ?? null;
+  }
+
+  onCommercialDocumentSelected(event: Event, index: number): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (file) {
+      this.commercialDocumentFile.update((cur) => ({ ...cur, [index]: file }));
+    }
+    input.value = '';
+  }
+
+  clearCommercialDocumentFile(index: number): void {
+    this.commercialDocumentFile.update((cur) => ({ ...cur, [index]: null }));
+  }
+
+  // ========== Transportation Transaction Methods ==========
+
+  getTransportationTransactions(group: AbstractControl): FormArray {
+    return group.get('transportationTransactions') as FormArray;
+  }
+
+  openNewTransactionDialog(index: number): void {
+    this.newTransactionRowIndex.set(index);
+    this.newTransactionForm.reset({ containerSerials: '', transportCompany: null, warehouse: null, transportDate: null });
+    this.newTransactionDialogVisible.set(true);
+    this.warehouseService.getWarehouses().subscribe((whs) => {
+      const activeWarehouses = whs
+        .filter((w: any) => w.status === 'Active')
+        .map((w: any) => {
+          const codeSuffix = w.code ? ` - ${w.code}` : '';
+          const label = `${w.name}${codeSuffix}`;
+          return { label, value: label };
+        });
+      this.warehouseOptions.set(activeWarehouses);
+    });
+  }
+
+  closeNewTransactionDialog(): void {
+    this.newTransactionDialogVisible.set(false);
+    this.newTransactionRowIndex.set(null);
+    this.newTransactionForm.reset();
+  }
+
+  saveNewTransaction(): void {
+    const index = this.newTransactionRowIndex();
+    if (index === null) return;
+    const group = this.formArray.at(index);
+    const containerId = group?.get('containerId')?.value;
+    if (!containerId) {
+      this.messageService.add({ severity: 'warn', summary: 'No Container', detail: 'Container ID is missing.' });
+      return;
+    }
+    const val = this.newTransactionForm.value;
+    if (!val.transportCompany || !val.warehouse || !val.transportDate) {
+      this.messageService.add({ severity: 'warn', summary: 'Required Fields', detail: 'Please fill Transport Company, Warehouse and Transport Date.' });
+      return;
+    }
+    const serials = (val.containerSerials || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+    if (serials.length === 0) {
+      this.messageService.add({ severity: 'warn', summary: 'Required Fields', detail: 'Please enter at least one container serial.' });
+      return;
+    }
+    this.savingTransaction.set(true);
+    const payload = {
+      containerSerials: serials,
+      transportCompany: val.transportCompany!,
+      warehouse: val.warehouse!,
+      transportDate: (val.transportDate as Date).toISOString(),
+    };
+    this.shipmentService.createTransportationTransaction(containerId, payload).subscribe({
+      next: (res) => {
+        this.savingTransaction.set(false);
+        const txn = res.transaction;
+        const txnArray = this.getTransportationTransactions(group);
+        txnArray.push(new FormGroup({
+          _id: new FormControl(txn._id || null),
+          transactionNo: new FormControl(txn.transactionNo || ''),
+          containerSerials: new FormControl(txn.containerSerials || []),
+          transportCompany: new FormControl(txn.transportCompany || ''),
+          warehouse: new FormControl(txn.warehouse || ''),
+          transportDate: new FormControl(txn.transportDate ? new Date(txn.transportDate) : null),
+          createdAt: new FormControl(txn.createdAt ? new Date(txn.createdAt) : new Date()),
+        }));
+        this.closeNewTransactionDialog();
+        this.messageService.add({ severity: 'success', summary: 'Transaction Created', detail: `Transaction ${txn.transactionNo} created.` });
+      },
+      error: (err) => {
+        this.savingTransaction.set(false);
+        this.messageService.add({ severity: 'error', summary: 'Failed', detail: err?.error?.message || 'Could not create transaction.' });
+      }
+    });
+  }
+
+  deleteTransaction(index: number, txnIndex: number): void {
+    const group = this.formArray.at(index);
+    const containerId = group?.get('containerId')?.value;
+    if (!containerId) return;
+    const txnArray = this.getTransportationTransactions(group);
+    const txn = txnArray.at(txnIndex);
+    const txnId = txn?.get('_id')?.value;
+    if (!txnId) {
+      txnArray.removeAt(txnIndex);
+      return;
+    }
+    this.confirmDialog.ask({
+      message: 'Delete this transportation transaction?',
+      header: 'Confirm Delete',
+      acceptLabel: 'Yes, Delete',
+    }).then((confirmed) => {
+      if (!confirmed) return;
+      this.deletingTransactionId.set(txnId);
+      this.shipmentService.deleteTransportationTransaction(containerId, txnId).subscribe({
+        next: () => {
+          this.deletingTransactionId.set(null);
+          txnArray.removeAt(txnIndex);
+          this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Transportation transaction deleted.' });
+        },
+        error: (err) => {
+          this.deletingTransactionId.set(null);
+          this.messageService.add({ severity: 'error', summary: 'Delete Failed', detail: err?.error?.message || 'Could not delete transaction.' });
+        }
+      });
+    });
   }
 }

@@ -20,6 +20,7 @@ import { SelectModule } from 'primeng/select';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { TabsModule } from 'primeng/tabs';
 import { DialogModule } from 'primeng/dialog';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { ShipmentPaymentCostingComponent } from '../shipment-payment-costing/shipment-payment-costing.component';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -50,6 +51,7 @@ import {
     InputTextModule,
     SelectButtonModule,
     SelectModule,
+    MultiSelectModule,
     ToggleSwitchModule,
     TabsModule,
     DialogModule,
@@ -114,6 +116,10 @@ export class ShipmentBlDetailsComponent {
     requestAmount: null as number | null,
   });
   readonly additionalRequestFiles = signal<Record<number, File | null>>({});
+  readonly yesNoOptions = [
+    { label: 'Yes', value: true },
+    { label: 'No', value: false }
+  ];
   readonly paymentToOptions = [
     { label: 'MOFA', value: 'MOFA' },
     { label: 'Shipping line', value: 'Shipping line' },
@@ -155,6 +161,18 @@ export class ShipmentBlDetailsComponent {
     if (!url || this.previewIsImage()) return null;
     return this.sanitizer.bypassSecurityTrustResourceUrl(url);
   });
+
+  readonly collapsedItems = signal<Record<string, boolean>>({});
+
+  toggleItemCollapse(shipmentIndex: number, itemIdx: number): void {
+    const key = `${shipmentIndex}-${itemIdx}`;
+    this.collapsedItems.update((cur) => ({ ...cur, [key]: !cur[key] }));
+  }
+
+  isItemCollapsed(shipmentIndex: number, itemIdx: number): boolean {
+    const key = `${shipmentIndex}-${itemIdx}`;
+    return !!this.collapsedItems()[key];
+  }
 
   constructor() {
     this.warehouseService.getWarehouses().subscribe({
@@ -291,6 +309,10 @@ export class ShipmentBlDetailsComponent {
         similarItems: savedDecision.similarItems ?? true,
         splitRequired: savedDecision.splitRequired ?? false,
         splitQuantity: Number(savedDecision.splitQuantity ?? actual.storageAllocationSplits?.length ?? 1) || 1,
+        singleItem: savedDecision.singleItem ?? true,
+        allocateSameWarehouse: savedDecision.allocateSameWarehouse ?? true,
+        warehousesSelected: savedDecision.warehousesSelected || [],
+        itemAllocations: savedDecision.itemAllocations || [],
       }, { emitEvent: false });
     }
 
@@ -681,6 +703,126 @@ export class ShipmentBlDetailsComponent {
       }
       control.patchValue(patch, { emitEvent: false });
     });
+  }
+
+  onSingleItemChange(group: AbstractControl, value: boolean, shipmentIndex: number): void {
+    const decision = this.getStorageDecision(group);
+    decision.patchValue({ singleItem: value }, { emitEvent: false });
+    this.syncItemAllocations(shipmentIndex);
+  }
+
+  onAllocateSameWarehouseChange(group: AbstractControl, value: boolean, shipmentIndex: number): void {
+    const decision = this.getStorageDecision(group);
+    decision.patchValue({ allocateSameWarehouse: value }, { emitEvent: false });
+    decision.patchValue({ warehousesSelected: [] }, { emitEvent: false });
+    this.syncItemAllocations(shipmentIndex);
+  }
+
+  onWarehouseSelectedChange(group: AbstractControl, value: string, shipmentIndex: number): void {
+    const decision = this.getStorageDecision(group);
+    decision.patchValue({ warehousesSelected: value ? [value] : [] }, { emitEvent: false });
+    this.syncItemAllocations(shipmentIndex);
+  }
+
+  onWarehousesSelectedChange(group: AbstractControl, value: string[], shipmentIndex: number): void {
+    const decision = this.getStorageDecision(group);
+    decision.patchValue({ warehousesSelected: value || [] }, { emitEvent: false });
+    this.syncItemAllocations(shipmentIndex);
+  }
+
+  syncItemAllocations(index: number): void {
+    const row = this.formArray.at(index);
+    if (!row) return;
+    const decisionGroup = this.getStorageDecision(row);
+    const decision = decisionGroup.getRawValue();
+
+    const shipment = this.shipmentData()?.shipment as any;
+    const lineItems = Array.isArray(shipment?.lineItems) ? shipment.lineItems : [];
+    const totalExpected = Number(this.shipmentData()?.shipment?.assumedContainerCount || 0);
+
+    let items: Array<{ itemName: string; expectedContainers: number }> = [];
+    if (decision.singleItem) {
+      const fallbackItem = shipment?.itemDescription || shipment?.item || 'Similar Item Set';
+      items = [{ itemName: fallbackItem, expectedContainers: totalExpected }];
+    } else {
+      items = lineItems.map((li: any) => ({
+        itemName: li.itemDescription || li.itemName || li.item || 'Similar Item Set',
+        expectedContainers: Number(li.plannedContainers || li.quantity || 0)
+      }));
+    }
+
+    const currentAllocations = decision.itemAllocations || [];
+    const warehouses = decision.warehousesSelected || [];
+
+    const newItemAllocations = items.map((item) => {
+      const existing = currentAllocations.find((ca: any) => ca.itemName === item.itemName);
+      const allocations = warehouses.map((wh: string) => {
+        const existingAlloc = existing?.allocations?.find((a: any) => a.warehouse === wh);
+        return {
+          warehouse: wh,
+          containersAssigned: existingAlloc ? Number(existingAlloc.containersAssigned || 0) : 0
+        };
+      });
+
+      if (warehouses.length === 1 && allocations.length === 1) {
+        allocations[0].containersAssigned = item.expectedContainers;
+      }
+
+      return {
+        itemName: item.itemName,
+        expectedContainers: item.expectedContainers,
+        allocations
+      };
+    });
+
+    decisionGroup.patchValue({
+      itemAllocations: newItemAllocations
+    }, { emitEvent: false });
+  }
+
+  getWarehouseCount(group: AbstractControl): number {
+    const decision = this.getStorageDecision(group);
+    return Array.isArray(decision.get('warehousesSelected')?.value) ? decision.get('warehousesSelected')?.value.length : 0;
+  }
+
+  getItemAllocationTotal(itemRow: any): number {
+    const allocations = Array.isArray(itemRow?.allocations) ? itemRow.allocations : [];
+    return allocations.reduce((sum: number, a: any) => sum + (Number(a.containersAssigned) || 0), 0);
+  }
+
+  getAllItemsAllocationTotal(group: AbstractControl): number {
+    const itemAllocations = this.getStorageDecision(group).get('itemAllocations')?.value || [];
+    return itemAllocations.reduce((sum: number, item: any) => sum + this.getItemAllocationTotal(item), 0);
+  }
+
+  onItemAllocationSpinnerChange(group: AbstractControl, itemIndex: number, warehouse: string, value: number, index: number): void {
+    const decisionGroup = this.getStorageDecision(group);
+    const decision = decisionGroup.getRawValue();
+    const itemAllocations = JSON.parse(JSON.stringify(decision.itemAllocations || []));
+
+    if (itemAllocations[itemIndex]) {
+      const alloc = itemAllocations[itemIndex].allocations.find((a: any) => a.warehouse === warehouse);
+      if (alloc) {
+        alloc.containersAssigned = Math.max(0, Math.floor(value || 0));
+      }
+    }
+
+    decisionGroup.patchValue({ itemAllocations }, { emitEvent: false });
+  }
+
+  getStorageAllocationTotalExpected(group: AbstractControl): number {
+    const decision = this.getStorageDecision(group).getRawValue();
+    const itemAllocations = decision.itemAllocations || [];
+    return itemAllocations.reduce((sum: number, item: any) => sum + (Number(item.expectedContainers) || 0), 0);
+  }
+
+  getStorageAllocationTotalAssigned(group: AbstractControl): number {
+    const decision = this.getStorageDecision(group).getRawValue();
+    const itemAllocations = decision.itemAllocations || [];
+    return itemAllocations.reduce((sum: number, item: any) => {
+      const allocations = Array.isArray(item.allocations) ? item.allocations : [];
+      return sum + allocations.reduce((s: number, a: any) => s + (Number(a.containersAssigned) || 0), 0);
+    }, 0);
   }
 
   onStorageSplitRequiredChange(group: AbstractControl, checked: boolean, shipmentIndex: number): void {
@@ -1860,6 +2002,34 @@ export class ShipmentBlDetailsComponent {
       return;
     }
 
+    const decisionGroup = this.getStorageDecision(row);
+    const decision = decisionGroup.getRawValue();
+
+    if (decision.allocateSameWarehouse) {
+      if (!decision.warehousesSelected || !decision.warehousesSelected.length) {
+        this.notificationService.error('Validation Error', 'Warehouse must be selected.');
+        return;
+      }
+    } else {
+      if (!decision.warehousesSelected || decision.warehousesSelected.length < 2) {
+        this.notificationService.error('Validation Error', 'Select at least 2 warehouses for multi-warehouse allocation.');
+        return;
+      }
+
+      // Validate item allocations sum matches expected
+      const itemAllocations = decision.itemAllocations || [];
+      for (const item of itemAllocations) {
+        const totalAssigned = this.getItemAllocationTotal(item);
+        if (totalAssigned !== item.expectedContainers) {
+          this.notificationService.error(
+            'Validation Error',
+            `Total assigned for ${item.itemName} (${totalAssigned}) does not match expected count (${item.expectedContainers}).`
+          );
+          return;
+        }
+      }
+    }
+
     const confirmed = await this.confirmDialog.ask({
       message: `Save storage allocations for Shipment ${index + 1}?`,
       header: 'Save Storage Allocation',
@@ -1867,43 +2037,99 @@ export class ShipmentBlDetailsComponent {
     });
     if (!confirmed) return;
 
-    const decisionGroup = this.getStorageDecision(row);
-    const decision = decisionGroup.getRawValue();
-    const splitRequired = !!decision.splitRequired;
-    const splitQuantity = Math.max(0, Math.floor(Number(decision.splitQuantity) || 0));
-    this.syncStorageSplitRows(row, splitRequired ? splitQuantity : 0, !!decision.similarItems, index);
+    // Distribute warehouses to individual container rows in storageAllocations FormArray
+    const storageAllocationsArray = this.getStorageRows(row);
+    if (decision.allocateSameWarehouse) {
+      const targetWarehouse = decision.warehousesSelected[0] || '';
+      storageAllocationsArray.controls.forEach((control) => {
+        control.patchValue({ warehouse: targetWarehouse }, { emitEvent: false });
+      });
+    } else {
+      const itemAllocations = decision.itemAllocations || [];
+      const flatAllocationsList: Array<{ warehouse: string; count: number }> = [];
+      itemAllocations.forEach((item: any) => {
+        item.allocations.forEach((a: any) => {
+          if (a.containersAssigned > 0) {
+            flatAllocationsList.push({
+              warehouse: a.warehouse,
+              count: Number(a.containersAssigned)
+            });
+          }
+        });
+      });
 
-    const splitRows = this.getStorageSplitRows(row).getRawValue().map((entry: any, rowIndex: number) => ({
-      sn: rowIndex + 1,
-      itemName: String(entry?.itemName || '').trim(),
-      quantity: Number(entry?.quantity) || 0,
-    }));
+      let currentAllocIndex = 0;
+      let currentAllocUsed = 0;
 
-    if (splitRequired && splitQuantity <= 0) {
-      this.notificationService.error('Required Fields Missing', 'Split Quantity is required when split is enabled.');
-      return;
+      storageAllocationsArray.controls.forEach((control) => {
+        if (currentAllocIndex < flatAllocationsList.length) {
+          const currentAlloc = flatAllocationsList[currentAllocIndex];
+          control.patchValue({ warehouse: currentAlloc.warehouse }, { emitEvent: false });
+          currentAllocUsed++;
+          if (currentAllocUsed >= currentAlloc.count) {
+            currentAllocIndex++;
+            currentAllocUsed = 0;
+          }
+        }
+      });
     }
 
-    if (splitRequired) {
-      const invalidRows = splitRows.filter((entry: any) =>
-        !entry.itemName ||
-        !entry.quantity ||
-        entry.quantity <= 0
-      );
-      if (invalidRows.length) {
-        this.notificationService.error('Required Fields Missing', 'Item Name and Quantity are required for all split rows.');
-        return;
+    // Build splits array
+    const splitRows: Array<{ sn: number; itemName: string; quantity: number; warehouse: string }> = [];
+    if (decision.allocateSameWarehouse) {
+      const targetWarehouse = decision.warehousesSelected[0];
+      const shipment = this.shipmentData()?.shipment as any;
+      const lineItems = Array.isArray(shipment?.lineItems) ? shipment.lineItems : [];
+      const totalExpected = Number(shipment?.assumedContainerCount || 1);
+
+      if (decision.singleItem) {
+        const itemName = shipment?.itemDescription || shipment?.item || 'Similar Item Set';
+        splitRows.push({
+          sn: 1,
+          itemName,
+          quantity: totalExpected,
+          warehouse: targetWarehouse
+        });
+      } else {
+        lineItems.forEach((li: any, idx: number) => {
+          splitRows.push({
+            sn: idx + 1,
+            itemName: li.itemDescription || li.itemName || li.item || 'Similar Item Set',
+            quantity: Number(li.plannedContainers || li.quantity || 1),
+            warehouse: targetWarehouse
+          });
+        });
       }
+    } else {
+      const itemAllocations = decision.itemAllocations || [];
+      let sn = 1;
+      itemAllocations.forEach((item: any) => {
+        item.allocations.forEach((a: any) => {
+          if (a.containersAssigned > 0) {
+            splitRows.push({
+              sn: sn++,
+              itemName: item.itemName,
+              quantity: Number(a.containersAssigned),
+              warehouse: a.warehouse
+            });
+          }
+        });
+      });
     }
 
     this.savingKey.set(`storage-${index}`);
     const formData = new FormData();
     formData.append('storageAllocationDecision', JSON.stringify({
       similarItems: !!decision.similarItems,
-      splitRequired,
-      splitQuantity: splitRequired ? splitQuantity : 0,
+      splitRequired: !decision.allocateSameWarehouse || !decision.singleItem,
+      splitQuantity: splitRows.length,
+      singleItem: !!decision.singleItem,
+      allocateSameWarehouse: !!decision.allocateSameWarehouse,
+      warehousesSelected: decision.warehousesSelected || [],
+      itemAllocations: decision.itemAllocations || [],
     }));
-    formData.append('storageAllocationSplits', JSON.stringify(splitRequired ? splitRows : []));
+    formData.append('storageAllocationSplits', JSON.stringify(splitRows));
+    formData.append('storageAllocations', JSON.stringify(storageAllocationsArray.getRawValue()));
 
     this.shipmentService.submitBLDetails(containerId, formData).subscribe({
       next: (response) => {

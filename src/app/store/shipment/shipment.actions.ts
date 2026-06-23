@@ -138,5 +138,11 @@ export const submitGRNFailure = createAction(
   props<{ error: string }>()
 );
 
+// --- Patch actual container data in store (after logistics section save) ---
+export const patchActualContainerData = createAction(
+  '[Shipment Form] Patch Actual Container Data',
+  props<{ containerId: string; actual: any }>()
+);
+
 // --- Reset ---
 export const resetShipmentFormState = createAction('[Shipment Form] Reset State');
