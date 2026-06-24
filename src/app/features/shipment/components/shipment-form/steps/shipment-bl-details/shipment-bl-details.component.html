@@ -667,6 +667,10 @@
                       </span>
                     </div>
                     <div class="flex items-center gap-2">
+                      <span class="inline-flex h-10 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 whitespace-nowrap">
+                        <i class="pi pi-box text-[10px] text-slate-400"></i>
+                        Expected: <span class="font-black text-slate-800 ml-0.5">{{ getTotalExtractedContainerCount(i) }}</span>&nbsp;containers
+                      </span>
                     @if (canEditStorageAllocations(i)) {
                       <button
                         type="button"

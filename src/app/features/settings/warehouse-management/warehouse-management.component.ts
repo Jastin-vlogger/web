@@ -9,6 +9,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { SelectModule } from 'primeng/select';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { AccordionModule } from 'primeng/accordion';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { WarehouseService, Warehouse, WarehouseBlock, WarehouseStorekeeperOption } from '../../../core/services/warehouse.service';
 import { RouterLink, RouterLinkActive } from '@angular/router';
@@ -32,6 +33,7 @@ import { RbacService } from '../../../core/services/rbac.service';
     SelectModule,
     ToastModule,
     ConfirmDialogModule,
+    AccordionModule,
   ],
   providers: [MessageService, ConfirmationService],
   template: `
@@ -144,48 +146,64 @@ import { RbacService } from '../../../core/services/rbac.service';
             </tr>
             <!-- Inline blocks expansion row -->
             @if (isBlocksExpanded(warehouse._id)) {
-            <tr class="bg-slate-50/80 border-b border-slate-100">
+            <tr class="bg-slate-50/60 border-b border-slate-100">
               <td colspan="6" class="px-6 pb-4 pt-2">
-                <div class="flex flex-col gap-2">
-                  <div class="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1">Blocks — {{ warehouse.name }}</div>
-                  <div class="flex flex-wrap gap-2">
-                    @for (block of (warehouse.blocks || []); track block._id) {
-                      <div class="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm">
-                        <i class="pi pi-box text-[10px] text-slate-400"></i>
-                        {{ block.name }}
+                <p-accordion styleClass="w-full">
+                  <p-accordion-panel value="blocks">
+                    <p-accordion-header>
+                      <div class="flex items-center gap-2">
+                        <i class="pi pi-boxes text-[11px] text-slate-500"></i>
+                        <span class="text-[11px] font-black uppercase tracking-wider text-slate-700">
+                          Blocks — {{ warehouse.name }}
+                        </span>
+                        <span class="ml-1 inline-flex items-center justify-center rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                          {{ warehouse.blocks?.length || 0 }}
+                        </span>
+                      </div>
+                    </p-accordion-header>
+                    <p-accordion-content>
+                      <div class="flex flex-col gap-3 pt-1">
+                        <div class="flex flex-wrap gap-2">
+                          @for (block of (warehouse.blocks || []); track block._id) {
+                            <div class="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm">
+                              <i class="pi pi-box text-[10px] text-slate-400"></i>
+                              {{ block.name }}
+                              @if (canEditWarehouses()) {
+                                <button
+                                  type="button"
+                                  (click)="removeBlock(warehouse, block)"
+                                  class="ml-1 text-red-400 hover:text-red-600 transition-colors"
+                                  title="Remove block">
+                                  <i class="pi pi-times text-[9px]"></i>
+                                </button>
+                              }
+                            </div>
+                          }
+                          @if (!(warehouse.blocks?.length)) {
+                            <span class="text-xs text-slate-400 italic">No blocks added yet.</span>
+                          }
+                        </div>
                         @if (canEditWarehouses()) {
-                          <button
-                            type="button"
-                            (click)="removeBlock(warehouse, block)"
-                            class="ml-1 text-red-400 hover:text-red-600 transition-colors"
-                            title="Remove block">
-                            <i class="pi pi-times text-[9px]"></i>
-                          </button>
+                          <div class="flex items-center gap-2 mt-1">
+                            <input
+                              pInputText
+                              [(ngModel)]="newBlockName"
+                              placeholder="Block name (e.g. Block A)"
+                              class="h-9 text-xs px-3 rounded-lg border border-slate-200 w-72" />
+                            <button
+                              type="button"
+                              (click)="addBlock(warehouse)"
+                              [disabled]="!newBlockName.trim() || addingBlock()"
+                              class="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-slate-800 text-white text-[10px] font-bold uppercase tracking-wider disabled:opacity-40 hover:bg-slate-700 transition-colors">
+                              <i class="pi pi-plus text-[9px]"></i>
+                              Add Block
+                            </button>
+                          </div>
                         }
                       </div>
-                    }
-                    @if (!(warehouse.blocks?.length)) {
-                      <span class="text-xs text-slate-400 italic">No blocks yet.</span>
-                    }
-                  </div>
-                  @if (canEditWarehouses()) {
-                    <div class="flex items-center gap-2 mt-1">
-                      <input
-                        pInputText
-                        [(ngModel)]="newBlockName"
-                        placeholder="Block name (e.g. Block A)"
-                        class="h-8 text-xs px-2 rounded-lg border border-slate-200 w-48" />
-                      <button
-                        type="button"
-                        (click)="addBlock(warehouse)"
-                        [disabled]="!newBlockName.trim() || addingBlock()"
-                        class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-slate-800 text-white text-[10px] font-bold uppercase tracking-wider disabled:opacity-40 hover:bg-slate-700 transition-colors">
-                        <i class="pi pi-plus text-[9px]"></i>
-                        Add Block
-                      </button>
-                    </div>
-                  }
-                </div>
+                    </p-accordion-content>
+                  </p-accordion-panel>
+                </p-accordion>
               </td>
             </tr>
             }
