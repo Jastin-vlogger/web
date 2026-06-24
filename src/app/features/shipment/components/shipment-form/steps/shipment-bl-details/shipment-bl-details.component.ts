@@ -314,6 +314,7 @@ export class ShipmentBlDetailsComponent {
         warehousesSelected: savedDecision.warehousesSelected || [],
         itemAllocations: savedDecision.itemAllocations || [],
       }, { emitEvent: false });
+      this.syncItemAllocations(index);
     }
 
     const splitRows = this.getStorageSplitRows(row);
@@ -745,10 +746,16 @@ export class ShipmentBlDetailsComponent {
       const fallbackItem = shipment?.itemDescription || shipment?.item || 'Similar Item Set';
       items = [{ itemName: fallbackItem, expectedContainers: totalExpected }];
     } else {
-      items = lineItems.map((li: any) => ({
-        itemName: li.itemDescription || li.itemName || li.item || 'Similar Item Set',
-        expectedContainers: Number(li.plannedContainers || li.quantity || 0)
-      }));
+      const baseShare = lineItems.length > 0 ? Math.floor(totalExpected / lineItems.length) : 0;
+      const remainder = lineItems.length > 0 ? totalExpected % lineItems.length : 0;
+      items = lineItems.map((li: any, idx: number) => {
+        const hasPlanned = li.plannedContainers && Number(li.plannedContainers) > 0 && Number(li.plannedContainers) <= totalExpected;
+        const expected = hasPlanned ? Number(li.plannedContainers) : (baseShare + (idx < remainder ? 1 : 0));
+        return {
+          itemName: li.itemDescription || li.itemName || li.item || 'Similar Item Set',
+          expectedContainers: expected
+        };
+      });
     }
 
     const currentAllocations = decision.itemAllocations || [];
@@ -756,17 +763,30 @@ export class ShipmentBlDetailsComponent {
 
     const newItemAllocations = items.map((item) => {
       const existing = currentAllocations.find((ca: any) => ca.itemName === item.itemName);
-      const allocations = warehouses.map((wh: string) => {
-        const existingAlloc = existing?.allocations?.find((a: any) => a.warehouse === wh);
+      const existingAllocations = existing?.allocations || [];
+      const existingSum = existingAllocations.reduce((sum: number, a: any) => sum + Number(a.containersAssigned || 0), 0);
+      
+      const matchesExisting = existingAllocations.length === warehouses.length &&
+        existingAllocations.every((a: any) => warehouses.includes(a.warehouse));
+
+      const baseWhShare = warehouses.length > 0 ? Math.floor(item.expectedContainers / warehouses.length) : 0;
+      const whRemainder = warehouses.length > 0 ? item.expectedContainers % warehouses.length : 0;
+
+      const allocations = warehouses.map((wh: string, whIdx: number) => {
+        const existingAlloc = existingAllocations.find((a: any) => a.warehouse === wh);
+        let assigned = 0;
+
+        if (matchesExisting && existingSum === item.expectedContainers) {
+          assigned = existingAlloc ? Number(existingAlloc.containersAssigned || 0) : 0;
+        } else {
+          assigned = baseWhShare + (whIdx < whRemainder ? 1 : 0);
+        }
+
         return {
           warehouse: wh,
-          containersAssigned: existingAlloc ? Number(existingAlloc.containersAssigned || 0) : 0
+          containersAssigned: assigned
         };
       });
-
-      if (warehouses.length === 1 && allocations.length === 1) {
-        allocations[0].containersAssigned = item.expectedContainers;
-      }
 
       return {
         itemName: item.itemName,
@@ -793,6 +813,13 @@ export class ShipmentBlDetailsComponent {
   getAllItemsAllocationTotal(group: AbstractControl): number {
     const itemAllocations = this.getStorageDecision(group).get('itemAllocations')?.value || [];
     return itemAllocations.reduce((sum: number, item: any) => sum + this.getItemAllocationTotal(item), 0);
+  }
+
+  hasItemAllocationOverage(group: AbstractControl): boolean {
+    const decision = this.getStorageDecision(group).getRawValue();
+    if (decision.allocateSameWarehouse) return false;
+    const itemAllocations = decision.itemAllocations || [];
+    return itemAllocations.some((item: any) => this.getItemAllocationTotal(item) > Number(item.expectedContainers || 0));
   }
 
   onItemAllocationSpinnerChange(group: AbstractControl, itemIndex: number, warehouse: string, value: number, index: number): void {
@@ -1216,8 +1243,13 @@ export class ShipmentBlDetailsComponent {
 
   private getUserDisplay(user: any): string {
     if (!user) return '—';
-    if (typeof user === 'string') return user || '—';
-    return String(user.name || user.email || user._id || '—');
+    if (typeof user === 'string') {
+      if (user === 'Admin User' || user === 'Admin' || user.toLowerCase().includes('admin')) return 'Logistic Dept User';
+      return user || '—';
+    }
+    const name = String(user.name || user.email || user._id || '—');
+    if (name === 'Admin User' || name === 'Admin' || name.toLowerCase().includes('admin')) return 'Logistic Dept User';
+    return name;
   }
 
   getClearingAdvancePaymentDetails(index: number): any {
@@ -2190,6 +2222,34 @@ export class ShipmentBlDetailsComponent {
     if (!containerId) {
       this.notificationService.warn('Missing container', 'This shipment row is not linked to a container yet.');
       return;
+    }
+
+    const decisionGroup = this.getStorageDecision(row);
+    const decision = decisionGroup.getRawValue();
+
+    if (decision.allocateSameWarehouse) {
+      if (!decision.warehousesSelected || !decision.warehousesSelected.length) {
+        this.notificationService.error('Validation Error', 'Warehouse must be selected.');
+        return;
+      }
+    } else {
+      if (!decision.warehousesSelected || decision.warehousesSelected.length < 2) {
+        this.notificationService.error('Validation Error', 'Select at least 2 warehouses for multi-warehouse allocation.');
+        return;
+      }
+
+      // Validate item allocations sum matches expected
+      const itemAllocations = decision.itemAllocations || [];
+      for (const item of itemAllocations) {
+        const totalAssigned = this.getItemAllocationTotal(item);
+        if (totalAssigned !== item.expectedContainers) {
+          this.notificationService.error(
+            'Validation Error',
+            `Total assigned for ${item.itemName} (${totalAssigned}) does not match expected count (${item.expectedContainers}).`
+          );
+          return;
+        }
+      }
     }
 
     const confirmed = await this.confirmDialog.ask({

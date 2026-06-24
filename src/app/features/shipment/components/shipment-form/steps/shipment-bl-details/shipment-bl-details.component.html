@@ -671,7 +671,8 @@
                       <button
                         type="button"
                         (click)="saveStorageAllocations(i)"
-                        [disabled]="isSaving(i, 'storage')"
+                        [disabled]="isSaving(i, 'storage') || hasItemAllocationOverage(group)"
+                        [title]="hasItemAllocationOverage(group) ? 'Container count exceeds expected — correct allocation before saving' : ''"
                         class="inline-flex h-10 items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-[10px] font-black uppercase tracking-wider text-emerald-600 hover:bg-emerald-100 disabled:opacity-50"
                       >
                         @if (isSaving(i, 'storage')) {
@@ -816,6 +817,15 @@
                           Warehouse Allocation by Item
                         </div>
 
+                        @if (hasItemAllocationOverage(group)) {
+                          <div class="rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 flex items-start gap-3">
+                            <i class="pi pi-exclamation-triangle text-red-500 text-sm shrink-0 mt-0.5"></i>
+                            <div class="text-xs text-red-700 font-semibold leading-relaxed">
+                              One or more items have containers assigned that exceed their expected count. Correct the values below before saving.
+                            </div>
+                          </div>
+                        }
+
                         @let itemAllocations = getStorageDecision(group).get('itemAllocations')?.value || [];
                         @for (item of itemAllocations; track item.itemName; let itemIdx = $index) {
                           <div class="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
@@ -867,7 +877,6 @@
                                                 styleClass="w-full"
                                                 inputStyleClass="table-input w-full"
                                                 [min]="0"
-                                                [max]="item.expectedContainers"
                                                 [showButtons]="true"
                                                 [useGrouping]="false"
                                                 placeholder="0">
@@ -880,12 +889,24 @@
                                   </div>
                                   
                                   <!-- Total Row inside item card matching screenshot style -->
-                                  <div class="rounded-lg bg-blue-50/30 border border-blue-100/50 px-4 py-2.5 flex justify-between items-center">
-                                    <span class="text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                                  @let totalAllocated = getItemAllocationTotal(item);
+                                  <div class="rounded-lg px-4 py-2.5 flex justify-between items-center"
+                                    [class.bg-red-50]="totalAllocated > item.expectedContainers"
+                                    [class.border]="totalAllocated > item.expectedContainers"
+                                    [class.border-red-200]="totalAllocated > item.expectedContainers"
+                                    [class.bg-blue-50]="totalAllocated <= item.expectedContainers"
+                                    [class.border-blue-100]="totalAllocated <= item.expectedContainers">
+                                    <span class="text-[10px] font-black uppercase tracking-wider"
+                                      [class.text-red-600]="totalAllocated > item.expectedContainers"
+                                      [class.text-slate-500]="totalAllocated <= item.expectedContainers">
                                       Total Assigned for Item {{ itemIdx + 1 }}
+                                      @if (totalAllocated > item.expectedContainers) {
+                                        <i class="pi pi-exclamation-triangle ml-1 text-[10px]"></i>
+                                      }
                                     </span>
-                                    @let totalAllocated = getItemAllocationTotal(item);
-                                    <span class="text-xs font-black text-blue-600">
+                                    <span class="text-xs font-black"
+                                      [class.text-red-600]="totalAllocated > item.expectedContainers"
+                                      [class.text-blue-600]="totalAllocated <= item.expectedContainers">
                                       {{ totalAllocated }} / {{ item.expectedContainers }}
                                     </span>
                                   </div>
@@ -900,12 +921,25 @@
                         }
 
                         <!-- Total Assigned for all items row -->
-                        <div class="rounded-xl bg-blue-50/50 border border-blue-100 px-4 py-3 flex justify-between items-center mt-2">
-                          <span class="text-[11px] font-black uppercase text-slate-600 tracking-wider">
+                        @let grandTotal = getAllItemsAllocationTotal(group);
+                        @let totalExpectedGlobal = shipmentData()?.shipment?.assumedContainerCount || 0;
+                        <div class="rounded-xl border px-4 py-3 flex justify-between items-center mt-2"
+                          [class.bg-red-50]="grandTotal > totalExpectedGlobal"
+                          [class.border-red-200]="grandTotal > totalExpectedGlobal"
+                          [class.bg-blue-50]="grandTotal <= totalExpectedGlobal"
+                          [class.border-blue-100]="grandTotal <= totalExpectedGlobal">
+                          <span class="text-[11px] font-black uppercase tracking-wider"
+                            [class.text-red-600]="grandTotal > totalExpectedGlobal"
+                            [class.text-slate-600]="grandTotal <= totalExpectedGlobal">
                             Total Assigned (All Items)
+                            @if (grandTotal > totalExpectedGlobal) {
+                              — Exceeds limit, save blocked
+                            }
                           </span>
-                          <span class="text-xs font-black text-blue-600">
-                            {{ getAllItemsAllocationTotal(group) }} / {{ shipmentData()?.shipment?.assumedContainerCount || 0 }}
+                          <span class="text-xs font-black"
+                            [class.text-red-600]="grandTotal > totalExpectedGlobal"
+                            [class.text-blue-600]="grandTotal <= totalExpectedGlobal">
+                            {{ grandTotal }} / {{ totalExpectedGlobal }}
                           </span>
                         </div>
                       </div>

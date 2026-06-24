@@ -1934,6 +1934,9 @@ export class ShipmentFormComponent implements OnDestroy {
     const nextStep = this.getAdjacentAccessibleStep(1);
     if (nextStep) {
       this.store.dispatch(ShipmentActions.setCurrentStep({ step: nextStep.index }));
+      if (this.shipmentId) {
+        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: this.shipmentId }));
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
@@ -1942,6 +1945,9 @@ export class ShipmentFormComponent implements OnDestroy {
     const previousStep = this.getAdjacentAccessibleStep(-1);
     if (previousStep) {
       this.store.dispatch(ShipmentActions.setCurrentStep({ step: previousStep.index }));
+      if (this.shipmentId) {
+        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: this.shipmentId }));
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }

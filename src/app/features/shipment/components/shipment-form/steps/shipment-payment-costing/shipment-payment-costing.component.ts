@@ -212,8 +212,13 @@ export class ShipmentPaymentCostingComponent {
 
   private getUserDisplay(user: any): string {
     if (!user) return '—';
-    if (typeof user === 'string') return user || '—';
-    return String(user.name || user.email || user._id || '—');
+    if (typeof user === 'string') {
+      if (user === 'Admin User' || user === 'Admin' || user.toLowerCase().includes('admin')) return 'Logistic Dept User';
+      return user || '—';
+    }
+    const name = String(user.name || user.email || user._id || '—');
+    if (name === 'Admin User' || name === 'Admin' || name.toLowerCase().includes('admin')) return 'Logistic Dept User';
+    return name;
   }
 
   private getDownloadedByLabel(): string {
@@ -1051,14 +1056,17 @@ export class ShipmentPaymentCostingComponent {
 
   getPaymentAllocationInfoRows(index: number): Array<{ label: string; value: string }> {
     const actual = this.shipmentData()?.actual?.[index] as any;
-    const approval = actual?.paymentAllocationApproval || actual?.paymentCostingApproval || {};
+    const approval = actual?.clearingAdvanceApproval || {};
+    const payment = actual?.clearingAdvancePaymentDetails || {};
     return [
+      { label: 'Requested At', value: this.formatDateTimeForDisplay(approval.submittedAt || approval.requestedAt || actual?.clearingAdvanceRequestedAt) },
       { label: 'Requested By', value: this.getUserDisplay(approval.submittedBy || approval.requestedBy) },
-      { label: 'Requested To', value: 'FAS Manager' },
-      { label: 'Requested At', value: this.formatDateTimeForDisplay(approval.submittedAt || approval.requestedAt) },
-      { label: 'Approved By', value: this.getUserDisplay(approval.fasManagerApprovedBy || approval.approvedBy) },
-      { label: 'Approved At', value: this.formatDateTimeForDisplay(approval.fasManagerApprovedAt || approval.approvedAt) },
-      { label: 'Status', value: this.getPaymentApprovalLabel(index) },
+      { label: 'Approved At', value: this.formatDateTimeForDisplay(approval.fasApprovedAt || approval.approvedAt) },
+      { label: 'Approved By', value: this.getUserDisplay(approval.fasApprovedBy || approval.approvedBy) },
+      { label: 'Cheque No', value: payment.chequeNo || '—' },
+      { label: 'Cheque Date', value: this.formatDateForReport(payment.chequeDate) },
+      { label: 'Payment Voucher No', value: payment.paymentVoucherNo || '—' },
+      { label: 'Transaction ID', value: payment.transactionId || '—' },
     ];
   }
 

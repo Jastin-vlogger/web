@@ -89,36 +89,48 @@
             
             .p-datatable-thead > tr > th,
             thead > tr > th {
-                @apply bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-500 py-3 px-4 border-b border-slate-200 whitespace-nowrap;
+                @apply bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-500 py-3 px-4 border border-slate-200 whitespace-nowrap;
             }
 
             .p-datatable-tbody > tr > td,
             tbody > tr > td {
-                @apply py-2 px-3 border-b border-slate-100 transition-colors whitespace-nowrap align-middle;
+                @apply py-2 px-3 border border-slate-200/60 transition-colors whitespace-nowrap align-middle;
                 
                 &:first-child { @apply px-4; }
             }
 
             /* Excel-like Inputs */
             .table-input {
+                width: 100% !important;
+                min-width: 0 !important;
                 input {
-                    @apply w-full border-none bg-transparent py-2 px-2 text-xs font-bold text-slate-900 text-center;
-                    @apply focus:ring-1 focus:ring-blue-400 focus:bg-white focus:shadow-inner rounded;
-                    min-width: 0;
+                    @apply w-full border border-slate-200 bg-white py-1 px-2 text-xs font-bold text-slate-900 text-center rounded-lg shadow-sm;
+                    @apply focus:ring-1 focus:ring-blue-400 focus:bg-white focus:border-blue-400 focus:outline-none;
+                    min-width: 0 !important;
+                    width: 100% !important;
                 }
             }
 
+            .p-inputnumber,
+            .p-inputnumber-input,
+            .p-datepicker,
+            .p-datepicker-input,
+            p-datepicker {
+                width: 100% !important;
+                min-width: 0 !important;
+            }
+
             .table-input-text {
-                @apply border-none bg-transparent py-2 px-2 text-xs font-medium text-slate-600;
-                @apply focus:ring-1 focus:ring-blue-400 focus:bg-white focus:shadow-inner rounded;
+                @apply border border-slate-200 bg-white py-1.5 px-2 text-xs font-medium text-slate-600 rounded-lg shadow-sm;
+                @apply focus:ring-1 focus:ring-blue-400 focus:bg-white focus:border-blue-400 focus:outline-none;
                 min-width: 120px;
             }
 
             .cell-dates {
                 @apply flex gap-1 items-center;
                 .date-mini {
-                    @apply border-none bg-transparent py-1 px-1 text-[10px] font-bold text-slate-700;
-                    @apply focus:ring-1 focus:ring-blue-400 focus:bg-white rounded;
+                    @apply border border-slate-200 bg-white py-1 px-2 text-[10px] font-bold text-slate-700 rounded-lg shadow-sm;
+                    @apply focus:ring-1 focus:ring-blue-400 focus:bg-white focus:border-blue-400 focus:outline-none;
                 }
             }
 
@@ -212,6 +224,11 @@
 
         .planned-table {
             th.planned-col-shipment, td.planned-col-shipment {
+                width: 220px;
+                min-width: 220px;
+            }
+
+            th.planned-col-status, td.planned-col-status {
                 width: 170px;
                 min-width: 170px;
             }
@@ -226,14 +243,14 @@
                 min-width: 68px;
             }
 
-            th.planned-col-qty, td.planned-col-qty {
+             th.planned-col-qty, td.planned-col-qty {
                 width: 76px;
                 min-width: 76px;
             }
 
             th.planned-col-date, td.planned-col-date {
-                min-width: 10.5rem; /* keep ETD/ETA usable on smaller screens */
-                width: 10.5rem;
+                min-width: 9.3rem;
+                width: 9.3rem;
             }
 
             th.planned-col-month, td.planned-col-month {
@@ -276,7 +293,7 @@
 
             .planned-col-date .table-input {
                 width: 100%;
-                min-width: 9.5rem;
+                min-width: 0 !important;
             }
         }
 
@@ -284,15 +301,15 @@
             .p-datatable-thead > tr > th { @apply bg-emerald-50/30 text-emerald-800; }
 
             /* Equal-width columns so inputs align with Scheduled table */
-            th.actual-col-serial, td.actual-col-serial { width: 190px; min-width: 190px; }
-            th.actual-col-shipment, td.actual-col-shipment { width: 180px; min-width: 180px; }
-            th.actual-col-status, td.actual-col-status { width: 140px; min-width: 140px; }
-            th.actual-col-num, td.actual-col-num { width: 72px; min-width: 72px; }
+            th.actual-col-serial, td.actual-col-serial { width: 220px; min-width: 220px; }
+            th.actual-col-shipment, td.actual-col-shipment { width: 220px; min-width: 220px; }
+            th.actual-col-status, td.actual-col-status { width: 170px; min-width: 170px; }
+            th.actual-col-num, td.actual-col-num { width: 95px; min-width: 95px; }
             th.actual-col-bags, td.actual-col-bags { width: 90px; min-width: 90px; }
             th.actual-col-compact, td.actual-col-compact { width: 78px; min-width: 78px; }
             th.actual-col-ci, td.actual-col-ci { width: 220px; min-width: 220px; }
             th.actual-col-bl, td.actual-col-bl { width: 200px; min-width: 200px; }
-            th.actual-col-date, td.actual-col-date { width: 165px; min-width: 165px; }
+            th.actual-col-date, td.actual-col-date { width: 144px; min-width: 144px; }
             th.actual-col-action, td.actual-col-action { width: 100px; min-width: 100px; }
 
             .actual-col-serial .table-input-text,
