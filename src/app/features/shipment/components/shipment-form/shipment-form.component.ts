@@ -1192,6 +1192,7 @@ export class ShipmentFormComponent implements OnDestroy {
               containerSerialNo: [containerLabel],
               bags: [storageMatch?.bags ?? allocationMatch?.bags ?? extractedContainer?.pkgCt ?? (extractedContainer as any)?.pkg_ct ?? null],
               warehouse: [storageMatch?.warehouse || allocationMatch?.warehouse || ''],
+              block: [(storageMatch as any)?.block || ''],
               storageAvailability: [storageMatch?.storageAvailability ?? allocationMatch?.storageAvailability ?? null],
               receivedOnDate: [storageMatch?.receivedOnDate ? new Date(storageMatch.receivedOnDate) : null],
               receivedOnTime: [this.parseTimeValue(storageMatch?.receivedOnTime)],

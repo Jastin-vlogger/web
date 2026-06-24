@@ -363,6 +363,15 @@ export class ShipmentService {
     return this.http.patch(`${this.apiUrl}/container/bl-details/${containerId}`, payload);
   }
 
+  replaceBlDocument(containerId: string, file: File): Observable<{ blDocumentUrl: string; blDocumentName: string }> {
+    const formData = new FormData();
+    formData.append('blDocument', file, file.name);
+    return this.http.post<{ blDocumentUrl: string; blDocumentName: string }>(
+      `${this.apiUrl}/container/bl-details/${containerId}/replace-bl-document`,
+      formData
+    );
+  }
+
   /**
    * Submit logistics/arrival details (Step 4)
    * PATCH /shipment/container/logistic/:id

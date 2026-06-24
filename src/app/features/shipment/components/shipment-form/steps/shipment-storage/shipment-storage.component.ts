@@ -14,7 +14,7 @@ import { SelectModule } from 'primeng/select';
 import { DialogModule } from 'primeng/dialog';
 import { ShipmentService } from '../../../../../../core/services/shipment.service';
 import { NotificationService } from '../../../../../../core/services/notification.service';
-import { WarehouseService } from '../../../../../../core/services/warehouse.service';
+import { WarehouseService, Warehouse } from '../../../../../../core/services/warehouse.service';
 import { ConfirmDialogService } from '../../../../../../core/services/confirm-dialog.service';
 import { RbacService } from '../../../../../../core/services/rbac.service';
 import { AuthService } from '../../../../../../core/services/auth.service';
@@ -56,6 +56,7 @@ export class ShipmentStorageComponent {
   constructor() {
     this.warehouseService.getWarehouses().subscribe({
       next: (warehouses) => {
+        this.allWarehouses.set(warehouses);
         const activeWarehouses = warehouses
           .filter((warehouse) => warehouse.status === 'Active')
           .map((warehouse) => {
@@ -137,6 +138,16 @@ export class ShipmentStorageComponent {
   private pendingRowUpload: { shipmentIndex: number; containerIndex: number } | null = null;
 
   readonly warehouseOptions = signal<Array<{ label: string; value: string }>>([]);
+  private allWarehouses = signal<Warehouse[]>([]);
+
+  getBlockOptions(warehouseName: string): Array<{ label: string; value: string }> {
+    const label = warehouseName?.trim();
+    if (!label) return [];
+    const wh = this.allWarehouses().find(
+      (w) => `${w.name}${w.code ? ` - ${w.code}` : ''}` === label
+    );
+    return (wh?.blocks || []).map((b) => ({ label: b.name, value: b.name }));
+  }
 
   hasVisibleShipments(): boolean {
     return this.visibleShipmentIndices.length > 0;
@@ -180,6 +191,14 @@ export class ShipmentStorageComponent {
     return this.actualOverrides()[index] || this.shipmentData()?.actual?.[index] || null;
   }
 
+  getAllocationDecision(index: number): any {
+    return this.getActualRow(index)?.storageAllocationDecision || null;
+  }
+
+  getAllocationSplits(index: number): any[] {
+    return this.getActualRow(index)?.storageAllocationSplits || [];
+  }
+
   private applyActualOverride(index: number, actual: any): void {
     if (!actual) return;
     this.actualOverrides.update((current) => ({ ...current, [index]: actual }));
@@ -207,6 +226,7 @@ export class ShipmentStorageComponent {
           containerSerialNo: saved.containerSerialNo || '',
           bags: Number(saved.bags ?? 0),
           warehouse: saved.warehouse || '',
+          block: saved.block || '',
           storageAvailability: Number(saved.storageAvailability ?? 0),
           receivedOnDate: saved.receivedOnDate ? new Date(saved.receivedOnDate) : null,
           receivedOnTime: saved.receivedOnTime || '',
@@ -586,8 +606,21 @@ export class ShipmentStorageComponent {
     return this.savingRowKey() === `approve:${shipmentIndex}`;
   }
 
+  private isTransportationArranged(index: number): boolean {
+    const actual = this.getActualRow(index);
+    return Array.isArray(actual?.lockedLogisticsSections) &&
+      actual.lockedLogisticsSections.includes('transportation');
+  }
+
   async saveArrivalRow(index: number, containerIndex: number): Promise<void> {
     if (this.isStorageArrivalLocked(index)) return;
+    if (!this.isTransportationArranged(index)) {
+      this.notificationService.warn(
+        'Transportation Required',
+        'Milestone 4 (Transportation Arrangement) must be saved before recording storage arrival.'
+      );
+      return;
+    }
     this.ensureAccordionOpen(index);
     this.setShipmentTab(index, 'arrival');
     const group = this.formArray.at(index) as FormGroup | null;
@@ -638,6 +671,7 @@ export class ShipmentStorageComponent {
     formData.append('containerSerialNo', row.get('containerSerialNo')?.value || '');
     formData.append('bags', String(Number(row.get('bags')?.value) || 0));
     formData.append('warehouse', row.get('warehouse')?.value || '');
+    formData.append('block', row.get('block')?.value || '');
     formData.append('storageAvailability', String(Number(row.get('storageAvailability')?.value) || 0));
     formData.append('receivedOnDate', this.toDate(row.get('receivedOnDate')?.value));
     formData.append('receivedOnTime', this.toTime(row.get('receivedOnTime')?.value));
@@ -675,6 +709,13 @@ export class ShipmentStorageComponent {
    */
   async saveAllArrivalRows(shipmentIndex: number): Promise<void> {
     if (this.isStorageArrivalLocked(shipmentIndex)) return;
+    if (!this.isTransportationArranged(shipmentIndex)) {
+      this.notificationService.warn(
+        'Transportation Required',
+        'Milestone 4 (Transportation Arrangement) must be saved before recording storage arrival.'
+      );
+      return;
+    }
     this.ensureAccordionOpen(shipmentIndex);
     this.setShipmentTab(shipmentIndex, 'arrival');
     const group = this.formArray.at(shipmentIndex) as FormGroup | null;
@@ -728,6 +769,7 @@ export class ShipmentStorageComponent {
         containerSerialNo: row.get('containerSerialNo')?.value || '',
         bags: Number(row.get('bags')?.value) || 0,
         warehouse: row.get('warehouse')?.value || '',
+        block: row.get('block')?.value || '',
         storageAvailability: Number(row.get('storageAvailability')?.value) || 0,
         receivedOnDate: this.toDate(receivedOnDate),
         receivedOnTime: this.toTime(receivedOnTime),

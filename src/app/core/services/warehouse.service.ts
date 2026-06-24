@@ -4,6 +4,12 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 
+export interface WarehouseBlock {
+  _id?: string;
+  name: string;
+  capacity?: number;
+}
+
 export interface Warehouse {
   _id?: string;
   name: string;
@@ -19,6 +25,7 @@ export interface Warehouse {
     role: string;
     isActive?: boolean;
   }>;
+  blocks?: WarehouseBlock[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -62,5 +69,13 @@ export class WarehouseService {
 
   deleteWarehouse(id: string): Observable<Warehouse> {
     return this.http.delete<Warehouse>(`${this.apiUrl}/${id}`);
+  }
+
+  addBlock(warehouseId: string, name: string, capacity?: number): Observable<Warehouse> {
+    return this.http.post<Warehouse>(`${this.apiUrl}/${warehouseId}/blocks`, { name, capacity });
+  }
+
+  deleteBlock(warehouseId: string, blockId: string): Observable<Warehouse> {
+    return this.http.delete<Warehouse>(`${this.apiUrl}/${warehouseId}/blocks/${blockId}`);
   }
 }

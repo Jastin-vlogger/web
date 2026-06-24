@@ -10,7 +10,7 @@ import { SelectModule } from 'primeng/select';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
-import { WarehouseService, Warehouse, WarehouseStorekeeperOption } from '../../../core/services/warehouse.service';
+import { WarehouseService, Warehouse, WarehouseBlock, WarehouseStorekeeperOption } from '../../../core/services/warehouse.service';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { RbacService } from '../../../core/services/rbac.service';
@@ -91,17 +91,33 @@ import { RbacService } from '../../../core/services/rbac.service';
               <th class="bg-slate-50 text-slate-700 font-semibold py-4 text-[11px] uppercase tracking-wider">Name</th>
               <th class="bg-slate-50 text-slate-700 font-semibold py-4 text-[11px] uppercase tracking-wider">Code</th>
               <th class="bg-slate-50 text-slate-700 font-semibold py-4 text-[11px] uppercase tracking-wider">Storekeepers</th>
+              <th class="bg-slate-50 text-slate-700 font-semibold py-4 text-[11px] uppercase tracking-wider text-center">Blocks</th>
               <th class="bg-slate-50 text-slate-700 font-semibold py-4 text-[11px] uppercase tracking-wider text-center">Status</th>
               <th class="bg-slate-50 text-slate-700 font-semibold py-4 text-[11px] uppercase tracking-wider text-right px-6">Actions</th>
             </tr>
           </ng-template>
           <ng-template pTemplate="body" let-warehouse>
-            <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
+            <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100">
               <td class="py-4 font-semibold text-slate-800">{{ warehouse.name }}</td>
               <td class="py-4 text-slate-600 font-mono text-sm">{{ warehouse.code || '–' }}</td>
               <td class="py-4 text-slate-600 text-sm">{{ getAssignedStorekeeperNames(warehouse) || '–' }}</td>
               <td class="py-4 text-center">
-                <span 
+                <button
+                  type="button"
+                  (click)="toggleBlocks(warehouse._id)"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors"
+                  [class.bg-blue-50]="!isBlocksExpanded(warehouse._id)"
+                  [class.border-blue-100]="!isBlocksExpanded(warehouse._id)"
+                  [class.text-blue-600]="!isBlocksExpanded(warehouse._id)"
+                  [class.bg-slate-800]="isBlocksExpanded(warehouse._id)"
+                  [class.border-slate-800]="isBlocksExpanded(warehouse._id)"
+                  [class.text-white]="isBlocksExpanded(warehouse._id)">
+                  <i class="pi" [class.pi-boxes]="!isBlocksExpanded(warehouse._id)" [class.pi-chevron-up]="isBlocksExpanded(warehouse._id)" style="font-size:10px"></i>
+                  {{ (warehouse.blocks?.length || 0) }} Block{{ (warehouse.blocks?.length || 0) !== 1 ? 's' : '' }}
+                </button>
+              </td>
+              <td class="py-4 text-center">
+                <span
                   [class]="warehouse.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'"
                   class="px-3 py-1 rounded-full text-xs font-semibold border">
                   {{ warehouse.status }}
@@ -126,10 +142,57 @@ import { RbacService } from '../../../core/services/rbac.service';
                 </div>
               </td>
             </tr>
+            <!-- Inline blocks expansion row -->
+            @if (isBlocksExpanded(warehouse._id)) {
+            <tr class="bg-slate-50/80 border-b border-slate-100">
+              <td colspan="6" class="px-6 pb-4 pt-2">
+                <div class="flex flex-col gap-2">
+                  <div class="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1">Blocks — {{ warehouse.name }}</div>
+                  <div class="flex flex-wrap gap-2">
+                    @for (block of (warehouse.blocks || []); track block._id) {
+                      <div class="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm">
+                        <i class="pi pi-box text-[10px] text-slate-400"></i>
+                        {{ block.name }}
+                        @if (canEditWarehouses()) {
+                          <button
+                            type="button"
+                            (click)="removeBlock(warehouse, block)"
+                            class="ml-1 text-red-400 hover:text-red-600 transition-colors"
+                            title="Remove block">
+                            <i class="pi pi-times text-[9px]"></i>
+                          </button>
+                        }
+                      </div>
+                    }
+                    @if (!(warehouse.blocks?.length)) {
+                      <span class="text-xs text-slate-400 italic">No blocks yet.</span>
+                    }
+                  </div>
+                  @if (canEditWarehouses()) {
+                    <div class="flex items-center gap-2 mt-1">
+                      <input
+                        pInputText
+                        [(ngModel)]="newBlockName"
+                        placeholder="Block name (e.g. Block A)"
+                        class="h-8 text-xs px-2 rounded-lg border border-slate-200 w-48" />
+                      <button
+                        type="button"
+                        (click)="addBlock(warehouse)"
+                        [disabled]="!newBlockName.trim() || addingBlock()"
+                        class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg bg-slate-800 text-white text-[10px] font-bold uppercase tracking-wider disabled:opacity-40 hover:bg-slate-700 transition-colors">
+                        <i class="pi pi-plus text-[9px]"></i>
+                        Add Block
+                      </button>
+                    </div>
+                  }
+                </div>
+              </td>
+            </tr>
+            }
           </ng-template>
           <ng-template pTemplate="emptymessage">
             <tr>
-              <td colspan="5" class="p-16 text-center text-slate-400">
+              <td colspan="6" class="p-16 text-center text-slate-400">
                 <i class="pi pi-warehouse text-5xl mb-4 block opacity-20"></i>
                 <p class="text-lg font-semibold mb-2">No warehouses found</p>
                 <p class="text-sm">Click "Add Warehouse" to create one.</p>
@@ -241,6 +304,55 @@ export class WarehouseManagementComponent implements OnInit {
   saving = signal(false);
   displayDialog = false;
   editingWarehouse = signal<Warehouse | null>(null);
+
+  expandedBlockIds = signal<Set<string>>(new Set());
+  newBlockName = '';
+  addingBlock = signal(false);
+
+  toggleBlocks(warehouseId: string | undefined): void {
+    if (!warehouseId) return;
+    this.expandedBlockIds.update((s) => {
+      const next = new Set(s);
+      if (next.has(warehouseId)) next.delete(warehouseId); else next.add(warehouseId);
+      return next;
+    });
+    this.newBlockName = '';
+  }
+
+  isBlocksExpanded(warehouseId: string | undefined): boolean {
+    return !!warehouseId && this.expandedBlockIds().has(warehouseId);
+  }
+
+  addBlock(warehouse: Warehouse): void {
+    const name = this.newBlockName.trim();
+    if (!name || !warehouse._id || this.addingBlock()) return;
+    this.addingBlock.set(true);
+    this.warehouseService.addBlock(warehouse._id, name).subscribe({
+      next: (updated) => {
+        this.warehouses.update((list) => list.map((w) => w._id === updated._id ? updated : w));
+        this.newBlockName = '';
+        this.addingBlock.set(false);
+        this.messageService.add({ severity: 'success', summary: 'Block Added', detail: `"${name}" added to ${warehouse.name}` });
+      },
+      error: (err) => {
+        this.addingBlock.set(false);
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: err.error?.message || 'Could not add block' });
+      },
+    });
+  }
+
+  removeBlock(warehouse: Warehouse, block: WarehouseBlock): void {
+    if (!warehouse._id || !block._id) return;
+    this.warehouseService.deleteBlock(warehouse._id, block._id).subscribe({
+      next: (updated) => {
+        this.warehouses.update((list) => list.map((w) => w._id === updated._id ? updated : w));
+        this.messageService.add({ severity: 'success', summary: 'Block Removed', detail: `"${block.name}" removed` });
+      },
+      error: () => {
+        this.messageService.add({ severity: 'error', summary: 'Error', detail: 'Could not remove block' });
+      },
+    });
+  }
 
   warehouseForm: FormGroup = this.fb.group({
     name: ['', Validators.required],

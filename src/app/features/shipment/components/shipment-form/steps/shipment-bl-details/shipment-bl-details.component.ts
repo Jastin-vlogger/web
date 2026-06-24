@@ -90,6 +90,7 @@ export class ShipmentBlDetailsComponent {
   readonly expandedCostSheet = signal<Record<number, boolean>>({});
   readonly bookingFiles = signal<Record<number, File | null>>({});
   readonly commercialInvoiceFiles = signal<Record<number, File | null>>({});
+  readonly replacingBlDocIndex = signal<number | null>(null);
   readonly costSheetAttachmentFiles = signal<Record<string, File | null>>({});
   readonly statusModalVisible = signal(false);
   readonly statusModalShipmentIndex = signal<number | null>(null);
@@ -706,7 +707,39 @@ export class ShipmentBlDetailsComponent {
     });
   }
 
+  hasOnlyOneLineItem(): boolean {
+    const shipment = this.shipmentData()?.shipment as any;
+    const lineItems = Array.isArray(shipment?.lineItems) ? shipment.lineItems : [];
+    return lineItems.length <= 1;
+  }
+
+  getTotalExtractedContainerCount(): number {
+    const seen = new Set<string>();
+    for (let i = 0; i < this.formArray.length; i++) {
+      const row = this.formArray.at(i);
+      const extracted: any[] = row.get('extractedContainers')?.value || [];
+      extracted.forEach((c: any) => {
+        const num = typeof c === 'string' ? c.trim() : String(c?.containerNumber || c?.containerNo || c?.container_number || '').trim();
+        if (num) seen.add(num);
+      });
+      const packagingList = row.get('packagingList')?.value;
+      const containerInfo: any[] = packagingList?.containerInfo || packagingList?.container_info || [];
+      const containerNumberList: any[] = packagingList?.container_number_list || [];
+      const source = containerInfo.length ? containerInfo : containerNumberList;
+      source.forEach((c: any) => {
+        const num = typeof c === 'string' ? c.trim() : String(c?.container_number || c?.containerNo || c?.container_no || c?.containerNumber || '').trim();
+        if (num) seen.add(num);
+      });
+    }
+    const fromPacking = seen.size;
+    return fromPacking > 0 ? fromPacking : Number(this.shipmentData()?.shipment?.assumedContainerCount || 0);
+  }
+
   onSingleItemChange(group: AbstractControl, value: boolean, shipmentIndex: number): void {
+    if (!value && this.hasOnlyOneLineItem()) {
+      this.notificationService.warn('Restriction', 'This shipment has only one item in the LPO. Cannot switch to multiple items.');
+      return;
+    }
     const decision = this.getStorageDecision(group);
     decision.patchValue({ singleItem: value }, { emitEvent: false });
     this.syncItemAllocations(shipmentIndex);
@@ -739,7 +772,7 @@ export class ShipmentBlDetailsComponent {
 
     const shipment = this.shipmentData()?.shipment as any;
     const lineItems = Array.isArray(shipment?.lineItems) ? shipment.lineItems : [];
-    const totalExpected = Number(this.shipmentData()?.shipment?.assumedContainerCount || 0);
+    const totalExpected = this.getTotalExtractedContainerCount();
 
     let items: Array<{ itemName: string; expectedContainers: number }> = [];
     if (decision.singleItem) {
@@ -1179,6 +1212,31 @@ export class ShipmentBlDetailsComponent {
 
   getSavedBlDocumentName(group: AbstractControl): string {
     return group.get('blDocumentName')?.value || '';
+  }
+
+  onReplaceBlDocSelected(event: Event, index: number): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!input) return;
+    input.value = '';
+    if (!file) return;
+
+    const row = this.formArray.at(index);
+    const containerId = row?.get('containerId')?.value;
+    if (!containerId) return;
+
+    this.replacingBlDocIndex.set(index);
+    this.shipmentService.replaceBlDocument(containerId, file).subscribe({
+      next: (res) => {
+        row.patchValue({ blDocumentUrl: res.blDocumentUrl, blDocumentName: res.blDocumentName }, { emitEvent: false });
+        this.replacingBlDocIndex.set(null);
+        this.notificationService.success('Document replaced', 'BL document updated and synced to all same-BL containers.');
+      },
+      error: (err) => {
+        this.replacingBlDocIndex.set(null);
+        this.notificationService.error('Replace failed', err?.error?.message || 'Could not replace the document.');
+      },
+    });
   }
 
   getCommercialInvoiceDocumentUrl(index: number): string {
@@ -2112,7 +2170,7 @@ export class ShipmentBlDetailsComponent {
       const targetWarehouse = decision.warehousesSelected[0];
       const shipment = this.shipmentData()?.shipment as any;
       const lineItems = Array.isArray(shipment?.lineItems) ? shipment.lineItems : [];
-      const totalExpected = Number(shipment?.assumedContainerCount || 1);
+      const totalExpected = this.getTotalExtractedContainerCount() || 1;
 
       if (decision.singleItem) {
         const itemName = shipment?.itemDescription || shipment?.item || 'Similar Item Set';

@@ -710,16 +710,24 @@
                       </div>
                       
                       <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 flex flex-col gap-1.5">
-                          <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Single Item</div>
+                        <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 flex flex-col gap-1.5"
+                          [class.opacity-60]="hasOnlyOneLineItem()"
+                          [title]="hasOnlyOneLineItem() ? 'LPO has only one item — cannot switch to multiple' : ''">
+                          <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            Single Item
+                            @if (hasOnlyOneLineItem()) {
+                              <span class="ml-1 text-[9px] text-amber-600 font-bold">(LPO: 1 item)</span>
+                            }
+                          </div>
                           <div class="flex items-center gap-3 h-10">
-                            <p-toggleswitch 
-                              [ngModel]="getStorageDecision(group).get('singleItem')?.value" 
-                              [ngModelOptions]="{standalone: true}" 
+                            <p-toggleswitch
+                              [ngModel]="getStorageDecision(group).get('singleItem')?.value"
+                              [ngModelOptions]="{standalone: true}"
+                              [disabled]="hasOnlyOneLineItem()"
                               (onChange)="onSingleItemChange(group, $event.checked, i)">
                             </p-toggleswitch>
-                            <span class="text-xs font-bold" 
-                              [class.text-blue-600]="getStorageDecision(group).get('singleItem')?.value === true" 
+                            <span class="text-xs font-bold"
+                              [class.text-blue-600]="getStorageDecision(group).get('singleItem')?.value === true"
                               [class.text-slate-500]="getStorageDecision(group).get('singleItem')?.value !== true">
                               {{ getStorageDecision(group).get('singleItem')?.value === true ? 'Yes' : 'No' }}
                             </span>
@@ -922,7 +930,7 @@
 
                         <!-- Total Assigned for all items row -->
                         @let grandTotal = getAllItemsAllocationTotal(group);
-                        @let totalExpectedGlobal = shipmentData()?.shipment?.assumedContainerCount || 0;
+                        @let totalExpectedGlobal = getTotalExtractedContainerCount();
                         <div class="rounded-xl border px-4 py-3 flex justify-between items-center mt-2"
                           [class.bg-red-50]="grandTotal > totalExpectedGlobal"
                           [class.border-red-200]="grandTotal > totalExpectedGlobal"
