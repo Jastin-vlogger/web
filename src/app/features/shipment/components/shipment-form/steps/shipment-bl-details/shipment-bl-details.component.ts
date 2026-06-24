@@ -713,9 +713,24 @@ export class ShipmentBlDetailsComponent {
     return lineItems.length <= 1;
   }
 
-  getTotalExtractedContainerCount(): number {
+  getTotalExtractedContainerCount(index?: number): number {
     const seen = new Set<string>();
-    for (let i = 0; i < this.formArray.length; i++) {
+
+    let indices: number[];
+    if (index != null) {
+      const blNo = String(this.formArray.at(index)?.get('blNo')?.value || '').trim().toUpperCase();
+      if (blNo) {
+        indices = this.formArray.controls
+          .map((_, i) => i)
+          .filter(i => String(this.formArray.at(i)?.get('blNo')?.value || '').trim().toUpperCase() === blNo);
+      } else {
+        indices = [index];
+      }
+    } else {
+      indices = Array.from({ length: this.formArray.length }, (_, i) => i);
+    }
+
+    for (const i of indices) {
       const row = this.formArray.at(i);
       const extracted: any[] = row.get('extractedContainers')?.value || [];
       extracted.forEach((c: any) => {
@@ -731,6 +746,7 @@ export class ShipmentBlDetailsComponent {
         if (num) seen.add(num);
       });
     }
+
     const fromPacking = seen.size;
     return fromPacking > 0 ? fromPacking : Number(this.shipmentData()?.shipment?.assumedContainerCount || 0);
   }
@@ -772,7 +788,7 @@ export class ShipmentBlDetailsComponent {
 
     const shipment = this.shipmentData()?.shipment as any;
     const lineItems = Array.isArray(shipment?.lineItems) ? shipment.lineItems : [];
-    const totalExpected = this.getTotalExtractedContainerCount();
+    const totalExpected = this.getTotalExtractedContainerCount(index);
 
     let items: Array<{ itemName: string; expectedContainers: number }> = [];
     if (decision.singleItem) {
@@ -2170,7 +2186,7 @@ export class ShipmentBlDetailsComponent {
       const targetWarehouse = decision.warehousesSelected[0];
       const shipment = this.shipmentData()?.shipment as any;
       const lineItems = Array.isArray(shipment?.lineItems) ? shipment.lineItems : [];
-      const totalExpected = this.getTotalExtractedContainerCount() || 1;
+      const totalExpected = this.getTotalExtractedContainerCount(index) || 1;
 
       if (decision.singleItem) {
         const itemName = shipment?.itemDescription || shipment?.item || 'Similar Item Set';
