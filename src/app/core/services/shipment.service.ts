@@ -442,6 +442,10 @@ export class ShipmentService {
     return this.http.patch<ShipmentContainerApprovalResponse>(`${this.apiUrl}/container/bl-details/${containerId}/storage-allocations/approve`, {});
   }
 
+  resetStorageAllocations(containerId: string): Observable<ShipmentContainerApprovalResponse> {
+    return this.http.patch<ShipmentContainerApprovalResponse>(`${this.apiUrl}/container/bl-details/${containerId}/storage-allocations/reset`, {});
+  }
+
   approveStorageArrival(containerId: string): Observable<ShipmentContainerApprovalResponse> {
     return this.http.patch<ShipmentContainerApprovalResponse>(`${this.apiUrl}/container/storage/${containerId}/approve`, {});
   }

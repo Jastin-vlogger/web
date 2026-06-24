@@ -657,51 +657,91 @@
                   </div>
                 </div>
               } @else if (getActiveTab(i) === 'storage') {
-                <div class="rounded-2xl border border-slate-200 overflow-hidden" [class.rbac-readonly-shell]="!canEditStorageAllocations()">
+                <div class="rounded-2xl border border-slate-200 overflow-hidden" [class.rbac-readonly-shell]="isStorageAllocationFormReadOnly(i)">
                   <div class="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 flex-wrap">
                       <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Storage Allocation</span>
                       <span class="inline-flex h-10 items-center rounded-lg border px-3 text-[9px] font-black uppercase tracking-wider whitespace-nowrap"
                         [ngClass]="getApprovalBadgeClasses(getStorageAllocationApprovalLabel(i))">
                         {{ getStorageAllocationApprovalLabel(i) }}
                       </span>
+                      @if (isTransportationArranged(i)) {
+                        <span class="inline-flex h-10 items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 text-[9px] font-black uppercase tracking-wider text-amber-700 whitespace-nowrap">
+                          <i class="pi pi-lock text-[9px]"></i>
+                          Frozen — Transportation Arranged
+                        </span>
+                      }
                     </div>
                     <div class="flex items-center gap-2">
                       <span class="inline-flex h-10 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 whitespace-nowrap">
                         <i class="pi pi-box text-[10px] text-slate-400"></i>
                         Expected: <span class="font-black text-slate-800 ml-0.5">{{ getTotalExtractedContainerCount(i) }}</span>&nbsp;containers
                       </span>
-                    @if (canEditStorageAllocations(i)) {
-                      <button
-                        type="button"
-                        (click)="saveStorageAllocations(i)"
-                        [disabled]="isSaving(i, 'storage') || hasItemAllocationOverage(group)"
-                        [title]="hasItemAllocationOverage(group) ? 'Container count exceeds expected — correct allocation before saving' : ''"
-                        class="inline-flex h-10 items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-[10px] font-black uppercase tracking-wider text-emerald-600 hover:bg-emerald-100 disabled:opacity-50"
-                      >
-                        @if (isSaving(i, 'storage')) {
-                          <i class="pi pi-spin pi-spinner text-[10px]"></i>
-                        } @else {
-                          <i class="pi pi-check text-[10px]"></i>
-                        }
-                        Save
-                      </button>
-                    }
-                    @if (canApproveStorageAllocations(i)) {
-                      <button
-                        type="button"
-                        (click)="approveStorageAllocations(i)"
-                        [disabled]="isSaving(i, 'storage')"
-                        class="rbac-allow-interaction inline-flex h-10 items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-4 text-[10px] font-black uppercase tracking-wider text-violet-700 hover:bg-violet-100 disabled:opacity-50"
-                      >
-                        @if (isSaving(i, 'storage')) {
-                          <i class="pi pi-spin pi-spinner text-[10px]"></i>
-                        } @else {
-                          <i class="pi pi-check-circle text-[10px]"></i>
-                        }
-                        Approve
-                      </button>
-                    }
+                      @if (!isStorageAllocationFrozen(i) && isStorageAllocationHasSavedData(i) && !isStorageAllocationInEditMode(i) && canEditStorageAllocations()) {
+                        <button
+                          type="button"
+                          (click)="enterStorageAllocationEditMode(i)"
+                          class="rbac-allow-interaction inline-flex h-10 items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 text-[10px] font-black uppercase tracking-wider text-blue-700 hover:bg-blue-100"
+                        >
+                          <i class="pi pi-pencil text-[10px]"></i>
+                          Edit
+                        </button>
+                      }
+                      @if (isStorageAllocationInEditMode(i) && isStorageAllocationHasSavedData(i)) {
+                        <button
+                          type="button"
+                          (click)="exitStorageAllocationEditMode(i)"
+                          class="rbac-allow-interaction inline-flex h-10 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-black uppercase tracking-wider text-slate-600 hover:bg-slate-100"
+                        >
+                          <i class="pi pi-times text-[10px]"></i>
+                          Cancel
+                        </button>
+                      }
+                      @if (canEditStorageAllocations(i)) {
+                        <button
+                          type="button"
+                          (click)="saveStorageAllocations(i)"
+                          [disabled]="isSaving(i, 'storage') || hasItemAllocationOverage(group) || !isStorageWarehouseValid(group)"
+                          [title]="!isStorageWarehouseValid(group) ? 'Select a destination warehouse before saving' : hasItemAllocationOverage(group) ? 'Container count exceeds expected — correct allocation before saving' : ''"
+                          class="inline-flex h-10 items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-[10px] font-black uppercase tracking-wider text-emerald-600 hover:bg-emerald-100 disabled:opacity-50"
+                        >
+                          @if (isSaving(i, 'storage')) {
+                            <i class="pi pi-spin pi-spinner text-[10px]"></i>
+                          } @else {
+                            <i class="pi pi-check text-[10px]"></i>
+                          }
+                          Save
+                        </button>
+                      }
+                      @if (canApproveStorageAllocations(i)) {
+                        <button
+                          type="button"
+                          (click)="approveStorageAllocations(i)"
+                          [disabled]="isSaving(i, 'storage')"
+                          class="rbac-allow-interaction inline-flex h-10 items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-4 text-[10px] font-black uppercase tracking-wider text-violet-700 hover:bg-violet-100 disabled:opacity-50"
+                        >
+                          @if (isSaving(i, 'storage')) {
+                            <i class="pi pi-spin pi-spinner text-[10px]"></i>
+                          } @else {
+                            <i class="pi pi-check-circle text-[10px]"></i>
+                          }
+                          Approve
+                        </button>
+                      }
+                      <!-- Reset button — commented out until needed
+                      @if (canResetStorageAllocations() && isStorageAllocationHasSavedData(i)) {
+                        <button
+                          type="button"
+                          (click)="resetStorageAllocations(i)"
+                          [disabled]="isSaving(i, 'storage')"
+                          class="rbac-allow-interaction inline-flex h-10 items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 text-[10px] font-black uppercase tracking-wider text-red-600 hover:bg-red-100 disabled:opacity-50"
+                          title="Clear all saved storage allocation data"
+                        >
+                          <i class="pi pi-trash text-[10px]"></i>
+                          Reset
+                        </button>
+                      }
+                      -->
                     </div>
                   </div>
                   <div class="grid grid-cols-1 gap-4 bg-white p-4">

@@ -96,6 +96,7 @@ export class ShipmentBlDetailsComponent {
   readonly statusModalShipmentIndex = signal<number | null>(null);
   readonly savingKey = signal<string | null>(null);
   readonly actualOverrides = signal<Record<number, any>>({});
+  readonly storageAllocationEditingIndices = signal<Set<number>>(new Set());
   readonly storageValidationModalVisible = signal(false);
   readonly storageValidationMessage = signal('');
   readonly storageValidationDetails = signal<Array<{ storage: string; packaging: string }>>([]);
@@ -392,7 +393,10 @@ export class ShipmentBlDetailsComponent {
   }
 
   canEditStorageAllocations(index?: number): boolean {
-    if (index != null && this.isStorageAllocationsApproved(index)) return false;
+    if (index != null) {
+      if (this.isStorageAllocationFrozen(index)) return false;
+      if (this.isStorageAllocationHasSavedData(index) && !this.isStorageAllocationInEditMode(index)) return false;
+    }
     if (this.authService.isAdminLevelRole()) return true;
     return this.canViewStorageAllocations() && this.rbacService.hasPermission('shipment.tab.bl_details.storage_allocations.edit');
   }
@@ -509,6 +513,52 @@ export class ShipmentBlDetailsComponent {
 
   isStorageAllocationsApproved(index: number): boolean {
     return this.getEffectiveStorageAllocationStatus(index) === 'approved';
+  }
+
+  isTransportationArranged(index: number): boolean {
+    const actual = this.getActualShipment(index);
+    return Array.isArray(actual?.lockedLogisticsSections) &&
+      actual.lockedLogisticsSections.includes('transportation');
+  }
+
+  isStorageAllocationFrozen(index: number): boolean {
+    return this.isStorageAllocationsApproved(index) || this.isTransportationArranged(index);
+  }
+
+  isStorageAllocationHasSavedData(index: number): boolean {
+    return this.getEffectiveStorageAllocationStatus(index) !== 'draft';
+  }
+
+  isStorageAllocationInEditMode(index: number): boolean {
+    return this.storageAllocationEditingIndices().has(index);
+  }
+
+  enterStorageAllocationEditMode(index: number): void {
+    if (this.isStorageAllocationFrozen(index)) return;
+    this.storageAllocationEditingIndices.update(s => { const n = new Set(s); n.add(index); return n; });
+  }
+
+  exitStorageAllocationEditMode(index: number): void {
+    this.storageAllocationEditingIndices.update(s => { const n = new Set(s); n.delete(index); return n; });
+  }
+
+  isStorageAllocationFormReadOnly(index: number): boolean {
+    if (!this.canViewStorageAllocations() && !this.authService.isAdminLevelRole()) return true;
+    if (this.isStorageAllocationFrozen(index)) return true;
+    if (this.isStorageAllocationHasSavedData(index) && !this.isStorageAllocationInEditMode(index)) return true;
+    return false;
+  }
+
+  isStorageWarehouseValid(group: AbstractControl): boolean {
+    const decision = this.getStorageDecision(group);
+    const allocateSame = decision.get('allocateSameWarehouse')?.value;
+    const selected: string[] = decision.get('warehousesSelected')?.value || [];
+    return allocateSame ? selected.length >= 1 : selected.length >= 2;
+  }
+
+  canResetStorageAllocations(): boolean {
+    return this.authService.isAdminLevelRole() ||
+      this.rbacService.hasPermission('shipment.tab.bl_details.storage_allocations.edit');
   }
 
   getClearingAdvanceApproval(index: number): any {
@@ -2242,12 +2292,48 @@ export class ShipmentBlDetailsComponent {
         this.savingKey.set(null);
         this.applyActualOverride(index, response?.container?.actual);
         this.patchStorageAllocationsFromActual(index, response?.container?.actual);
+        this.exitStorageAllocationEditMode(index);
         this.notificationService.success('Saved', 'Storage allocations saved successfully.');
-        this.ensureAccordionOpen(index); // POINT 8: keep accordion open
+        this.ensureAccordionOpen(index);
+        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
       },
       error: (error) => {
         this.savingKey.set(null);
         this.notificationService.error('Save failed', error.error?.message || 'Could not save storage allocations.');
+      }
+    });
+  }
+
+  async resetStorageAllocations(index: number): Promise<void> {
+    if (!this.canResetStorageAllocations()) return;
+    const row = this.formArray.at(index);
+    const shipmentId = this.shipmentData()?.shipment?._id;
+    if (!row || !shipmentId) return;
+
+    const containerId = row.get('containerId')?.value;
+    if (!containerId) return;
+
+    const confirmed = await this.confirmDialog.ask({
+      message: `This will clear all saved storage allocation data for Shipment ${index + 1}. This cannot be undone.`,
+      header: 'Reset Storage Allocation',
+      acceptLabel: 'Yes, Reset',
+    });
+    if (!confirmed) return;
+
+    this.savingKey.set(`storage-${index}`);
+    this.shipmentService.resetStorageAllocations(containerId).subscribe({
+      next: (response) => {
+        this.savingKey.set(null);
+        this.applyActualOverride(index, (response as any)?.container?.actual);
+        this.patchStorageAllocationsFromActual(index, (response as any)?.container?.actual);
+        this.exitStorageAllocationEditMode(index);
+        this.notificationService.success('Reset', 'Storage allocation has been cleared.');
+        this.ensureAccordionOpen(index);
+        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+      },
+      error: (error) => {
+        this.savingKey.set(null);
+        this.notificationService.error('Reset failed', error.error?.message || 'Could not reset storage allocation.');
       }
     });
   }
