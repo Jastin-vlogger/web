@@ -151,35 +151,11 @@
                   </div>
                 }
 
-                <!-- Per-container assignment table -->
-                <div class="storage-allocation-viewport overflow-x-auto">
-                  <table class="w-full border-separate border-spacing-0" style="min-width: 1040px;">
-                    <thead>
-                      <tr class="bg-slate-50 border-b border-slate-200">
-                        <th class="px-4 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-10">#</th>
-                        <th class="px-4 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-52">Container Serial No</th>
-                        <th class="px-4 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-36">Bags</th>
-                        <th class="px-4 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-72">Warehouse</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (cGroup of getContainersArray(group); track $index; let c = $index) {
-                        <tr [formGroup]="$any(cGroup)" class="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50 transition-colors">
-                          <td class="px-4 py-2.5 text-xs font-bold text-slate-500">{{ c + 1 }}</td>
-                          <td class="px-4 py-2.5">
-                            <input pInputText formControlName="containerSerialNo" class="table-input-text w-full bg-slate-50" readonly placeholder="Container Serial No" />
-                          </td>
-                          <td class="px-4 py-2.5">
-                            <input pInputText class="table-input-text w-full bg-slate-50" [value]="$any(cGroup).get('bags')?.value ?? ''" readonly placeholder="0" />
-                          </td>
-                          <td class="px-4 py-2.5">
-                            <input pInputText class="table-input-text w-full bg-slate-50" [value]="$any(cGroup).get('warehouse')?.value || ''" readonly placeholder="Warehouse" />
-                          </td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
+                @if (!decision) {
+                  <div class="px-4 py-8 text-center text-xs text-slate-400 italic">
+                    No storage allocation saved yet.
+                  </div>
+                }
               </div>
             }
 
