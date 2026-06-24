@@ -140,6 +140,10 @@ export class ShipmentStorageComponent {
   readonly warehouseOptions = signal<Array<{ label: string; value: string }>>([]);
   private allWarehouses = signal<Warehouse[]>([]);
 
+  // ===== Task 3: Storage Arrival per-container edit modal =====
+  readonly arrivalEditVisible = signal(false);
+  readonly arrivalEditCtx = signal<{ shipmentIndex: number; containerIndex: number } | null>(null);
+
   getBlockOptions(warehouseName: string): Array<{ label: string; value: string }> {
     const label = warehouseName?.trim();
     if (!label) return [];
@@ -612,6 +616,109 @@ export class ShipmentStorageComponent {
       actual.lockedLogisticsSections.includes('transportation');
   }
 
+  // ===== Task 3: per-container edit modal helpers =====
+  getArrivalRow(shipmentIndex: number, containerIndex: number): FormGroup | null {
+    const group = this.formArray.at(shipmentIndex) as FormGroup | null;
+    if (!group) return null;
+    return (this.getContainersArray(group)[containerIndex] as FormGroup) || null;
+  }
+
+  getEditingRow(): FormGroup | null {
+    const ctx = this.arrivalEditCtx();
+    return ctx ? this.getArrivalRow(ctx.shipmentIndex, ctx.containerIndex) : null;
+  }
+
+  openArrivalEditModal(shipmentIndex: number, containerIndex: number): void {
+    const row = this.getArrivalRow(shipmentIndex, containerIndex);
+    if (row) {
+      // Received On Date/Time default to the current system date/time when empty.
+      const now = new Date();
+      if (!row.get('receivedOnDate')?.value) row.get('receivedOnDate')?.patchValue(now, { emitEvent: false });
+      if (!row.get('receivedOnTime')?.value) row.get('receivedOnTime')?.patchValue(now, { emitEvent: false });
+    }
+    this.arrivalEditCtx.set({ shipmentIndex, containerIndex });
+    this.arrivalEditVisible.set(true);
+  }
+
+  closeArrivalEditModal(): void {
+    this.arrivalEditVisible.set(false);
+    this.arrivalEditCtx.set(null);
+  }
+
+  /** Transportation date/time for a container, pulled from Milestone 4 (transportationBooked). */
+  getTransportationInfo(shipmentIndex: number, containerSerialNo: string): { date: Date | null; time: string } {
+    const actual = this.getActualRow(shipmentIndex);
+    const booked = Array.isArray(actual?.transportationBooked) ? actual.transportationBooked : [];
+    const match = booked.find((b: any) => (b?.containerSerialNo || '') === containerSerialNo);
+    return {
+      date: match?.transportDate ? new Date(match.transportDate) : null,
+      time: match?.transportTime || '',
+    };
+  }
+
+  private combineDateTime(date: Date | null, time: string): Date | null {
+    if (!date) return null;
+    const result = new Date(date);
+    const [h, m] = (time || '00:00').split(':').map((n) => parseInt(n, 10) || 0);
+    result.setHours(h, m, 0, 0);
+    return result;
+  }
+
+  /** Delay between transportation dispatch and storage arrival, as a friendly label. */
+  getArrivalDelayLabel(shipmentIndex: number, containerIndex: number): string {
+    const row = this.getArrivalRow(shipmentIndex, containerIndex);
+    if (!row) return '–';
+    const serial = row.get('containerSerialNo')?.value || '';
+    const transport = this.getTransportationInfo(shipmentIndex, serial);
+    const receivedDate = row.get('receivedOnDate')?.value;
+    if (!transport.date || !receivedDate) return '–';
+
+    const start = this.combineDateTime(transport.date, transport.time);
+    const end = this.combineDateTime(new Date(receivedDate), this.toTime(row.get('receivedOnTime')?.value));
+    if (!start || !end) return '–';
+
+    const diffMs = end.getTime() - start.getTime();
+    if (diffMs <= 0) return 'On time';
+    const totalMinutes = Math.floor(diffMs / 60000);
+    const days = Math.floor(totalMinutes / 1440);
+    const hours = Math.floor((totalMinutes % 1440) / 60);
+    const minutes = totalMinutes % 60;
+    const parts: string[] = [];
+    if (days) parts.push(`${days}d`);
+    if (hours) parts.push(`${hours}h`);
+    if (minutes && !days) parts.push(`${minutes}m`);
+    return parts.length ? `${parts.join(' ')} late` : 'On time';
+  }
+
+  /** Warehouse names assigned to the current storekeeper, or null when the user sees all warehouses. */
+  private getAssignedWarehouseNames(): string[] | null {
+    if (this.authService.isAdminLevelRole() || !this.shouldEnforceTabPermissions()) return null;
+    const user = this.authService.getCurrentUser();
+    if (!user) return [];
+    return this.allWarehouses()
+      .filter((w) => (w.assignedStorekeepers || []).some((s) => s._id === user.id || s.email === user.email))
+      .map((w) => `${w.name}${w.code ? ` - ${w.code}` : ''}`);
+  }
+
+  isContainerVisibleForUser(warehouseName: string): boolean {
+    const assigned = this.getAssignedWarehouseNames();
+    if (assigned === null) return true; // admin / manager / management
+    if (!warehouseName) return true; // not yet allocated — keep visible
+    return assigned.includes(warehouseName);
+  }
+
+  getVisibleArrivalContainers(group: AbstractControl): Array<{ control: AbstractControl; index: number }> {
+    return this.getContainersArray(group)
+      .map((control, index) => ({ control, index }))
+      .filter(({ control }) => this.isContainerVisibleForUser((control as FormGroup).get('warehouse')?.value || ''));
+  }
+
+  async saveArrivalFromModal(): Promise<void> {
+    const ctx = this.arrivalEditCtx();
+    if (!ctx) return;
+    await this.saveArrivalRow(ctx.shipmentIndex, ctx.containerIndex);
+  }
+
   async saveArrivalRow(index: number, containerIndex: number): Promise<void> {
     if (this.isStorageArrivalLocked(index)) return;
     if (!this.isTransportationArranged(index)) {
@@ -693,6 +800,7 @@ export class ShipmentStorageComponent {
         this.storageArrivalStatusOverrides.update((current) => ({ ...current, [index]: 'pending_warehouse_manager' }));
         this.savingRowKey.set(null);
         if (rowFile) this.clearRowFile(index, containerIndex);
+        this.closeArrivalEditModal();
         this.notificationService.success('Saved', `Storage arrival row ${containerIndex + 1} saved successfully.`);
         this.store.dispatch(ShipmentActions.submitClearanceFinalSuccess({ index }));
       },

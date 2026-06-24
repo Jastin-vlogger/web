@@ -217,115 +217,71 @@
                   </div>
                 </div>
                 <div class="storage-arrival-viewport overflow-x-auto">
-                  <table class="w-full border-separate border-spacing-0" [style.min-width]="isStorageArrivalLocked(i) ? '2000px' : '2300px'">
-                    <thead>
-                      <tr class="bg-slate-50 border-b border-slate-200">
-                        <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-10">#</th>
-                        <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-52">Container No</th>
-                        <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-36">Bags</th>
-                        <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-64">Warehouse</th>
-                        <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-48">Block</th>
-                        <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-40">Received On Date<span class="text-red-500 ml-0.5">*</span></th>
-                        <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-36">Received On Time<span class="text-red-500 ml-0.5">*</span></th>
-                        <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-72">GRN #<span class="text-red-500 ml-0.5">*</span></th>
-                        <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-72">Batch #<span class="text-red-500 ml-0.5">*</span></th>
-                        <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-40">Production Date<span class="text-red-500 ml-0.5">*</span></th>
-                        <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-40">Expiry Date<span class="text-red-500 ml-0.5">*</span></th>
-                        <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-80">Remarks</th>
-                        @if (!isStorageArrivalLocked(i)) {
-                        <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-24">Document</th>
-                        <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-28">Action</th>
-                        }
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (cGroup of getContainersArray(group); track $index; let c = $index) {
-                        <tr [formGroup]="$any(cGroup)" class="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/30 transition-colors">
-                          <td class="px-3 py-2 text-xs font-bold text-slate-500">{{ c + 1 }}</td>
-                          <td class="px-3 py-2">
-                            <input pInputText formControlName="containerSerialNo" class="table-input-text w-full bg-slate-50" readonly placeholder="Container No" />
-                          </td>
-                          <td class="px-3 py-2">
-                            <input pInputText class="table-input-text w-full bg-slate-50" [value]="$any(cGroup).get('bags')?.value ?? ''" readonly placeholder="0" />
-                          </td>
-                          <td class="px-3 py-2">
-                            <input pInputText class="table-input-text w-full bg-slate-50" [value]="$any(cGroup).get('warehouse')?.value || ''" readonly placeholder="Warehouse" />
-                          </td>
-                          <td class="px-3 py-2">
-                            @let blockVal = $any(cGroup).get('block')?.value;
-                            @if (blockVal) {
-                              <span class="inline-flex items-center rounded-md bg-indigo-50 px-2 py-1 text-[11px] font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10">{{ blockVal }}</span>
-                            } @else {
-                              <span class="text-[10px] text-slate-400 italic">–</span>
-                            }
-                          </td>
-                          <td class="px-3 py-2">
-                            <p-datepicker formControlName="receivedOnDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [disabled]="isStorageArrivalLocked(i)" />
-                          </td>
-                          <td class="px-3 py-2">
-                            <p-datepicker formControlName="receivedOnTime" appendTo="body" inputStyleClass="table-input" placeholder="HH:MM" styleClass="w-full" [timeOnly]="true" hourFormat="24" [disabled]="isStorageArrivalLocked(i)" />
-                          </td>
-                          <td class="px-3 py-2">
-                            <input pInputText formControlName="grn" class="table-input-text w-full" placeholder="GRN #" [readonly]="isStorageArrivalLocked(i)" />
-                          </td>
-                          <td class="px-3 py-2">
-                            <input pInputText formControlName="batch" class="table-input-text w-full" placeholder="Batch #" [readonly]="isStorageArrivalLocked(i)" />
-                          </td>
-                          <td class="px-3 py-2">
-                            <p-datepicker formControlName="productionDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [disabled]="isStorageArrivalLocked(i)" />
-                          </td>
-                          <td class="px-3 py-2">
-                            <p-datepicker formControlName="expiryDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [disabled]="isStorageArrivalLocked(i)" />
-                          </td>
-                          <td class="px-3 py-2">
-                            <input pInputText formControlName="remarks" class="table-input-text w-full" placeholder="Remarks" [readonly]="isStorageArrivalLocked(i)" />
-                          </td>
-                          @if (!isStorageArrivalLocked(i)) {
-                          <td class="px-3 py-2">
-                            <div class="flex items-center gap-1">
-                              @if (!isStorageArrivalLocked(i)) {
-                              <button type="button" (click)="clickRowFileInput(i, c)" class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-blue-600">
-                                <i class="pi pi-upload text-[10px]"></i>
-                              </button>
-                              }
-                              @if (getRowFile(i, c)) {
-                                <button type="button" (click)="openDocumentPreview(getRowFile(i, c)!, 'Storage Row Document')" class="h-8 w-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 inline-flex items-center justify-center">
-                                  <i class="pi pi-eye text-[10px]"></i>
-                                </button>
-                                @if (!isStorageArrivalLocked(i)) {
-                                <button type="button" (click)="clearRowFile(i, c)" class="h-8 w-8 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 inline-flex items-center justify-center">
-                                  <i class="pi pi-trash text-[10px]"></i>
-                                </button>
-                                }
-                              } @else if (getSavedRowDocumentUrl(cGroup)) {
-                                <button type="button" (click)="openRemoteDocumentPreview(getSavedRowDocumentUrl(cGroup), getSavedRowDocumentName(cGroup) || 'Storage Row Document')" class="h-8 w-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 inline-flex items-center justify-center">
-                                  <i class="pi pi-eye text-[10px]"></i>
-                                </button>
-                              }
-                            </div>
-                          </td>
-                          <td class="px-3 py-2">
-                            @if (!isStorageArrivalLocked(i)) {
-                            <button
-                              type="button"
-                              (click)="saveArrivalRow(i, c)"
-                              class="inline-flex min-w-[5.75rem] items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:bg-emerald-100"
-                            >
-                              @if (isSavingArrivalRow(i, c)) {
-                                <i class="pi pi-spin pi-spinner text-[10px]"></i>
-                                Saving...
-                              } @else {
-                                <i class="pi pi-check text-[10px]"></i>
-                                Save
-                              }
-                            </button>
-                            }
-                          </td>
-                          }
+                  @let visibleContainers = getVisibleArrivalContainers(group);
+                  @if (visibleContainers.length > 0) {
+                    <table class="w-full border-separate border-spacing-0 min-w-[900px]">
+                      <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200">
+                          <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-10">#</th>
+                          <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200">Container No</th>
+                          <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200">Bags</th>
+                          <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200">Warehouse</th>
+                          <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200">Block</th>
+                          <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200">GRN #</th>
+                          <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200">Delay</th>
+                          <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200">Status</th>
+                          <th class="px-3 py-2.5 text-right text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-24">Action</th>
                         </tr>
-                      }
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        @for (item of visibleContainers; track item.index) {
+                          @let cGroup = item.control;
+                          @let c = item.index;
+                          @let recorded = !!($any(cGroup).get('grn')?.value && $any(cGroup).get('batch')?.value);
+                          <tr class="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/30 transition-colors">
+                            <td class="px-3 py-2.5 text-xs font-bold text-slate-500">{{ c + 1 }}</td>
+                            <td class="px-3 py-2.5 text-xs font-semibold text-slate-700 font-mono">{{ $any(cGroup).get('containerSerialNo')?.value || '–' }}</td>
+                            <td class="px-3 py-2.5 text-xs text-slate-600">{{ $any(cGroup).get('bags')?.value ?? '–' }}</td>
+                            <td class="px-3 py-2.5 text-xs text-slate-600">{{ $any(cGroup).get('warehouse')?.value || '–' }}</td>
+                            <td class="px-3 py-2.5">
+                              @let blockVal = $any(cGroup).get('block')?.value;
+                              @if (blockVal) {
+                                <span class="inline-flex items-center rounded-md bg-indigo-50 px-2 py-1 text-[11px] font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10">{{ blockVal }}</span>
+                              } @else {
+                                <span class="text-[10px] text-slate-400 italic">–</span>
+                              }
+                            </td>
+                            <td class="px-3 py-2.5 text-xs text-slate-600">{{ $any(cGroup).get('grn')?.value || '–' }}</td>
+                            <td class="px-3 py-2.5 text-xs">
+                              @let delayLabel = getArrivalDelayLabel(i, c);
+                              <span [class.text-rose-600]="delayLabel.endsWith('late')" [class.text-emerald-600]="delayLabel === 'On time'" [class.text-slate-400]="delayLabel === '–'" class="font-semibold">{{ delayLabel }}</span>
+                            </td>
+                            <td class="px-3 py-2.5">
+                              @if (recorded) {
+                                <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600"><i class="pi pi-check text-[9px]"></i> Recorded</span>
+                              } @else {
+                                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Pending</span>
+                              }
+                            </td>
+                            <td class="px-3 py-2.5 text-right">
+                              <button
+                                type="button"
+                                (click)="openArrivalEditModal(i, c)"
+                                class="inline-flex items-center justify-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100"
+                              >
+                                <i class="pi {{ isStorageArrivalLocked(i) ? 'pi-eye' : 'pi-pencil' }} text-[10px]"></i>
+                                {{ isStorageArrivalLocked(i) ? 'View' : 'Edit' }}
+                              </button>
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  } @else {
+                    <div class="px-4 py-8 text-center text-xs text-slate-400 italic">
+                      No containers assigned to your warehouse(s) for this shipment.
+                    </div>
+                  }
                 </div>
               </div>
             }
@@ -375,3 +331,145 @@
     }
   </div>
 </p-dialog>
+
+<!-- ===== Task 3: Storage Arrival per-container edit modal ===== -->
+@if (arrivalEditVisible()) {
+  @let ctx = arrivalEditCtx();
+  @let row = getEditingRow();
+  @if (ctx && row) {
+    @let si = ctx.shipmentIndex;
+    @let ci = ctx.containerIndex;
+    @let locked = isStorageArrivalLocked(si);
+    @let serial = $any(row).get('containerSerialNo')?.value || '';
+    @let transport = getTransportationInfo(si, serial);
+    <p-dialog
+      [header]="(locked ? 'View' : 'Edit') + ' Storage Arrival — Container ' + (ci + 1)"
+      [visible]="arrivalEditVisible()"
+      (visibleChange)="arrivalEditVisible.set($event)"
+      (onHide)="closeArrivalEditModal()"
+      [modal]="true"
+      [dismissableMask]="false"
+      [style]="{ width: '90vw', maxWidth: '760px' }"
+      [draggable]="false"
+      appendTo="body">
+      <div [formGroup]="$any(row)" class="flex flex-col gap-5 p-1">
+
+        <!-- Read-only summary (from allocation + transportation) -->
+        <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+          <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Container Details (read-only)</span>
+          <div class="mt-3 grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3">
+            <div class="flex flex-col gap-0.5">
+              <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Container No</span>
+              <span class="text-xs font-semibold text-slate-700 font-mono">{{ serial || '–' }}</span>
+            </div>
+            <div class="flex flex-col gap-0.5">
+              <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Bags</span>
+              <span class="text-xs font-semibold text-slate-700">{{ $any(row).get('bags')?.value ?? '–' }}</span>
+            </div>
+            <div class="flex flex-col gap-0.5">
+              <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Warehouse</span>
+              <span class="text-xs font-semibold text-slate-700">{{ $any(row).get('warehouse')?.value || '–' }}</span>
+            </div>
+            <div class="flex flex-col gap-0.5">
+              <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Received On Date</span>
+              <span class="text-xs font-semibold text-slate-700">{{ $any(row).get('receivedOnDate')?.value | date:'dd/MM/yyyy' }}</span>
+            </div>
+            <div class="flex flex-col gap-0.5">
+              <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Received On Time</span>
+              <span class="text-xs font-semibold text-slate-700">{{ $any(row).get('receivedOnTime')?.value | date:'HH:mm' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transportation (auto-populated from Milestone 4) + Delay -->
+        <div class="rounded-xl border border-blue-100 bg-blue-50/40 p-4">
+          <span class="text-[9px] font-black text-blue-400 uppercase tracking-widest">Transportation (auto)</span>
+          <div class="mt-3 grid grid-cols-3 gap-x-4 gap-y-3">
+            <div class="flex flex-col gap-0.5">
+              <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Transportation Date</span>
+              <span class="text-xs font-semibold text-slate-700">{{ transport.date ? (transport.date | date:'dd/MM/yyyy') : '–' }}</span>
+            </div>
+            <div class="flex flex-col gap-0.5">
+              <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Transportation Time</span>
+              <span class="text-xs font-semibold text-slate-700">{{ transport.time || '–' }}</span>
+            </div>
+            <div class="flex flex-col gap-0.5">
+              <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Delay</span>
+              @let delayLabel = getArrivalDelayLabel(si, ci);
+              <span class="text-xs font-bold" [class.text-rose-600]="delayLabel.endsWith('late')" [class.text-emerald-600]="delayLabel === 'On time'" [class.text-slate-400]="delayLabel === '–'">{{ delayLabel }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Storekeeper inputs -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Block</label>
+            <p-select formControlName="block" [options]="getBlockOptions($any(row).get('warehouse')?.value)" optionLabel="label" optionValue="value" placeholder="Select block" styleClass="w-full" appendTo="body" [showClear]="true" [disabled]="locked"></p-select>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">GRN #<span class="text-red-500 ml-0.5">*</span></label>
+            <input pInputText formControlName="grn" class="table-input-text w-full" placeholder="GRN #" [readonly]="locked" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Batch #<span class="text-red-500 ml-0.5">*</span></label>
+            <input pInputText formControlName="batch" class="table-input-text w-full" placeholder="Batch #" [readonly]="locked" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Production Date<span class="text-red-500 ml-0.5">*</span></label>
+            <p-datepicker formControlName="productionDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [disabled]="locked" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Expiry Date<span class="text-red-500 ml-0.5">*</span></label>
+            <p-datepicker formControlName="expiryDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [disabled]="locked" />
+          </div>
+          <div class="flex flex-col gap-1.5 md:col-span-2">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Remarks</label>
+            <input pInputText formControlName="remarks" class="table-input-text w-full" placeholder="Remarks" [readonly]="locked" />
+          </div>
+        </div>
+
+        <!-- Attachment (optional) -->
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Attachment <span class="text-slate-400 normal-case font-normal">(optional)</span></label>
+          <div class="flex items-center gap-2">
+            @if (!locked) {
+            <button type="button" (click)="clickRowFileInput(si, ci)" class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-600">
+              <i class="pi pi-upload text-[10px]"></i> Upload
+            </button>
+            }
+            @if (getRowFile(si, ci)) {
+              <button type="button" (click)="openDocumentPreview(getRowFile(si, ci)!, 'Storage Row Document')" class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 inline-flex items-center justify-center"><i class="pi pi-eye text-[10px]"></i></button>
+              @if (!locked) {
+              <button type="button" (click)="clearRowFile(si, ci)" class="h-9 w-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 inline-flex items-center justify-center"><i class="pi pi-trash text-[10px]"></i></button>
+              }
+            } @else if (getSavedRowDocumentUrl(row)) {
+              <button type="button" (click)="openRemoteDocumentPreview(getSavedRowDocumentUrl(row), getSavedRowDocumentName(row) || 'Storage Row Document')" class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 inline-flex items-center justify-center"><i class="pi pi-eye text-[10px]"></i></button>
+            }
+          </div>
+          @if (getRowFile(si, ci)) {
+            <p class="text-[10px] text-slate-400 truncate">{{ getRowFile(si, ci)?.name }}</p>
+          } @else if (getSavedRowDocumentName(row)) {
+            <p class="text-[10px] text-slate-400 truncate">{{ getSavedRowDocumentName(row) }}</p>
+          }
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-3 pt-1">
+          <button type="button" (click)="closeArrivalEditModal()" class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50">
+            {{ locked ? 'Close' : 'Cancel' }}
+          </button>
+          @if (!locked) {
+          <button type="button" (click)="saveArrivalFromModal()" [disabled]="isSavingArrivalRow(si, ci)" class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-600 hover:bg-emerald-100 disabled:opacity-50">
+            @if (isSavingArrivalRow(si, ci)) {
+              <i class="pi pi-spin pi-spinner text-sm"></i> Saving...
+            } @else {
+              <i class="pi pi-check text-sm"></i> Save
+            }
+          </button>
+          }
+        </div>
+      </div>
+    </p-dialog>
+  }
+}

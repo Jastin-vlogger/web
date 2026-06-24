@@ -658,7 +658,7 @@
                       @if (canEditLogisticsSection('transportation') && !isRowEditLocked(i)) {
                         <button type="button" (click)="openBulkDateModal(i)"
                           class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100">
-                          <i class="pi pi-list-check text-[10px]"></i> Bulk Update
+                          <i class="pi pi-pencil text-[10px]"></i> Manage Shipments
                         </button>
                         <button type="button" (click)="saveLogisticsSection(i, 'transportation')"
                           [disabled]="isSectionSaving(i, 'transportation')"
@@ -675,76 +675,42 @@
                   </div>
 
                   <div class="overflow-x-auto">
-                    <table class="w-full text-[11px]">
-                      <thead>
-                        <tr class="border-b border-slate-200 bg-slate-50">
-                          <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[120px]">Container</th>
-                          <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[180px]">Transport Company</th>
-                          <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[180px]">Warehouse</th>
-                          <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[160px]">Booked Date</th>
-                          <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[160px]">Transport Date</th>
-                          <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[160px]">Token Date</th>
-                          <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[160px]">Storage Start</th>
-                          <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[160px]">Storage End</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        @for (row of getTransportationRows(group).controls; track $index) {
-                          <tr [formGroup]="$any(row)" class="border-b border-slate-100 hover:bg-slate-50">
-                            <td class="px-2 py-2 font-mono text-slate-700 font-bold text-[10px] whitespace-nowrap">{{ row.get('containerSerialNo')?.value }}</td>
-                            <td class="px-2 py-2 min-w-[150px]">
-                              @if (!isRowEditLocked(i)) {
-                                <p-select formControlName="transportCompanyName" [options]="transportCompanyOptions()" optionLabel="label" optionValue="value" placeholder="Select company" styleClass="w-full" appendTo="body" [showClear]="true"></p-select>
-                              } @else {
-                                <span class="text-slate-600">{{ row.get('transportCompanyName')?.value || '—' }}</span>
-                              }
-                            </td>
-                            <td class="px-2 py-2 min-w-[150px]">
-                              @if (!isRowEditLocked(i)) {
-                                <p-select formControlName="warehouse" [options]="warehouseOptions()" optionLabel="label" optionValue="value" placeholder="Select warehouse" styleClass="w-full" appendTo="body" [showClear]="true"></p-select>
-                              } @else {
-                                <span class="text-slate-600">{{ row.get('warehouse')?.value || '—' }}</span>
-                              }
-                            </td>
-                            <td class="px-2 py-2 min-w-[160px]">
-                              @if (!isRowEditLocked(i)) {
-                                <p-datepicker formControlName="bookedDate" appendTo="body" inputStyleClass="table-input text-[11px]" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" />
-                              } @else {
-                                <span class="text-slate-600">{{ row.get('bookedDate')?.value | date:'dd/MM/yy' }}</span>
-                              }
-                            </td>
-                            <td class="px-2 py-2 min-w-[160px]">
-                              @if (!isRowEditLocked(i)) {
-                                <p-datepicker formControlName="transportDate" appendTo="body" inputStyleClass="table-input text-[11px]" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" />
-                              } @else {
-                                <span class="text-slate-600">{{ row.get('transportDate')?.value | date:'dd/MM/yy' }}</span>
-                              }
-                            </td>
-                            <td class="px-2 py-2 min-w-[160px]">
-                              @if (!isRowEditLocked(i)) {
-                                <p-datepicker formControlName="tokenReceivedDate" appendTo="body" inputStyleClass="table-input text-[11px]" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" />
-                              } @else {
-                                <span class="text-slate-600">{{ row.get('tokenReceivedDate')?.value | date:'dd/MM/yy' }}</span>
-                              }
-                            </td>
-                            <td class="px-2 py-2 min-w-[160px]">
-                              @if (!isRowEditLocked(i)) {
-                                <p-datepicker formControlName="storageStartDate" appendTo="body" inputStyleClass="table-input text-[11px]" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" />
-                              } @else {
-                                <span class="text-slate-600">{{ row.get('storageStartDate')?.value | date:'dd/MM/yy' }}</span>
-                              }
-                            </td>
-                            <td class="px-2 py-2 min-w-[160px]">
-                              @if (!isRowEditLocked(i)) {
-                                <p-datepicker formControlName="storageEndDate" appendTo="body" inputStyleClass="table-input text-[11px]" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full" />
-                              } @else {
-                                <span class="text-slate-600">{{ row.get('storageEndDate')?.value | date:'dd/MM/yy' }}</span>
-                              }
-                            </td>
+                    @let transactions = getTransactionGroups(group);
+                    @if (transactions.length > 0) {
+                      <table class="w-full text-[11px]">
+                        <thead>
+                          <tr class="border-b border-slate-200 bg-slate-50">
+                            <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[140px]">Transaction</th>
+                            <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[180px]">Transport Company</th>
+                            <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[180px]">Warehouse</th>
+                            <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[160px]">Booked Date</th>
+                            <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[160px]">Transport Date</th>
+                            <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[120px]">Containers</th>
+                            <th class="text-left px-2 py-2 font-bold text-slate-600 min-w-[80px]">Action</th>
                           </tr>
-                        }
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          @for (transaction of transactions; track transaction.transactionId) {
+                            @let displayRow = getTransactionDisplayRow(transaction);
+                            <tr class="border-b border-slate-100 hover:bg-slate-50 cursor-pointer">
+                              <td class="px-2 py-2 text-slate-700 font-bold text-[11px]">Transaction #{{ $index + 1 }}</td>
+                              <td class="px-2 py-2 text-slate-700">{{ displayRow.transportCompanyName || '—' }}</td>
+                              <td class="px-2 py-2 text-slate-700">{{ displayRow.warehouse || '—' }}</td>
+                              <td class="px-2 py-2 text-slate-700">{{ displayRow.bookedDate | date:'dd/MM/yy' }}</td>
+                              <td class="px-2 py-2 text-slate-700">{{ displayRow.transportDate | date:'dd/MM/yy' }}</td>
+                              <td class="px-2 py-2 text-slate-700 font-bold">{{ transaction.rows.length }}</td>
+                              <td class="px-2 py-2">
+                                <button type="button" (click)="openTransactionDetailModal(transaction)" class="text-blue-600 hover:text-blue-800 font-bold">
+                                  <i class="pi pi-eye text-[12px]"></i>
+                                </button>
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    } @else {
+                      <div class="py-4 text-center text-slate-500 text-[11px]">No transportation arrangements saved yet. Click "Manage Shipments" to add.</div>
+                    }
                   </div>
                 </div>
               </div>
@@ -1023,36 +989,6 @@
               hourFormat="24"
               [showIcon]="true" />
           </div>
-          <div class="flex flex-col gap-1">
-            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Storage Start</label>
-            <p-datepicker
-              formControlName="storageStartDate"
-              appendTo="body"
-              inputStyleClass="table-input text-[11px]"
-              styleClass="w-full"
-              dateFormat="dd/mm/yy"
-              [showIcon]="true" />
-          </div>
-          <div class="flex flex-col gap-1">
-            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Storage End</label>
-            <p-datepicker
-              formControlName="storageEndDate"
-              appendTo="body"
-              inputStyleClass="table-input text-[11px]"
-              styleClass="w-full"
-              dateFormat="dd/mm/yy"
-              [showIcon]="true" />
-          </div>
-          <div class="flex flex-col gap-1">
-            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Token Received</label>
-            <p-datepicker
-              formControlName="tokenReceivedDate"
-              appendTo="body"
-              inputStyleClass="table-input text-[11px]"
-              styleClass="w-full"
-              dateFormat="dd/mm/yy"
-              [showIcon]="true" />
-          </div>
         </div>
       </div>
 
@@ -1073,10 +1009,10 @@
         >
           @if (bulkTransportationSaving()) {
             <i class="pi pi-spin pi-spinner text-sm"></i>
-            Saving...
+            Submitting...
           } @else {
             <i class="pi pi-check text-sm"></i>
-            Save {{ selectedTransportationCount(bulkDateRowIndex()!) }} Selected
+            Submit
           }
         </button>
       </div>
@@ -1145,5 +1081,71 @@
         </button>
       </div>
     </div>
+  </p-dialog>
+}
+
+<!-- Transaction Detail Modal -->
+@if (transactionDetailModalVisible()) {
+  @let transaction = selectedTransactionData();
+  <p-dialog
+    [visible]="transactionDetailModalVisible()"
+    (visibleChange)="transactionDetailModalVisible.set($event)"
+    (onHide)="closeTransactionDetailModal()"
+    [modal]="true"
+    header="Transaction Details"
+    [style]="{ width: '70vw' }"
+    styleClass="max-w-4xl"
+  >
+    @if (transaction) {
+      <div class="space-y-4">
+        <!-- Transaction Summary -->
+        <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
+          <h3 class="font-bold text-slate-800 mb-3">Transaction Information</h3>
+          <div class="grid grid-cols-2 gap-4 text-[12px]">
+            <div>
+              <span class="text-slate-600 font-semibold">Transport Company:</span>
+              <p class="text-slate-800 font-bold">{{ transaction.rows[0]?.transportCompanyName || '—' }}</p>
+            </div>
+            <div>
+              <span class="text-slate-600 font-semibold">Warehouse:</span>
+              <p class="text-slate-800 font-bold">{{ transaction.rows[0]?.warehouse || '—' }}</p>
+            </div>
+            <div>
+              <span class="text-slate-600 font-semibold">Booked Date:</span>
+              <p class="text-slate-800 font-bold">{{ transaction.rows[0]?.bookedDate | date:'dd/MM/yyyy' }}</p>
+            </div>
+            <div>
+              <span class="text-slate-600 font-semibold">Transport Date:</span>
+              <p class="text-slate-800 font-bold">{{ transaction.rows[0]?.transportDate | date:'dd/MM/yyyy' }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Containers in Transaction -->
+        <div>
+          <h3 class="font-bold text-slate-800 mb-3">Containers ({{ transaction.rows.length }})</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-[11px] border border-slate-200 rounded-lg">
+              <thead>
+                <tr class="bg-slate-100 border-b border-slate-200">
+                  <th class="text-left px-3 py-2 font-bold text-slate-700">Container No</th>
+                  <th class="text-left px-3 py-2 font-bold text-slate-700">Booking Time</th>
+                  <th class="text-left px-3 py-2 font-bold text-slate-700">Transport Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (container of transaction.rows; track $index) {
+                  <tr class="border-b border-slate-100 hover:bg-slate-50">
+                    <td class="px-3 py-2 font-mono font-bold text-slate-800">{{ container.containerSerialNo }}</td>
+                    <td class="px-3 py-2 text-slate-700">{{ container.bookingTime || '—' }}</td>
+                    <td class="px-3 py-2 text-slate-700">{{ container.transportTime || '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    }
   </p-dialog>
 }

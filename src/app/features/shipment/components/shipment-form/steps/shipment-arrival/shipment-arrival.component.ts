@@ -176,6 +176,10 @@ export class ShipmentArrivalComponent {
   readonly bulkDateModalVisible = signal(false);
   readonly bulkDateRowIndex = signal<number | null>(null);
   readonly bulkTransportationSaving = signal(false);
+  readonly bulkContainerSearchFilter = signal<string>('');
+  readonly bulkTransportationAttachments = signal<File[]>([]);
+  readonly transactionDetailModalVisible = signal(false);
+  readonly selectedTransactionData = signal<any>(null);
   readonly bulkDateForm = new FormGroup({
     transportCompanyName: new FormControl<string | null>(null),
     warehouse: new FormControl<string | null>(null),
@@ -183,9 +187,6 @@ export class ShipmentArrivalComponent {
     bookingTime: new FormControl<Date | null>(null),
     transportDate: new FormControl<Date | null>(null),
     transportTime: new FormControl<Date | null>(null),
-    storageStartDate: new FormControl<Date | null>(null),
-    storageEndDate: new FormControl<Date | null>(null),
-    tokenReceivedDate: new FormControl<Date | null>(null),
   });
 
   hasVisibleShipments(): boolean {
@@ -507,6 +508,7 @@ export class ShipmentArrivalComponent {
     const toDate = (val: unknown) => (val ? new Date(val as Date).toISOString().split('T')[0] : '');
     return this.getTransportationRows(group).getRawValue().map((tb: any) => ({
       sn: Number(tb.sn) || 0,
+      transactionId: tb.transactionId || '',
       containerSerialNo: tb.containerSerialNo || '',
       transportCompanyName: tb.transportCompanyName || '',
       warehouse: tb.warehouse || '',
@@ -820,6 +822,40 @@ export class ShipmentArrivalComponent {
 
   toggleTransportation(index: number): void {
     this.expandedTransportation.update((cur) => ({ ...cur, [index]: !cur[index] }));
+  }
+
+  getTransactionGroups(group: AbstractControl): Array<{ transactionId: string; rows: any[] }> {
+    const allRows = this.getTransportationRows(group).getRawValue() || [];
+    const grouped: Record<string, any[]> = {};
+    const order: string[] = [];
+
+    // Only containers that belong to a saved transaction appear. A transaction is created
+    // when containers are submitted together via "Manage Shipments" (shared transactionId).
+    allRows.forEach((row: any) => {
+      const txnId = (row.transactionId || '').trim();
+      if (!txnId) return;
+      if (!grouped[txnId]) {
+        grouped[txnId] = [];
+        order.push(txnId);
+      }
+      grouped[txnId].push(row);
+    });
+
+    return order.map((transactionId) => ({ transactionId, rows: grouped[transactionId] }));
+  }
+
+  getTransactionDisplayRow(transaction: { transactionId: string; rows: any[] }): any {
+    return transaction.rows[0] || {};
+  }
+
+  openTransactionDetailModal(transaction: { transactionId: string; rows: any[] }): void {
+    this.selectedTransactionData.set(transaction);
+    this.transactionDetailModalVisible.set(true);
+  }
+
+  closeTransactionDetailModal(): void {
+    this.transactionDetailModalVisible.set(false);
+    this.selectedTransactionData.set(null);
   }
 
   getFileSignal(kind: Step5DocKind): ReturnType<typeof signal<Record<number, File | null>>> {
@@ -1881,6 +1917,7 @@ export class ShipmentArrivalComponent {
         const saved = booked[rowIndex];
         if (!saved) return;
         row.patchValue({
+          transactionId: saved.transactionId || '',
           transportCompanyName: saved.transportCompanyName || '',
           warehouse: saved.warehouse || '',
           bookedDate: saved.bookedDate ? new Date(saved.bookedDate) : null,
@@ -2046,11 +2083,10 @@ export class ShipmentArrivalComponent {
       bookingTime: new Date(currentTime),
       transportDate: new Date(currentDate),
       transportTime: new Date(currentTime),
-      storageStartDate: null,
-      storageEndDate: null,
-      tokenReceivedDate: null,
     });
     this.clearBulkTransportationSelection(index);
+    this.bulkTransportationAttachments.set([]);
+    this.bulkContainerSearchFilter.set('');
     this.bulkDateModalVisible.set(true);
   }
 
@@ -2087,6 +2123,34 @@ export class ShipmentArrivalComponent {
     });
   }
 
+  filterBulkContainers(event: Event): void {
+    const searchValue = (event.target as HTMLInputElement).value.toLowerCase().trim();
+    this.bulkContainerSearchFilter.set(searchValue);
+  }
+
+  isBulkContainerVisible(containerNo: string | undefined): boolean {
+    if (!containerNo) return false;
+    const filter = this.bulkContainerSearchFilter().toLowerCase();
+    if (!filter) return true;
+    return containerNo.toLowerCase().includes(filter);
+  }
+
+  onBulkAttachmentSelected(event: Event): void {
+    const files = (event.target as HTMLInputElement).files;
+    if (!files) return;
+    const newFiles = Array.from(files);
+    this.bulkTransportationAttachments.update(current => [...current, ...newFiles]);
+    (event.target as HTMLInputElement).value = '';
+  }
+
+  removeBulkAttachment(index: number): void {
+    this.bulkTransportationAttachments.update(current => {
+      const next = [...current];
+      next.splice(index, 1);
+      return next;
+    });
+  }
+
   saveBulkTransportationSelection(): void {
     const index = this.bulkDateRowIndex();
     if (index === null) return;
@@ -2117,9 +2181,6 @@ export class ShipmentArrivalComponent {
     if (values.bookingTime) patch['bookingTime'] = values.bookingTime;
     if (values.transportDate) patch['transportDate'] = values.transportDate;
     if (values.transportTime) patch['transportTime'] = values.transportTime;
-    if (values.storageStartDate) patch['storageStartDate'] = values.storageStartDate;
-    if (values.storageEndDate) patch['storageEndDate'] = values.storageEndDate;
-    if (values.tokenReceivedDate) patch['tokenReceivedDate'] = values.tokenReceivedDate;
 
     if (!Object.keys(patch).length) {
       this.messageService.add({
@@ -2129,6 +2190,10 @@ export class ShipmentArrivalComponent {
       });
       return;
     }
+
+    // One bulk submit = one transaction. Assign a single shared transactionId to all selected rows
+    // so they group into a single row in the transaction table.
+    patch['transactionId'] = `TXN-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
     selectedRows.forEach((row) => {
       row.patchValue(patch, { emitEvent: false });
@@ -2161,6 +2226,12 @@ export class ShipmentArrivalComponent {
     payload.append('sectionKey', 'transportation');
     payload.append('transportationPartialSave', 'true');
     payload.append('transportationBooked', JSON.stringify(this.buildTransportationBookedPayload(group)));
+
+    // Append attachments if any
+    const attachments = this.bulkTransportationAttachments();
+    attachments.forEach((file, index) => {
+      payload.append(`transportationAttachment_${index}`, file, file.name);
+    });
 
     this.bulkTransportationSaving.set(true);
     this.shipmentService.submitLogistics(containerId, payload).subscribe({

@@ -94,6 +94,8 @@ export class ShipmentBlDetailsComponent {
   readonly costSheetAttachmentFiles = signal<Record<string, File | null>>({});
   readonly statusModalVisible = signal(false);
   readonly statusModalShipmentIndex = signal<number | null>(null);
+  readonly storageAuditModalVisible = signal(false);
+  readonly storageAuditModalIndex = signal<number | null>(null);
   readonly savingKey = signal<string | null>(null);
   readonly actualOverrides = signal<Record<number, any>>({});
   readonly storageAllocationEditingIndices = signal<Set<number>>(new Set());
@@ -573,6 +575,29 @@ export class ShipmentBlDetailsComponent {
     return this.getActualShipment(index)?.storageAllocationApproval || { status: 'draft' };
   }
 
+  getApprovalUserName(userField: any): string {
+    if (!userField) return '—';
+    if (typeof userField === 'object') return userField.name || userField.email || '—';
+    return '—';
+  }
+
+  formatApprovalDate(dateStr: string | null | undefined): string {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  openStorageAuditModal(index: number): void {
+    this.storageAuditModalIndex.set(index);
+    this.storageAuditModalVisible.set(true);
+  }
+
+  closeStorageAuditModal(): void {
+    this.storageAuditModalVisible.set(false);
+    this.storageAuditModalIndex.set(null);
+  }
+
   getClearingAdvanceApprovalLabel(index: number): string {
     const status = this.getEffectiveClearingAdvanceStatus(index);
     switch (status) {
@@ -666,7 +691,8 @@ export class ShipmentBlDetailsComponent {
     const status = this.getEffectiveStorageAllocationStatus(index);
     return status === 'pending_warehouse_manager' && (
       this.authService.isAdminLevelRole() ||
-      this.isWarehouseManagerRole()
+      this.isWarehouseManagerRole() ||
+      this.rbacService.hasPermission('shipment.tab.bl_details.storage_allocations.approve_warehouse_manager')
     );
   }
 
@@ -927,9 +953,20 @@ export class ShipmentBlDetailsComponent {
     const itemAllocations = JSON.parse(JSON.stringify(decision.itemAllocations || []));
 
     if (itemAllocations[itemIndex]) {
-      const alloc = itemAllocations[itemIndex].allocations.find((a: any) => a.warehouse === warehouse);
-      if (alloc) {
-        alloc.containersAssigned = Math.max(0, Math.floor(value || 0));
+      const item = itemAllocations[itemIndex];
+      const newValue = Math.max(0, Math.floor(value || 0));
+      const changedAlloc = item.allocations.find((a: any) => a.warehouse === warehouse);
+      if (changedAlloc) {
+        changedAlloc.containersAssigned = newValue;
+        const others = item.allocations.filter((a: any) => a.warehouse !== warehouse);
+        if (others.length > 0) {
+          const remainder = Math.max(0, Number(item.expectedContainers || 0) - newValue);
+          const base = Math.floor(remainder / others.length);
+          const extra = remainder % others.length;
+          others.forEach((a: any, idx: number) => {
+            a.containersAssigned = base + (idx < extra ? 1 : 0);
+          });
+        }
       }
     }
 

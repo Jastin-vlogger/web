@@ -695,17 +695,19 @@ export interface PaymentCostingApprovalState {
 export interface StorageAllocationApprovalState {
   status?: 'draft' | 'pending_warehouse_manager' | 'approved';
   submittedAt?: string | null;
-  submittedBy?: string | null;
+  submittedBy?: string | { _id?: string; name?: string; email?: string; role?: string } | null;
+  lastUpdatedAt?: string | null;
+  lastUpdatedBy?: string | { _id?: string; name?: string; email?: string; role?: string } | null;
   warehouseManagerApprovedAt?: string | null;
-  warehouseManagerApprovedBy?: string | null;
+  warehouseManagerApprovedBy?: string | { _id?: string; name?: string; email?: string; role?: string } | null;
 }
 
 export interface StorageArrivalApprovalState {
   status?: 'draft' | 'pending_warehouse_manager' | 'approved';
   submittedAt?: string | null;
-  submittedBy?: string | null;
+  submittedBy?: string | { _id?: string; name?: string; email?: string; role?: string } | null;
   warehouseManagerApprovedAt?: string | null;
-  warehouseManagerApprovedBy?: string | null;
+  warehouseManagerApprovedBy?: string | { _id?: string; name?: string; email?: string; role?: string } | null;
 }
 
 // Steps 2-7: Actual Container Data
@@ -816,6 +818,14 @@ export interface ActualContainer {
     similarItems?: boolean;
     splitRequired?: boolean;
     splitQuantity?: number;
+    singleItem?: boolean;
+    allocateSameWarehouse?: boolean;
+    warehousesSelected?: string[];
+    itemAllocations?: {
+      itemName?: string;
+      expectedContainers?: number;
+      allocations?: { warehouse?: string; containersAssigned?: number }[];
+    }[];
   } | null;
   storageAllocationSplits?: {
     sn?: number;

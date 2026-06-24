@@ -1666,6 +1666,7 @@ export class ShipmentFormComponent implements OnDestroy {
       rows.push(
         this.fb.group({
           sn: [i + 1],
+          transactionId: [existing?.transactionId || ''],
 	          containerSerialNo: [
 	            existing?.containerSerialNo ||
 	            extracted?.containerNo ||
