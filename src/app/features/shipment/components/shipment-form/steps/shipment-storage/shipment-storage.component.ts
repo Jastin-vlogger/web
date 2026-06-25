@@ -121,6 +121,7 @@ export class ShipmentStorageComponent {
   // POINT 13: Global save all state
   readonly savingAllRows = signal(false);
   readonly saveAllProgress = signal<{ current: number; total: number } | null>(null);
+  readonly generatingReport = signal(false);
   readonly storageArrivalStatusOverrides = signal<Record<number, 'draft' | 'pending_warehouse_manager' | 'approved'>>({});
   readonly actualOverrides = signal<Record<number, any>>({});
   readonly previewUrl = signal<string | null>(null);
@@ -817,6 +818,35 @@ export class ShipmentStorageComponent {
         this.savingRowKey.set(null);
         this.notificationService.error('Save failed', error.error?.message || 'Could not save storage arrival row.');
       }
+    });
+  }
+
+  /**
+   * Generate the "Report Received" Excel from the server (all received containers
+   * across shipments) and trigger a browser download.
+   */
+  generateStorageArrivalReport(): void {
+    if (this.generatingReport()) return;
+    this.generatingReport.set(true);
+    this.shipmentService.downloadStorageArrivalReport().subscribe({
+      next: (blob) => {
+        this.generatingReport.set(false);
+        const url = window.URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `report-received-${new Date().toISOString().slice(0, 10)}.xlsx`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (error) => {
+        this.generatingReport.set(false);
+        this.notificationService.error(
+          'Report Failed',
+          error?.error?.message || 'Unable to generate the storage arrival report.'
+        );
+      },
     });
   }
 

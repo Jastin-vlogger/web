@@ -290,6 +290,12 @@ export class ShipmentService {
     });
   }
 
+  downloadStorageArrivalReport(): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/reports/storage-arrival/excel`, {
+      responseType: 'blob',
+    });
+  }
+
   createShipment(payload: CreateShipmentPayload | FormData): Observable<CreateShipmentResponse> {
     return this.http.post<CreateShipmentResponse>(`${this.apiUrl}/create`, payload);
   }

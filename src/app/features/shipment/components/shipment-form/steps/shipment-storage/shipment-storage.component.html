@@ -198,6 +198,20 @@
                         Saving {{ progress.current }} / {{ progress.total }}...
                       </span>
                     }
+                    <button
+                      type="button"
+                      (click)="generateStorageArrivalReport()"
+                      [disabled]="generatingReport()"
+                      class="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-emerald-600 hover:bg-emerald-100 disabled:opacity-50"
+                    >
+                      @if (generatingReport()) {
+                        <i class="pi pi-spin pi-spinner text-[10px]"></i>
+                        Generating...
+                      } @else {
+                        <i class="pi pi-file-excel text-[10px]"></i>
+                        Generate Report
+                      }
+                    </button>
                     @if (!isStorageArrivalLocked(i)) {
                     <button
                       type="button"
