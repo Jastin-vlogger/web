@@ -32,6 +32,112 @@
             </div>
         </header>
 
+        @if (canViewDashboardSection('dashboard.section.warehouse_chart.view') || canViewDashboardSection('dashboard.section.fas_chart.view') || canViewDashboardSection('dashboard.section.logistics_chart.view')) {
+        <section class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 mb-6">
+
+            <!-- Warehouse — Arrival Status -->
+            @if (canViewDashboardSection('dashboard.section.warehouse_chart.view')) {
+            <article class="sl-panel flex flex-col gap-5 p-6 bg-white border border-slate-200 rounded-xl shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                        <i class="pi pi-warehouse"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800">Warehouse</h3>
+                        <p class="text-xs font-semibold text-slate-500">Arrival status</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-5">
+                    <div class="relative h-32 w-32 shrink-0">
+                        <canvas baseChart [data]="warehouseChartConfig()" [options]="doughnutChartOptions" [type]="'doughnut'"></canvas>
+                    </div>
+                    <div class="flex flex-1 flex-col gap-2">
+                        @for (stat of warehouseChartStats(); track stat.label) {
+                            <div class="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2">
+                                <span class="flex items-center gap-2 text-xs font-bold text-slate-600">
+                                    <span class="h-2.5 w-2.5 rounded-full"
+                                        [class.bg-emerald-500]="stat.tone === 'emerald'"
+                                        [class.bg-amber-500]="stat.tone === 'amber'"
+                                        [class.bg-blue-500]="stat.tone === 'blue'"></span>
+                                    {{ stat.label }}
+                                </span>
+                                <strong class="text-lg font-black tabular-nums text-slate-900">{{ stat.value }}</strong>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </article>
+            }
+
+            <!-- FAS — Document Approvals -->
+            @if (canViewDashboardSection('dashboard.section.fas_chart.view')) {
+            <article class="sl-panel flex flex-col gap-5 p-6 bg-white border border-slate-200 rounded-xl shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                        <i class="pi pi-file-check"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800">FAS</h3>
+                        <p class="text-xs font-semibold text-slate-500">Document approvals</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-5">
+                    <div class="relative h-32 w-32 shrink-0">
+                        <canvas baseChart [data]="fasChartConfig()" [options]="doughnutChartOptions" [type]="'doughnut'"></canvas>
+                    </div>
+                    <div class="flex flex-1 flex-col gap-2">
+                        @for (stat of fasChartStats(); track stat.label) {
+                            <div class="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2">
+                                <span class="flex items-center gap-2 text-xs font-bold text-slate-600">
+                                    <span class="h-2.5 w-2.5 rounded-full"
+                                        [class.bg-emerald-500]="stat.tone === 'emerald'"
+                                        [class.bg-amber-500]="stat.tone === 'amber'"
+                                        [class.bg-blue-500]="stat.tone === 'blue'"></span>
+                                    {{ stat.label }}
+                                </span>
+                                <strong class="text-lg font-black tabular-nums text-slate-900">{{ stat.value }}</strong>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </article>
+            }
+
+            <!-- Logistics — Clearance Advance -->
+            @if (canViewDashboardSection('dashboard.section.logistics_chart.view')) {
+            <article class="sl-panel flex flex-col gap-5 p-6 bg-white border border-slate-200 rounded-xl shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                        <i class="pi pi-truck"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-800">Logistics</h3>
+                        <p class="text-xs font-semibold text-slate-500">Clearance advance</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-5">
+                    <div class="relative h-32 w-32 shrink-0">
+                        <canvas baseChart [data]="logisticsChartConfig()" [options]="doughnutChartOptions" [type]="'doughnut'"></canvas>
+                    </div>
+                    <div class="flex flex-1 flex-col gap-2">
+                        @for (stat of logisticsChartStats(); track stat.label) {
+                            <div class="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2">
+                                <span class="flex items-center gap-2 text-xs font-bold text-slate-600">
+                                    <span class="h-2.5 w-2.5 rounded-full"
+                                        [class.bg-emerald-500]="stat.tone === 'emerald'"
+                                        [class.bg-rose-500]="stat.tone === 'rose'"></span>
+                                    {{ stat.label }}
+                                </span>
+                                <strong class="text-lg font-black tabular-nums text-slate-900">{{ stat.value }}</strong>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </article>
+            }
+        </section>
+        }
+
         @if (canViewDashboardSection('dashboard.section.status_snapshot.view') || canViewDashboardSection('dashboard.section.shipment_status_chart.view')) {
         <section class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
             <!-- Left Side Column -->

@@ -265,6 +265,85 @@ export class DashboardComponent implements OnInit {
   readonly statusPivotChartConfig = computed<ChartData<'bar'>>(() => this.buildStatusPivotChartConfig(this.statusPivot()));
   readonly statusPivotByItemChartConfig = computed<ChartData<'bar'>>(() => this.buildStatusPivotChartConfig(this.statusPivotByItem()));
 
+  // ── Department charts (Warehouse / FAS / Logistics) ─────────────────────────
+  doughnutChartOptions: ChartConfiguration<'doughnut'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '62%',
+    plugins: {
+      legend: { display: false },
+    },
+  };
+
+  private buildDoughnut(values: number[], colors: string[], labels: string[]): ChartData<'doughnut'> {
+    return {
+      labels,
+      datasets: [
+        {
+          data: values,
+          backgroundColor: colors,
+          borderColor: '#ffffff',
+          borderWidth: 2,
+        },
+      ],
+    };
+  }
+
+  readonly warehouseChartStats = computed(() => {
+    const w = this.dashboard()?.departmentCharts?.warehouse;
+    return [
+      { label: 'Arrived', value: w?.arrived ?? 0, tone: 'emerald' },
+      { label: 'Pending', value: w?.pending ?? 0, tone: 'amber' },
+      { label: 'In Transit', value: w?.inTransit ?? 0, tone: 'blue' },
+    ];
+  });
+
+  readonly warehouseChartConfig = computed<ChartData<'doughnut'>>(() => {
+    const w = this.dashboard()?.departmentCharts?.warehouse;
+    return this.buildDoughnut(
+      [w?.arrived ?? 0, w?.pending ?? 0, w?.inTransit ?? 0],
+      ['#10b981', '#f59e0b', '#3b82f6'],
+      ['Arrived', 'Pending', 'In Transit']
+    );
+  });
+
+  readonly fasChartStats = computed(() => {
+    const f = this.dashboard()?.departmentCharts?.fas;
+    return [
+      { label: 'Submitted', value: f?.submitted ?? 0, tone: 'blue' },
+      { label: 'Pending', value: f?.pending ?? 0, tone: 'amber' },
+      { label: 'Approved', value: f?.approved ?? 0, tone: 'emerald' },
+    ];
+  });
+
+  readonly fasChartConfig = computed<ChartData<'doughnut'>>(() => {
+    const f = this.dashboard()?.departmentCharts?.fas;
+    return this.buildDoughnut(
+      [f?.submitted ?? 0, f?.pending ?? 0, f?.approved ?? 0],
+      ['#3b82f6', '#f59e0b', '#10b981'],
+      ['Submitted', 'Pending', 'Approved']
+    );
+  });
+
+  readonly logisticsChartStats = computed(() => {
+    const l = this.dashboard()?.departmentCharts?.logistics;
+    return [
+      { label: 'Cleared', value: l?.cleared ?? 0, tone: 'emerald' },
+      { label: 'Not Cleared', value: l?.notCleared ?? 0, tone: 'rose' },
+    ];
+  });
+
+  readonly logisticsChartConfig = computed<ChartData<'doughnut'>>(() => {
+    const l = this.dashboard()?.departmentCharts?.logistics;
+    return this.buildDoughnut(
+      [l?.cleared ?? 0, l?.notCleared ?? 0],
+      ['#10b981', '#ef4444'],
+      ['Cleared', 'Not Cleared']
+    );
+  });
+
+  readonly hasDepartmentChartData = computed(() => !!this.dashboard()?.departmentCharts);
+
   formatPivotNumber(value: number | null | undefined): string {
     return Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
   }

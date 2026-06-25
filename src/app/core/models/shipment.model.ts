@@ -228,6 +228,12 @@ export interface ExtractDpwCargoResponse {
   message?: string;
 }
 
+export interface DashboardDepartmentCharts {
+  warehouse: { arrived: number; pending: number; inTransit: number };
+  fas: { submitted: number; pending: number; approved: number };
+  logistics: { cleared: number; notCleared: number };
+}
+
 export interface DashboardSummaryResponse {
   kpis: DashboardKpis;
   stageBreakdown: DashboardStageBreakdown[];
@@ -240,6 +246,7 @@ export interface DashboardSummaryResponse {
   chartData?: DashboardChartData;
   statusPivot?: DashboardStatusPivot;
   statusPivotByItem?: DashboardStatusPivot;
+  departmentCharts?: DashboardDepartmentCharts;
 }
 
 export interface DashboardShippingStatusOrder {
