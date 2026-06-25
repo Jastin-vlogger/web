@@ -2,7 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs/operators';
-import { ShipmentReportExportChildRow, ShipmentReportExportRow } from '../../../../core/models/shipment.model';
+import { ShipmentReportExportChildRow, ShipmentReportExportRow, StorageArrivalReportRow } from '../../../../core/models/shipment.model';
 import { ShipmentReportFilters, ShipmentService } from '../../../../core/services/shipment.service';
 import { AuthService } from '../../../../core/services/auth.service';
 
@@ -15,6 +15,12 @@ type ReportColumn = {
 type ChildReportColumn = {
   header: string;
   key: keyof ShipmentReportExportChildRow;
+};
+
+type StorageArrivalReportColumn = {
+  header: string;
+  key: keyof StorageArrivalReportRow;
+  width: number;
 };
 
 type ExportType = 'excel' | 'pdf';
@@ -41,6 +47,14 @@ export class ReportsLandingComponent implements OnInit {
   readonly filterModalVisible = signal(false);
   readonly exportModalVisible = signal(false);
   readonly pendingExportType = signal<ExportType | null>(null);
+
+  readonly storageArrivalLoading = signal(false);
+  readonly storageArrivalError = signal<string | null>(null);
+  readonly storageArrivalRows = signal<StorageArrivalReportRow[]>([]);
+  readonly storageArrivalGeneratedAt = signal<string | null>(null);
+  readonly storageArrivalExporting = signal(false);
+
+  readonly activeReport = signal<'default' | 'storage-arrival'>('default');
 
   readonly columns: ReportColumn[] = [
     { header: 'S/N', key: 'sn', width: 8 },
@@ -92,6 +106,29 @@ export class ReportsLandingComponent implements OnInit {
     { header: 'Status', key: 'shipmentStatus' },
   ];
 
+  readonly storageArrivalColumns: StorageArrivalReportColumn[] = [
+    { header: 'Sl No', key: 'slNo', width: 8 },
+    { header: 'Shipment No.', key: 'shipmentNo', width: 18 },
+    { header: 'Date', key: 'date', width: 12 },
+    { header: 'Supplier', key: 'supplier', width: 20 },
+    { header: 'Country', key: 'country', width: 14 },
+    { header: 'Item Description', key: 'itemDescription', width: 28 },
+    { header: 'FCL', key: 'fcl', width: 8 },
+    { header: 'Bags', key: 'bag', width: 10 },
+    { header: 'Tons', key: 'ton', width: 10 },
+    { header: 'ETA', key: 'eta', width: 12 },
+    { header: 'COM IN NO', key: 'comInNo', width: 18 },
+    { header: 'BL No', key: 'blNo', width: 20 },
+    { header: 'GRN', key: 'grn', width: 18 },
+    { header: 'Qty', key: 'qty', width: 10 },
+    { header: 'Warehouse', key: 'wh', width: 12 },
+    { header: 'Batch', key: 'batch', width: 12 },
+    { header: 'Production Date', key: 'pDate', width: 12 },
+    { header: 'Expiry Date', key: 'eDate', width: 12 },
+    { header: 'Status', key: 'status', width: 14 },
+    { header: 'Remarks', key: 'remarks', width: 22 },
+  ];
+
   readonly selectedColumns = signal<string[]>(this.columns.map((column) => String(column.key)));
   readonly selectedChildColumns = signal<string[]>(this.childColumns.map((column) => String(column.key)));
   readonly activeFilterCount = computed(() =>
@@ -140,6 +177,7 @@ export class ReportsLandingComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadReportRows();
+    this.loadStorageArrivalReport();
   }
 
   updateFilter(key: keyof ShipmentReportFilters, value: string): void {
@@ -190,9 +228,15 @@ export class ReportsLandingComponent implements OnInit {
   }
 
   openExportModal(type: ExportType): void {
-    if (!this.rows().length) return;
-    this.pendingExportType.set(type);
-    this.exportModalVisible.set(true);
+    if (this.activeReport() === 'default' && !this.rows().length) return;
+    if (this.activeReport() === 'storage-arrival' && !this.storageArrivalRows().length) return;
+
+    if (this.activeReport() === 'default') {
+      this.pendingExportType.set(type);
+      this.exportModalVisible.set(true);
+    } else {
+      this.exportStorageArrivalReport();
+    }
   }
 
   closeExportModal(): void {
@@ -360,5 +404,53 @@ export class ReportsLandingComponent implements OnInit {
       ...current,
       [row.shipmentNo]: !current[row.shipmentNo],
     }));
+  }
+
+  loadStorageArrivalReport(): void {
+    this.storageArrivalLoading.set(true);
+    this.storageArrivalError.set(null);
+
+    this.shipmentService
+      .getStorageArrivalReportData()
+      .pipe(finalize(() => this.storageArrivalLoading.set(false)))
+      .subscribe({
+        next: (response) => {
+          this.storageArrivalRows.set(response.rows ?? []);
+          this.storageArrivalGeneratedAt.set(response.generatedAt ?? null);
+        },
+        error: () => {
+          this.storageArrivalError.set('Unable to load storage arrival report data right now.');
+        },
+      });
+  }
+
+  exportStorageArrivalReport(): void {
+    if (this.storageArrivalExporting() || !this.storageArrivalRows().length) return;
+
+    this.storageArrivalExporting.set(true);
+    this.shipmentService
+      .downloadStorageArrivalReport()
+      .pipe(finalize(() => this.storageArrivalExporting.set(false)))
+      .subscribe({
+        next: (blob) => {
+          this.downloadBlob(blob, this.buildFilename('xlsx'));
+        },
+        error: () => {
+          this.storageArrivalError.set('Unable to export storage arrival report right now.');
+        },
+      });
+  }
+
+  formatStorageArrivalCellValue(value: unknown): string | number {
+    if (value == null || value === '') return '';
+    return String(value);
+  }
+
+  getStorageArrivalStatusClasses(status: string | undefined): string {
+    const baseClasses = 'inline-flex items-center rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em]';
+    if (status === 'Arrived') {
+      return `${baseClasses} border-emerald-200 bg-emerald-50 text-emerald-700`;
+    }
+    return `${baseClasses} border-amber-200 bg-amber-50 text-amber-700`;
   }
 }

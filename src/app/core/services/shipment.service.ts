@@ -13,9 +13,9 @@ import {
   ExtractBillNoResponse,
   ExtractArrivalNoticeResponse,
   ExtractDpwCargoResponse,
-  DashboardSummaryResponse
-  ,
+  DashboardSummaryResponse,
   ShipmentReportExportResponse,
+  StorageArrivalReportResponse,
   BlRowDefinitionItem
 } from '../models/shipment.model';
 
@@ -288,6 +288,10 @@ export class ShipmentService {
       params: this.buildReportParams(options),
       responseType: 'blob',
     });
+  }
+
+  getStorageArrivalReportData(): Observable<StorageArrivalReportResponse> {
+    return this.http.get<StorageArrivalReportResponse>(`${this.apiUrl}/reports/storage-arrival/data`);
   }
 
   downloadStorageArrivalReport(): Observable<Blob> {

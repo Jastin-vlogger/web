@@ -99,6 +99,34 @@ export interface ShipmentReportExportResponse {
   generatedAt: string;
 }
 
+export interface StorageArrivalReportRow {
+  slNo: number;
+  shipmentNo: string;
+  date: string;
+  supplier: string;
+  country: string;
+  itemDescription: string;
+  fcl: string | number;
+  bag: string | number;
+  ton: string | number;
+  eta: string;
+  comInNo: string;
+  blNo: string;
+  grn: string;
+  qty: string | number;
+  wh: string;
+  batch: string;
+  pDate: string;
+  eDate: string;
+  status: 'Arrived' | 'Pending';
+  remarks: string;
+}
+
+export interface StorageArrivalReportResponse {
+  rows: StorageArrivalReportRow[];
+  generatedAt: string;
+}
+
 export interface DashboardKpis {
   totalShipments: number;
   completedShipments: number;

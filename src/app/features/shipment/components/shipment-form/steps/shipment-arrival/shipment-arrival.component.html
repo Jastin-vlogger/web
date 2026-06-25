@@ -93,88 +93,88 @@
                     </div>
                   </div>
 
-                  <div class="flex flex-col gap-2.5">
-                    <div class="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/40">
-                      <div class="flex items-center gap-2 min-w-0">
-                        <i class="pi pi-file text-slate-400 text-[12px]"></i>
-                        <div class="min-w-0">
+                  <div class="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div class="flex flex-col gap-2 p-3 rounded-xl border border-slate-100 bg-slate-50/40">
+                      <div class="flex items-start gap-2">
+                        <i class="pi pi-file text-slate-400 text-[12px] mt-0.5 shrink-0"></i>
+                        <div class="min-w-0 flex-1">
                           <p class="text-[11px] font-bold text-slate-700">BL</p>
                           <p class="text-[10px] text-slate-400 truncate">{{ getMappedDocName(i, 'bl') || (getMappedDocUrl(i, 'bl') ? 'Document available' : 'Not uploaded') }}</p>
                         </div>
                       </div>
-                      <div class="flex items-center gap-2 shrink-0">
+                      <div class="flex items-center gap-2 justify-end pt-1">
                         @if (getMappedDocUrl(i, 'bl')) {
-                          <button type="button" (click)="openRemoteDocumentPreview(getMappedDocUrl(i, 'bl'), getMappedDocName(i, 'bl') || 'BL')" class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 inline-flex items-center justify-center"><i class="pi pi-eye text-[12px]"></i></button>
+                          <button type="button" (click)="openRemoteDocumentPreview(getMappedDocUrl(i, 'bl'), getMappedDocName(i, 'bl') || 'BL')" class="h-8 w-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 inline-flex items-center justify-center"><i class="pi pi-eye text-[12px]"></i></button>
                         } @else {
                           <span class="text-[10px] text-slate-400 italic">—</span>
                         }
                       </div>
                     </div>
-                    <div class="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/40">
-                      <div class="flex items-center gap-2 min-w-0">
-                        <i class="pi pi-file text-slate-400 text-[12px]"></i>
-                        <div class="min-w-0">
+                    <div class="flex flex-col gap-2 p-3 rounded-xl border border-slate-100 bg-slate-50/40">
+                      <div class="flex items-start gap-2">
+                        <i class="pi pi-file text-slate-400 text-[12px] mt-0.5 shrink-0"></i>
+                        <div class="min-w-0 flex-1">
                           <p class="text-[11px] font-bold text-slate-700">Commercial Invoice</p>
                           <p class="text-[10px] text-slate-400 truncate">{{ getMappedDocName(i, 'commercialInvoice') || (getMappedDocUrl(i, 'commercialInvoice') ? 'Document available' : 'Not uploaded') }}</p>
                         </div>
                       </div>
-                      <div class="flex items-center gap-2 shrink-0">
+                      <div class="flex items-center gap-2 justify-end pt-1">
                         @if (getMappedDocUrl(i, 'commercialInvoice')) {
-                          <button type="button" (click)="openRemoteDocumentPreview(getMappedDocUrl(i, 'commercialInvoice'), getMappedDocName(i, 'commercialInvoice') || 'Commercial Invoice')" class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 inline-flex items-center justify-center"><i class="pi pi-eye text-[12px]"></i></button>
+                          <button type="button" (click)="openRemoteDocumentPreview(getMappedDocUrl(i, 'commercialInvoice'), getMappedDocName(i, 'commercialInvoice') || 'Commercial Invoice')" class="h-8 w-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 inline-flex items-center justify-center"><i class="pi pi-eye text-[12px]"></i></button>
                         } @else {
                           <span class="text-[10px] text-slate-400 italic">—</span>
                         }
                       </div>
                     </div>
-                    <div class="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/40">
-                      <div class="flex items-center gap-2 min-w-0">
-                        <i class="pi pi-file text-slate-400 text-[12px]"></i>
-                        <div class="min-w-0">
+                    <div class="flex flex-col gap-2 p-3 rounded-xl border border-slate-100 bg-slate-50/40">
+                      <div class="flex items-start gap-2">
+                        <i class="pi pi-file text-slate-400 text-[12px] mt-0.5 shrink-0"></i>
+                        <div class="min-w-0 flex-1">
                           <p class="text-[11px] font-bold text-slate-700">Packing List</p>
                           <p class="text-[10px] text-slate-400 truncate">{{ getMappedDocName(i, 'packingList') || (getMappedDocUrl(i, 'packingList') ? 'Document available' : 'Not uploaded') }}</p>
                         </div>
                       </div>
-                      <div class="flex items-center gap-2 shrink-0">
+                      <div class="flex items-center gap-2 justify-end pt-1">
                         @if (getMappedDocUrl(i, 'packingList')) {
-                          <button type="button" (click)="openRemoteDocumentPreview(getMappedDocUrl(i, 'packingList'), getMappedDocName(i, 'packingList') || 'Packing List')" class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 inline-flex items-center justify-center"><i class="pi pi-eye text-[12px]"></i></button>
+                          <button type="button" (click)="openRemoteDocumentPreview(getMappedDocUrl(i, 'packingList'), getMappedDocName(i, 'packingList') || 'Packing List')" class="h-8 w-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 inline-flex items-center justify-center"><i class="pi pi-eye text-[12px]"></i></button>
                         } @else {
                           <span class="text-[10px] text-slate-400 italic">—</span>
                         }
                       </div>
                     </div>
                     @let cooDoc = getRepositoryDocByType(group, 'certificate_of_origin');
-                    <div class="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/40">
-                      <div class="flex items-center gap-2 min-w-0">
-                        <i class="pi pi-file text-slate-400 text-[12px]"></i>
-                        <div class="min-w-0">
+                    <div class="flex flex-col gap-2 p-3 rounded-xl border border-slate-100 bg-slate-50/40">
+                      <div class="flex items-start gap-2">
+                        <i class="pi pi-file text-slate-400 text-[12px] mt-0.5 shrink-0"></i>
+                        <div class="min-w-0 flex-1">
                           <p class="text-[11px] font-bold text-slate-700">Certificate of Origin</p>
                           <p class="text-[10px] text-slate-400 truncate">{{ cooDoc?.get('documentName')?.value || 'Not uploaded' }}</p>
                         </div>
                       </div>
-                      <div class="flex items-center gap-2 shrink-0">
+                      <div class="flex items-center gap-2 justify-end pt-1">
                         @if (!isRowEditLocked(i)) {
-                          <button type="button" (click)="clickTypedDocUpload(i, 'certificate_of_origin', 'Certificate of Origin')" [disabled]="uploadingRepositoryDocument()" class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-blue-600 inline-flex items-center justify-center disabled:opacity-50"><i class="pi pi-upload text-[12px]"></i></button>
+                          <button type="button" (click)="clickTypedDocUpload(i, 'certificate_of_origin', 'Certificate of Origin')" [disabled]="uploadingRepositoryDocument()" class="h-8 w-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-blue-600 inline-flex items-center justify-center disabled:opacity-50"><i class="pi pi-upload text-[12px]"></i></button>
                         }
                         @if (cooDoc?.get('documentUrl')?.value) {
-                          <button type="button" (click)="openRemoteDocumentPreview(cooDoc!.get('documentUrl')?.value, cooDoc!.get('documentName')?.value || 'Certificate of Origin')" class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 inline-flex items-center justify-center"><i class="pi pi-eye text-[12px]"></i></button>
+                          <button type="button" (click)="openRemoteDocumentPreview(cooDoc!.get('documentUrl')?.value, cooDoc!.get('documentName')?.value || 'Certificate of Origin')" class="h-8 w-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 inline-flex items-center justify-center"><i class="pi pi-eye text-[12px]"></i></button>
                         }
                       </div>
                     </div>
                     @let healthDoc = getRepositoryDocByType(group, 'health_certificate');
-                    <div class="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50/40">
-                      <div class="flex items-center gap-2 min-w-0">
-                        <i class="pi pi-file text-slate-400 text-[12px]"></i>
-                        <div class="min-w-0">
+                    <div class="flex flex-col gap-2 p-3 rounded-xl border border-slate-100 bg-slate-50/40">
+                      <div class="flex items-start gap-2">
+                        <i class="pi pi-file text-slate-400 text-[12px] mt-0.5 shrink-0"></i>
+                        <div class="min-w-0 flex-1">
                           <p class="text-[11px] font-bold text-slate-700">Health Certificate</p>
                           <p class="text-[10px] text-slate-400 truncate">{{ healthDoc?.get('documentName')?.value || 'Not uploaded' }}</p>
                         </div>
                       </div>
-                      <div class="flex items-center gap-2 shrink-0">
+                      <div class="flex items-center gap-2 justify-end pt-1">
                         @if (!isRowEditLocked(i)) {
-                          <button type="button" (click)="clickTypedDocUpload(i, 'health_certificate', 'Health Certificate')" [disabled]="uploadingRepositoryDocument()" class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-blue-600 inline-flex items-center justify-center disabled:opacity-50"><i class="pi pi-upload text-[12px]"></i></button>
+                          <button type="button" (click)="clickTypedDocUpload(i, 'health_certificate', 'Health Certificate')" [disabled]="uploadingRepositoryDocument()" class="h-8 w-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-blue-600 inline-flex items-center justify-center disabled:opacity-50"><i class="pi pi-upload text-[12px]"></i></button>
                         }
                         @if (healthDoc?.get('documentUrl')?.value) {
-                          <button type="button" (click)="openRemoteDocumentPreview(healthDoc!.get('documentUrl')?.value, healthDoc!.get('documentName')?.value || 'Health Certificate')" class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 inline-flex items-center justify-center"><i class="pi pi-eye text-[12px]"></i></button>
+                          <button type="button" (click)="openRemoteDocumentPreview(healthDoc!.get('documentUrl')?.value, healthDoc!.get('documentName')?.value || 'Health Certificate')" class="h-8 w-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 inline-flex items-center justify-center"><i class="pi pi-eye text-[12px]"></i></button>
                         }
                       </div>
                     </div>

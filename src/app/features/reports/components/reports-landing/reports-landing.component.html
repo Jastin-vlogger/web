@@ -3,153 +3,235 @@
     <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
       <div>
         <p class="text-[11px] font-black uppercase tracking-[0.3em] text-blue-200">Reports</p>
-        <h1 class="mt-3 text-3xl font-black tracking-tight">Shipment Master Export</h1>
-        <p class="mt-3 max-w-3xl text-sm text-slate-300">
-          Filter shipment records, preview the report, and export selected columns to Excel or PDF.
-        </p>
+        <div class="mt-3 flex items-center gap-4">
+          <div>
+            <h1 class="text-3xl font-black tracking-tight">
+              {{ activeReport() === 'default' ? 'Shipment Master Export' : 'Storage Arrival Report' }}
+            </h1>
+            <p class="mt-3 max-w-3xl text-sm text-slate-300">
+              @if (activeReport() === 'default') {
+                Filter shipment records, preview the report, and export selected columns to Excel or PDF.
+              } @else {
+                All shipment storage arrival and receipt records.
+              }
+            </p>
+          </div>
+          <div class="flex flex-col gap-2">
+            <label class="text-xs font-black uppercase tracking-[0.16em] text-blue-200">Report Type</label>
+            <select
+              class="rounded-xl border border-white/20 bg-slate-900/50 px-4 py-2 text-sm font-semibold text-white focus:outline-none"
+              [value]="activeReport()"
+              (change)="activeReport.set($any($event.target).value)">
+              <option value="default">Default</option>
+              <option value="storage-arrival">Storage Arrival</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <div class="flex flex-wrap gap-3">
-        <button
-          type="button"
-          class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
-          [disabled]="!rows().length || exporting() !== null"
-          (click)="openExportModal('excel')">
-          <i class="pi pi-file-excel"></i>
-          {{ exporting() === 'excel' ? 'Exporting...' : 'Export Excel' }}
-        </button>
-        <button
-          type="button"
-          class="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black uppercase tracking-[0.18em] text-slate-950 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-          [disabled]="!rows().length || exporting() !== null"
-          (click)="openExportModal('pdf')">
-          <i class="pi pi-file-pdf"></i>
-          {{ exporting() === 'pdf' ? 'Exporting...' : 'Export PDF' }}
-        </button>
+        @if (activeReport() === 'default') {
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
+            [disabled]="!rows().length || exporting() !== null"
+            (click)="openExportModal('excel')">
+            <i class="pi pi-file-excel"></i>
+            {{ exporting() === 'excel' ? 'Exporting...' : 'Export Excel' }}
+          </button>
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-black uppercase tracking-[0.18em] text-slate-950 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            [disabled]="!rows().length || exporting() !== null"
+            (click)="openExportModal('pdf')">
+            <i class="pi pi-file-pdf"></i>
+            {{ exporting() === 'pdf' ? 'Exporting...' : 'Export PDF' }}
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-black uppercase tracking-[0.18em] text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
+            [disabled]="!storageArrivalRows().length || storageArrivalExporting()"
+            (click)="openExportModal('excel')">
+            <i class="pi pi-file-excel"></i>
+            {{ storageArrivalExporting() ? 'Exporting...' : 'Export Excel' }}
+          </button>
+        }
       </div>
     </div>
   </section>
 
-  <section class="grid grid-cols-1 gap-5 xl:grid-cols-3">
-    @for (card of reportCards(); track card.title) {
-      <article class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
-        <div class="flex h-12 w-12 items-center justify-center rounded-2xl"
-             [class.bg-blue-50]="card.tone === 'blue'"
-             [class.text-blue-700]="card.tone === 'blue'"
-             [class.bg-emerald-50]="card.tone === 'emerald'"
-             [class.text-emerald-700]="card.tone === 'emerald'"
-             [class.bg-slate-100]="card.tone === 'slate'"
-             [class.text-slate-700]="card.tone === 'slate'">
-          <i [class]="card.icon + ' text-lg'"></i>
-        </div>
-        <h2 class="mt-5 text-lg font-black tracking-tight text-slate-900">{{ card.title }}</h2>
-        <p class="mt-2 text-sm leading-6 text-slate-500">{{ card.description }}</p>
-        <div class="mt-5 text-2xl font-black tracking-tight text-slate-900">{{ card.value }}</div>
-      </article>
-    }
-  </section>
+  @if (activeReport() === 'default') {
+    <section class="grid grid-cols-1 gap-5 xl:grid-cols-3">
+      @for (card of reportCards(); track card.title) {
+        <article class="rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm">
+          <div class="flex h-12 w-12 items-center justify-center rounded-2xl"
+               [class.bg-blue-50]="card.tone === 'blue'"
+               [class.text-blue-700]="card.tone === 'blue'"
+               [class.bg-emerald-50]="card.tone === 'emerald'"
+               [class.text-emerald-700]="card.tone === 'emerald'"
+               [class.bg-slate-100]="card.tone === 'slate'"
+               [class.text-slate-700]="card.tone === 'slate'">
+            <i [class]="card.icon + ' text-lg'"></i>
+          </div>
+          <h2 class="mt-5 text-lg font-black tracking-tight text-slate-900">{{ card.title }}</h2>
+          <p class="mt-2 text-sm leading-6 text-slate-500">{{ card.description }}</p>
+          <div class="mt-5 text-2xl font-black tracking-tight text-slate-900">{{ card.value }}</div>
+        </article>
+      }
+    </section>
+  }
 
-  <section class="rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
-    <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-6 py-4">
-      <div>
-        <h2 class="text-lg font-black tracking-tight text-slate-900">Report Preview</h2>
-        <p class="mt-1 text-sm text-slate-500">Filtered rows here are the same rows used for export.</p>
-      </div>
-      <div class="flex flex-wrap items-center justify-end gap-3">
-        <button
-          type="button"
-          class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-black uppercase tracking-[0.14em] text-slate-700 transition hover:bg-slate-50"
-          (click)="openFilterModal()">
-          <i class="pi pi-filter"></i>
-          Filters
-          @if (activeFilterCount()) {
-            <span class="rounded-full bg-slate-950 px-2 py-0.5 text-[10px] text-white">{{ activeFilterCount() }}</span>
-          }
-        </button>
-        <div class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
-          {{ rows().length }} row(s)
+  @if (activeReport() === 'default') {
+    <section class="rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
+      <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-6 py-4">
+        <div>
+          <h2 class="text-lg font-black tracking-tight text-slate-900">Report Preview</h2>
+          <p class="mt-1 text-sm text-slate-500">Filtered rows here are the same rows used for export.</p>
+        </div>
+        <div class="flex flex-wrap items-center justify-end gap-3">
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-black uppercase tracking-[0.14em] text-slate-700 transition hover:bg-slate-50"
+            (click)="openFilterModal()">
+            <i class="pi pi-filter"></i>
+            Filters
+            @if (activeFilterCount()) {
+              <span class="rounded-full bg-slate-950 px-2 py-0.5 text-[10px] text-white">{{ activeFilterCount() }}</span>
+            }
+          </button>
+          <div class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+            {{ rows().length }} row(s)
+          </div>
         </div>
       </div>
-    </div>
 
-    @if (loading()) {
-      <div class="px-6 py-12 text-sm font-medium text-slate-500">Loading report data...</div>
-    } @else if (error()) {
-      <div class="px-6 py-12 text-sm font-medium text-rose-500">{{ error() }}</div>
-    } @else if (!rows().length) {
-      <div class="px-6 py-12 text-sm font-medium text-slate-500">No shipment data is available for the selected filters.</div>
-    } @else {
-      <div class="report-scroll">
-        <table class="report-table">
-          <thead>
-            <tr>
-              <th class="report-expand-col"></th>
-              @for (column of columns; track column.header) {
-                <th>{{ column.header }}</th>
-              }
-            </tr>
-          </thead>
-          <tbody>
-            @for (row of rows(); track row.shipmentNo + '-' + row.sn) {
-              <tr class="report-parent-row">
-                <td class="report-expand-col">
-                  @if (hasChildren(row)) {
-                    <button type="button" class="report-expand-button" (click)="toggleRow(row)" [attr.aria-expanded]="isExpanded(row)">
-                      <i class="pi" [ngClass]="isExpanded(row) ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
-                    </button>
-                  }
-                </td>
+      @if (loading()) {
+        <div class="px-6 py-12 text-sm font-medium text-slate-500">Loading report data...</div>
+      } @else if (error()) {
+        <div class="px-6 py-12 text-sm font-medium text-rose-500">{{ error() }}</div>
+      } @else if (!rows().length) {
+        <div class="px-6 py-12 text-sm font-medium text-slate-500">No shipment data is available for the selected filters.</div>
+      } @else {
+        <div class="report-scroll">
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th class="report-expand-col"></th>
                 @for (column of columns; track column.header) {
-                  <td>
-                    @if (column.key === 'shipmentStatus' || column.key === 'reportStatus') {
-                      <span [class]="getStatusClasses(row[column.key])">{{ formatCellValue(row[column.key], column.key) }}</span>
-                    } @else {
-                      {{ formatCellValue(row[column.key], column.key) }}
-                    }
-                  </td>
+                  <th>{{ column.header }}</th>
                 }
               </tr>
-              @if (isExpanded(row) && hasChildren(row)) {
-                <tr class="report-child-shell">
-                  <td [attr.colspan]="columns.length + 1" class="report-child-cell">
-                    <div class="report-child-wrapper">
-                      <div class="report-child-title">{{ row.noOfShipments || row.children?.length || 0 }} shipment split(s)</div>
-                      <table class="report-child-table">
-                        <thead>
-                          <tr>
-                            @for (column of childColumns; track column.header) {
-                              <th [class.report-child-highlight-header]="column.key === 'shipmentNo' || column.key === 'actualShipmentNo'" [class.report-child-neutral-header]="column.key !== 'shipmentNo' && column.key !== 'actualShipmentNo'">
-                                {{ column.header }}
-                              </th>
-                            }
-                          </tr>
-                        </thead>
-                        <tbody>
-                          @for (child of row.children || []; track child.shipmentNo + '-' + ($index)) {
+            </thead>
+            <tbody>
+              @for (row of rows(); track row.shipmentNo + '-' + row.sn) {
+                <tr class="report-parent-row">
+                  <td class="report-expand-col">
+                    @if (hasChildren(row)) {
+                      <button type="button" class="report-expand-button" (click)="toggleRow(row)" [attr.aria-expanded]="isExpanded(row)">
+                        <i class="pi" [ngClass]="isExpanded(row) ? 'pi-chevron-down' : 'pi-chevron-right'"></i>
+                      </button>
+                    }
+                  </td>
+                  @for (column of columns; track column.header) {
+                    <td>
+                      @if (column.key === 'shipmentStatus' || column.key === 'reportStatus') {
+                        <span [class]="getStatusClasses(row[column.key])">{{ formatCellValue(row[column.key], column.key) }}</span>
+                      } @else {
+                        {{ formatCellValue(row[column.key], column.key) }}
+                      }
+                    </td>
+                  }
+                </tr>
+                @if (isExpanded(row) && hasChildren(row)) {
+                  <tr class="report-child-shell">
+                    <td [attr.colspan]="columns.length + 1" class="report-child-cell">
+                      <div class="report-child-wrapper">
+                        <div class="report-child-title">{{ row.noOfShipments || row.children?.length || 0 }} shipment split(s)</div>
+                        <table class="report-child-table">
+                          <thead>
                             <tr>
                               @for (column of childColumns; track column.header) {
-                                <td [class.report-child-highlight-cell]="column.key === 'shipmentNo' || column.key === 'actualShipmentNo'" [class.report-child-neutral-cell]="column.key !== 'shipmentNo' && column.key !== 'actualShipmentNo'">
-                                  @if (column.key === 'shipmentStatus') {
-                                    <span [class]="getChildStatusClasses(child[column.key])">{{ formatChildCellValue(child[column.key], column.key) }}</span>
-                                  } @else {
-                                    {{ formatChildCellValue(child[column.key], column.key) }}
-                                  }
-                                </td>
+                                <th [class.report-child-highlight-header]="column.key === 'shipmentNo' || column.key === 'actualShipmentNo'" [class.report-child-neutral-header]="column.key !== 'shipmentNo' && column.key !== 'actualShipmentNo'">
+                                  {{ column.header }}
+                                </th>
                               }
                             </tr>
-                          }
-                        </tbody>
-                      </table>
-                    </div>
-                  </td>
+                          </thead>
+                          <tbody>
+                            @for (child of row.children || []; track child.shipmentNo + '-' + ($index)) {
+                              <tr>
+                                @for (column of childColumns; track column.header) {
+                                  <td [class.report-child-highlight-cell]="column.key === 'shipmentNo' || column.key === 'actualShipmentNo'" [class.report-child-neutral-cell]="column.key !== 'shipmentNo' && column.key !== 'actualShipmentNo'">
+                                    @if (column.key === 'shipmentStatus') {
+                                      <span [class]="getChildStatusClasses(child[column.key])">{{ formatChildCellValue(child[column.key], column.key) }}</span>
+                                    } @else {
+                                      {{ formatChildCellValue(child[column.key], column.key) }}
+                                    }
+                                  </td>
+                                }
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  } @else {
+    <section class="rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
+      <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-6 py-4">
+        <div>
+          <h2 class="text-lg font-black tracking-tight text-slate-900">Storage Arrival Report</h2>
+          <p class="mt-1 text-sm text-slate-500">All shipment storage arrival and receipt records.</p>
+        </div>
+        <div class="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+          {{ storageArrivalRows().length }} row(s)
+        </div>
+      </div>
+
+      @if (storageArrivalLoading()) {
+        <div class="px-6 py-12 text-sm font-medium text-slate-500">Loading storage arrival report data...</div>
+      } @else if (storageArrivalError()) {
+        <div class="px-6 py-12 text-sm font-medium text-rose-500">{{ storageArrivalError() }}</div>
+      } @else if (!storageArrivalRows().length) {
+        <div class="px-6 py-12 text-sm font-medium text-slate-500">No storage arrival data available.</div>
+      } @else {
+        <div class="report-scroll">
+          <table class="report-table">
+            <thead>
+              <tr>
+                @for (column of storageArrivalColumns; track column.header) {
+                  <th>{{ column.header }}</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of storageArrivalRows(); track row.slNo) {
+                <tr>
+                  @for (column of storageArrivalColumns; track column.header) {
+                    <td>
+                      @if (column.key === 'status') {
+                        <span [class]="getStorageArrivalStatusClasses(row[column.key])">{{ formatStorageArrivalCellValue(row[column.key]) }}</span>
+                      } @else {
+                        {{ formatStorageArrivalCellValue(row[column.key]) }}
+                      }
+                    </td>
+                  }
                 </tr>
               }
-            }
-          </tbody>
-        </table>
-      </div>
-    }
-  </section>
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  }
 </div>
 
 @if (filterModalVisible()) {
