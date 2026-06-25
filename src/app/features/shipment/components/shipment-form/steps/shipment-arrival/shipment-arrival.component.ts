@@ -133,6 +133,7 @@ export class ShipmentArrivalComponent {
   @ViewChild('dpInvoiceInput') dpInvoiceInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('municipalityCertificateInput') municipalityCertificateInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('repositoryDocumentUpload') repositoryDocumentUploadRef?: ElementRef<HTMLInputElement>;
+  @ViewChild('typedDocInput') typedDocInputRef?: ElementRef<HTMLInputElement>;
 
   // Customs Documents ViewChild references
   @ViewChild('customsDocBoeInput') customsDocBoeInputRef?: ElementRef<HTMLInputElement>;
@@ -156,6 +157,10 @@ export class ShipmentArrivalComponent {
   readonly municipalityFile = signal<Record<number, File | null>>({});
   readonly dpInvoiceFile = signal<Record<number, File | null>>({});
   readonly municipalityCertificateFile = signal<Record<number, File | null>>({});
+
+  // Toggle for the optional DP Invoice upload under Bill Processing. Hidden for now;
+  // flip to true to re-enable the upload field and its (optional) validation.
+  readonly showDpInvoiceUpload = false;
 
   // Customs Documents file signals
   readonly customsDocBoeFile = signal<Record<number, File | null>>({});
@@ -1220,7 +1225,8 @@ export class ShipmentArrivalComponent {
 
   private validateBoePassingSection(index: number, group: AbstractControl): string[] {
     const missingFields: string[] = [];
-    if (!this.getDpInvoiceFile(index) && !String(group.get('dpInvoiceDocumentUrl')?.value || '').trim()) {
+    // DP Invoice is optional and currently hidden — only enforce it when the upload is shown.
+    if (this.showDpInvoiceUpload && !this.getDpInvoiceFile(index) && !String(group.get('dpInvoiceDocumentUrl')?.value || '').trim()) {
       missingFields.push('DP Invoice');
     }
     return missingFields;
@@ -2103,8 +2109,24 @@ export class ShipmentArrivalComponent {
     });
   }
 
+  /**
+   * Transportation rows that have not yet been assigned to a transaction. A container gets a
+   * shared transactionId the moment it is submitted via "Manage Shipments" (bulk update), so
+   * once assigned it drops out of the selectable list and can't be assigned a second time.
+   * Example: 20 containers, assign 2 -> the list now shows 18 remaining, and so on.
+   */
+  getUnassignedTransportationRows(group: AbstractControl): AbstractControl[] {
+    return this.getTransportationRows(group).controls.filter(
+      (row) => !String(row.get('transactionId')?.value || '').trim(),
+    );
+  }
+
+  getUnassignedTransportationCount(group: AbstractControl): number {
+    return this.getUnassignedTransportationRows(group).length;
+  }
+
   getSelectedTransportationRows(index: number): AbstractControl[] {
-    return this.getTransportationRows(this.formArray.at(index)).controls.filter((row) => row.get('checked')?.value === true);
+    return this.getUnassignedTransportationRows(this.formArray.at(index)).filter((row) => row.get('checked')?.value === true);
   }
 
   selectedTransportationCount(index: number): number {
@@ -2112,13 +2134,13 @@ export class ShipmentArrivalComponent {
   }
 
   areAllBulkTransportationRowsSelected(index: number): boolean {
-    const rows = this.getTransportationRows(this.formArray.at(index)).controls;
+    const rows = this.getUnassignedTransportationRows(this.formArray.at(index));
     return rows.length > 0 && rows.every((row) => row.get('checked')?.value === true);
   }
 
   toggleAllBulkTransportationRows(index: number, event: Event): void {
     const checked = (event.target as HTMLInputElement | null)?.checked === true;
-    this.getTransportationRows(this.formArray.at(index)).controls.forEach((row) => {
+    this.getUnassignedTransportationRows(this.formArray.at(index)).forEach((row) => {
       row.get('checked')?.patchValue(checked, { emitEvent: false });
     });
   }
@@ -2398,6 +2420,154 @@ export class ShipmentArrivalComponent {
 
   getRepositoryDocumentsCount(group: AbstractControl): number {
     return this.getAdditionalDocuments(group)?.length || 0;
+  }
+
+  // ===== Documents milestone (M1) =====
+  /** Document types that have their own dedicated row in the Documents milestone. */
+  private readonly typedDocumentKinds = ['certificate_of_origin', 'health_certificate'];
+
+  /**
+   * Mapped document URLs already captured in the BL Details step. These live on the
+   * actual container (the arrival form array does not carry them), so read from there.
+   */
+  getMappedDocUrl(index: number, kind: 'bl' | 'commercialInvoice' | 'packingList'): string {
+    const actual = this.shipmentData()?.actual?.[index] as any;
+    if (!actual) return '';
+    switch (kind) {
+      case 'bl':
+        return actual.blDocumentUrl || '';
+      case 'commercialInvoice':
+        return actual.commercialInvoiceDocumentUrl
+          || actual.customsOriginalDocuments?.invoice?.documentUrl
+          || actual.customsOriginalDocuments?.invoiceDocumentUrl
+          || '';
+      case 'packingList':
+        return actual.packagingListDocumentUrl
+          || actual.packingListDocumentUrl
+          || actual.customsOriginalDocuments?.packingList?.documentUrl
+          || '';
+    }
+  }
+
+  getMappedDocName(index: number, kind: 'bl' | 'commercialInvoice' | 'packingList'): string {
+    const actual = this.shipmentData()?.actual?.[index] as any;
+    if (!actual) return '';
+    switch (kind) {
+      case 'bl':
+        return actual.blDocumentName || '';
+      case 'commercialInvoice':
+        return actual.commercialInvoiceDocumentName
+          || actual.customsOriginalDocuments?.invoice?.documentName
+          || actual.customsOriginalDocuments?.invoiceDocumentName
+          || '';
+      case 'packingList':
+        return actual.packagingListDocumentName
+          || actual.packingListDocumentName
+          || actual.customsOriginalDocuments?.packingList?.documentName
+          || '';
+    }
+  }
+
+  /** Find a repository document by its dedicated documentType (e.g. certificate_of_origin). */
+  getRepositoryDocByType(group: AbstractControl, type: string): FormGroup | null {
+    const arr = this.getAdditionalDocuments(group);
+    if (!arr) return null;
+    return (
+      (arr.controls.find(
+        (c) => String(c.get('documentType')?.value || '').toLowerCase() === type
+      ) as FormGroup) || null
+    );
+  }
+
+  /** Repository docs excluding the ones with dedicated rows — shown under "Other Documents". */
+  getOtherRepositoryDocuments(group: AbstractControl): Array<{ control: AbstractControl; index: number }> {
+    const arr = this.getAdditionalDocuments(group);
+    if (!arr) return [];
+    return arr.controls
+      .map((control, index) => ({ control, index }))
+      .filter(({ control }) =>
+        !this.typedDocumentKinds.includes(String(control.get('documentType')?.value || '').toLowerCase())
+      );
+  }
+
+  getOtherRepositoryDocumentsCount(group: AbstractControl): number {
+    return this.getOtherRepositoryDocuments(group).length;
+  }
+
+  private pendingTypedDoc: { index: number; type: string; description: string } | null = null;
+
+  clickTypedDocUpload(index: number, type: string, description: string): void {
+    if (this.isRowEditLocked(index)) return;
+    this.pendingTypedDoc = { index, type, description };
+    this.typedDocInputRef?.nativeElement?.click();
+  }
+
+  onTypedDocInputChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    const pending = this.pendingTypedDoc;
+    input.value = '';
+    this.pendingTypedDoc = null;
+    if (!file || !pending) return;
+    this.uploadTypedRepositoryDocument(pending.index, file, pending.type, pending.description);
+  }
+
+  uploadTypedRepositoryDocument(index: number, file: File, documentType: string, description: string): void {
+    const group = this.formArray.at(index);
+    const containerId = group?.get('containerId')?.value;
+    if (!containerId || !group || !file) return;
+
+    // Replace any existing doc of this type so the dedicated slot holds a single file.
+    const existing = this.getRepositoryDocByType(group, documentType);
+    const existingId = existing?.get('_id')?.value;
+
+    this.uploadingRepositoryDocument.set(true);
+    const formData = new FormData();
+    formData.append('file', file, file.name);
+    formData.append('documentType', documentType);
+    formData.append('description', description);
+
+    this.shipmentService.uploadAdditionalRepositoryDocument(containerId, formData).subscribe({
+      next: (response) => {
+        this.uploadingRepositoryDocument.set(false);
+        const actual = response?.container?.actual;
+        const docs: any[] = actual?.additionalDocuments || [];
+        const newDoc = docs[docs.length - 1];
+        const docArray = this.getAdditionalDocuments(group);
+        // Drop a previous doc of the same type (keep one per dedicated slot).
+        if (existingId) {
+          const removeAt = docArray.controls.findIndex((c) => c.get('_id')?.value === existingId);
+          if (removeAt >= 0) docArray.removeAt(removeAt);
+        }
+        if (newDoc) {
+          docArray.push(new FormGroup({
+            _id: new FormControl(newDoc._id || null),
+            documentType: new FormControl(newDoc.documentType || documentType),
+            description: new FormControl(newDoc.description || description),
+            documentUrl: new FormControl(newDoc.fileUrl || newDoc.documentUrl || ''),
+            documentName: new FormControl(newDoc.fileName || newDoc.documentName || file.name),
+            uploadedOn: new FormControl(new Date(newDoc.uploadedAt || new Date())),
+            uploadedBy: new FormControl(newDoc.uploadedBy || 'System User'),
+          }));
+        }
+        if (actual) {
+          this.store.dispatch(ShipmentActions.patchActualContainerData({ containerId, actual }));
+        }
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Document Uploaded',
+          detail: `${description} uploaded successfully.`,
+        });
+      },
+      error: (err) => {
+        this.uploadingRepositoryDocument.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Upload Failed',
+          detail: err?.error?.message || 'Could not upload document.',
+        });
+      }
+    });
   }
 
   deleteRepositoryDocument(index: number, docIndex: number): void {

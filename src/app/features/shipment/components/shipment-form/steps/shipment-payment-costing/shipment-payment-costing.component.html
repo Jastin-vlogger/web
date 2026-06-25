@@ -73,89 +73,48 @@
             }
           </div>
         </div>
-        <div class="w-full overflow-x-auto overflow-y-hidden" formArrayName="paymentAllocations">
-          <table class="min-w-[1400px] w-full table-fixed text-sm">
-            <colgroup>
-              <col class="w-[64px]" />
-              <col class="w-[24%]" />
-              <col class="w-[130px]" />
-              <col class="w-[130px]" />
-              <col class="w-[140px]" />
-              <col class="w-[170px]" />
-              <col class="w-[150px]" />
-              <col class="w-[170px]" />
-              <col class="w-[120px]" />
-            </colgroup>
-            <thead class="bg-white">
-              <tr class="border-b border-slate-100">
-                <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500 w-16">SN</th>
-                <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Description</th>
-                <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-slate-500">Request Amount</th>
-                <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Received Amount</th>
-                <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-50">Difference Amount</th>
-                <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Payment To</th>
-                <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Payment Term</th>
-                <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Reference</th>
-                <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-slate-500">Attachment</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (rowEntry of getVisiblePaymentAllocations(group, singleShipmentIndex!); track rowEntry.index; let visibleIndex = $index) {
-                <tr [formGroupName]="rowEntry.index" class="border-b border-slate-100 last:border-b-0">
-                  <td class="px-4 py-4 align-middle">
-                    <div class="font-bold text-slate-700">{{ visibleIndex + 1 }}</div>
-                  </td>
-                  <td class="px-4 py-4 align-middle">
-                    <div class="font-semibold text-slate-800 break-words">{{ rowEntry.control.get('description')?.value || '—' }}</div>
-                  </td>
-                  <td class="px-4 py-4 align-middle">
-                    <div class="table-input-text w-full bg-slate-50 min-h-[52px] flex items-center justify-center">{{ rowEntry.control.get('requestAmount')?.value ?? 0 }}</div>
-                  </td>
-                  <td class="px-4 py-4 align-middle">
-                    <p-inputNumber formControlName="paidAmount" styleClass="w-full" inputStyleClass="table-input w-full" [readonly]="isAllocationReadOnly(singleShipmentIndex!)" [minFractionDigits]="2" [maxFractionDigits]="2"></p-inputNumber>
-                  </td>
-                  <td class="px-4 py-4 align-middle bg-amber-50/60">
-                    <div class="table-input-text w-full bg-amber-50 min-h-[52px] flex items-center justify-center font-black text-amber-700">{{ getAllocationDifference(rowEntry.control) }}</div>
-                  </td>
-                  <td class="px-4 py-4 align-middle">
-                    <p-select formControlName="paymentTo" [options]="paymentToOptions" optionLabel="label" optionValue="value" placeholder="Payment To" styleClass="w-full" appendTo="body" [disabled]="isAllocationReadOnly(singleShipmentIndex!)" />
-                  </td>
-                  <td class="px-4 py-4 align-middle">
-                    <p-select formControlName="paymentTerm" [options]="paymentTermOptions" optionLabel="label" optionValue="value" placeholder="Term" styleClass="w-full" appendTo="body" [disabled]="isAllocationReadOnly(singleShipmentIndex!)" />
-                  </td>
-                  <td class="px-4 py-4 align-middle">
-                    <input pInputText formControlName="reference" class="table-input-text w-full" placeholder="Reference" [readonly]="isAllocationReadOnly(singleShipmentIndex!)" />
-                  </td>
-                  <td class="px-4 py-4 align-middle text-center">
-                    <div class="flex justify-center gap-2">
-                      <button type="button" (click)="clickAllocationAttachmentUpload(singleShipmentIndex!, rowEntry.index)" [disabled]="isAllocationReadOnly(singleShipmentIndex!)" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"><i class="pi pi-upload"></i></button>
-                      @if (getAllocationAttachmentFile(singleShipmentIndex!, rowEntry.index)) {
-                        <button type="button" (click)="openDocumentPreview(getAllocationAttachmentFile(singleShipmentIndex!, rowEntry.index)!, 'Payment Allocation Attachment')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
-                        <button type="button" (click)="clearAllocationAttachmentFile(singleShipmentIndex!, rowEntry.index)" class="w-9 h-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"><i class="pi pi-trash"></i></button>
-                      } @else if (rowEntry.control.get('attachmentDocumentUrl')?.value) {
-                        <button type="button" (click)="openRemoteDocumentPreview(rowEntry.control.get('attachmentDocumentUrl')?.value, rowEntry.control.get('attachmentDocumentName')?.value || 'Payment Allocation Attachment')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
-                      } @else {
-                        <div class="w-9 h-9 rounded-lg border border-slate-200 bg-slate-50 text-slate-300 flex items-center justify-center"><i class="pi pi-eye"></i></div>
-                      }
-                    </div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-            <tfoot class="bg-slate-50/70 border-t border-slate-100">
-              <tr>
-                <td class="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Total</td>
-                <td class="px-4 py-3"></td>
-                <td class="px-4 py-3 text-sm font-black text-slate-800 text-center">{{ getAllocationTotal(group, 'requestAmount') }}</td>
-                <td class="px-4 py-3 text-sm font-black text-slate-800">{{ getAllocationTotal(group, 'paidAmount') }}</td>
-                <td class="px-4 py-3 text-sm font-black text-amber-700 bg-amber-50 text-center">{{ getAllocationDifferenceTotal(group) }}</td>
-                <td class="px-4 py-3"></td>
-                <td class="px-4 py-3"></td>
-                <td class="px-4 py-3"></td>
-                <td class="px-4 py-3"></td>
-              </tr>
-            </tfoot>
-          </table>
+        <div class="flex flex-col">
+          <div class="hidden md:grid md:grid-cols-[48px_minmax(160px,2fr)_120px_120px_120px_110px] gap-3 px-4 py-2.5 bg-slate-50/70 border-b border-slate-100">
+            <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">SN</span>
+            <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Description</span>
+            <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Request</span>
+            <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Received</span>
+            <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Difference</span>
+            <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider text-center">Action</span>
+          </div>
+          @for (rowEntry of getVisiblePaymentAllocations(group, singleShipmentIndex!); track rowEntry.index; let visibleIndex = $index) {
+            <div class="border-b last:border-b-0 border-slate-100 px-4 py-3">
+              <div class="hidden md:grid md:grid-cols-[48px_minmax(160px,2fr)_120px_120px_120px_110px] gap-3 items-center">
+                <div class="text-sm font-bold text-slate-700">{{ visibleIndex + 1 }}</div>
+                <div class="text-sm font-semibold text-slate-700 truncate">{{ rowEntry.control.get('description')?.value || '\u2014' }}</div>
+                <div class="text-sm text-slate-700">{{ rowEntry.control.get('requestAmount')?.value ?? 0 }}</div>
+                <div class="text-sm text-slate-700">{{ rowEntry.control.get('paidAmount')?.value ?? 0 }}</div>
+                <div class="text-sm font-bold text-amber-700">{{ getAllocationDifference(rowEntry.control) }}</div>
+                <div class="flex justify-center">
+                  <button type="button" (click)="openAllocationRowEdit(singleShipmentIndex!, rowEntry.index)" class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100">
+                    <i class="pi" [class.pi-pencil]="!isAllocationApproved(singleShipmentIndex!)" [class.pi-eye]="isAllocationApproved(singleShipmentIndex!)"></i>
+                    {{ isAllocationApproved(singleShipmentIndex!) ? 'View' : 'Edit' }}
+                  </button>
+                </div>
+              </div>
+              <div class="md:hidden flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider">SN {{ visibleIndex + 1 }}</div>
+                  <div class="text-sm font-semibold text-slate-700 truncate">{{ rowEntry.control.get('description')?.value || '\u2014' }}</div>
+                  <div class="text-xs text-slate-500">Received: <strong class="text-slate-800">{{ rowEntry.control.get('paidAmount')?.value ?? 0 }}</strong></div>
+                </div>
+                <button type="button" (click)="openAllocationRowEdit(singleShipmentIndex!, rowEntry.index)" class="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100">
+                  <i class="pi" [class.pi-pencil]="!isAllocationApproved(singleShipmentIndex!)" [class.pi-eye]="isAllocationApproved(singleShipmentIndex!)"></i>
+                  {{ isAllocationApproved(singleShipmentIndex!) ? 'View' : 'Edit' }}
+                </button>
+              </div>
+            </div>
+          }
+          <div class="border-t border-slate-100 bg-slate-50/70 px-4 py-3 grid grid-cols-3 gap-3">
+            <div><div class="text-[9px] font-black uppercase tracking-wider text-slate-400">Total Request</div><div class="text-sm font-black text-slate-800">{{ getAllocationTotal(group, 'requestAmount') }}</div></div>
+            <div><div class="text-[9px] font-black uppercase tracking-wider text-slate-400">Total Received</div><div class="text-sm font-black text-slate-800">{{ getAllocationTotal(group, 'paidAmount') }}</div></div>
+            <div><div class="text-[9px] font-black uppercase tracking-wider text-amber-700">Difference</div><div class="text-sm font-black text-amber-700">{{ getAllocationDifferenceTotal(group) }}</div></div>
+          </div>
         </div>
         @if (hasHiddenPaymentAllocations(group)) {
           <div class="border-t border-slate-100 px-4 py-3 flex justify-center sm:justify-start">
@@ -430,89 +389,48 @@
                     }
                   </div>
                 </div>
-                <div class="w-full overflow-x-auto overflow-y-hidden" formArrayName="paymentAllocations">
-                  <table class="min-w-[1400px] w-full table-fixed text-sm">
-                    <colgroup>
-                      <col class="w-[64px]" />
-                      <col class="w-[24%]" />
-                      <col class="w-[130px]" />
-                      <col class="w-[130px]" />
-                      <col class="w-[140px]" />
-                      <col class="w-[170px]" />
-                      <col class="w-[150px]" />
-                      <col class="w-[170px]" />
-                      <col class="w-[120px]" />
-                    </colgroup>
-                    <thead class="bg-white">
-                      <tr class="border-b border-slate-100">
-                        <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500 w-16">SN</th>
-                        <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Description</th>
-                        <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-slate-500">Request Amount</th>
-                        <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Received Amount</th>
-                        <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-50">Difference Amount</th>
-                        <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Payment To</th>
-                        <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Payment Term</th>
-                        <th class="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">Reference</th>
-                        <th class="px-4 py-3 text-center text-[10px] font-black uppercase tracking-wider text-slate-500">Attachment</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (rowEntry of getVisiblePaymentAllocations(group, i); track rowEntry.index; let visibleIndex = $index) {
-                        <tr [formGroupName]="rowEntry.index" class="border-b border-slate-100 last:border-b-0">
-                          <td class="px-4 py-4 align-middle">
-                            <div class="font-bold text-slate-700">{{ visibleIndex + 1 }}</div>
-                          </td>
-                          <td class="px-4 py-4 align-middle">
-                            <div class="font-semibold text-slate-800 break-words">{{ rowEntry.control.get('description')?.value || '—' }}</div>
-                          </td>
-                          <td class="px-4 py-4 align-middle">
-                            <div class="table-input-text w-full bg-slate-50 min-h-[52px] flex items-center justify-center">{{ rowEntry.control.get('requestAmount')?.value ?? 0 }}</div>
-                          </td>
-                          <td class="px-4 py-4 align-middle">
-                            <p-inputNumber formControlName="paidAmount" styleClass="w-full" inputStyleClass="table-input w-full" [readonly]="isAllocationReadOnly(i)" [minFractionDigits]="2" [maxFractionDigits]="2"></p-inputNumber>
-                          </td>
-                          <td class="px-4 py-4 align-middle bg-amber-50/60">
-                            <div class="table-input-text w-full bg-amber-50 min-h-[52px] flex items-center justify-center font-black text-amber-700">{{ getAllocationDifference(rowEntry.control) }}</div>
-                          </td>
-                          <td class="px-4 py-4 align-middle">
-                            <p-select formControlName="paymentTo" [options]="paymentToOptions" optionLabel="label" optionValue="value" placeholder="Payment To" styleClass="w-full" appendTo="body" [disabled]="isAllocationReadOnly(i)" />
-                          </td>
-                          <td class="px-4 py-4 align-middle">
-                            <p-select formControlName="paymentTerm" [options]="paymentTermOptions" optionLabel="label" optionValue="value" placeholder="Term" styleClass="w-full" appendTo="body" [disabled]="isAllocationReadOnly(i)" />
-                          </td>
-                          <td class="px-4 py-4 align-middle">
-                            <input pInputText formControlName="reference" class="table-input-text w-full" placeholder="Reference" [readonly]="isAllocationReadOnly(i)" />
-                          </td>
-                          <td class="px-4 py-4 align-middle text-center">
-                            <div class="flex justify-center gap-2">
-                              <button type="button" (click)="clickAllocationAttachmentUpload(i, rowEntry.index)" [disabled]="isAllocationReadOnly(i)" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"><i class="pi pi-upload"></i></button>
-                              @if (getAllocationAttachmentFile(i, rowEntry.index)) {
-                                <button type="button" (click)="openDocumentPreview(getAllocationAttachmentFile(i, rowEntry.index)!, 'Payment Allocation Attachment')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
-                                <button type="button" (click)="clearAllocationAttachmentFile(i, rowEntry.index)" class="w-9 h-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100"><i class="pi pi-trash"></i></button>
-                              } @else if (rowEntry.control.get('attachmentDocumentUrl')?.value) {
-                                <button type="button" (click)="openRemoteDocumentPreview(rowEntry.control.get('attachmentDocumentUrl')?.value, rowEntry.control.get('attachmentDocumentName')?.value || 'Payment Allocation Attachment')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
-                              } @else {
-                                <div class="w-9 h-9 rounded-lg border border-slate-200 bg-slate-50 text-slate-300 flex items-center justify-center"><i class="pi pi-eye"></i></div>
-                              }
-                            </div>
-                          </td>
-                        </tr>
-                      }
-                    </tbody>
-                    <tfoot class="bg-slate-50/70 border-t border-slate-100">
-                      <tr>
-                        <td class="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-slate-500">Total</td>
-                        <td class="px-4 py-3"></td>
-                        <td class="px-4 py-3 text-sm font-black text-slate-800 text-center">{{ getAllocationTotal(group, 'requestAmount') }}</td>
-                        <td class="px-4 py-3 text-sm font-black text-slate-800">{{ getAllocationTotal(group, 'paidAmount') }}</td>
-                        <td class="px-4 py-3 text-sm font-black text-amber-700 bg-amber-50 text-center">{{ getAllocationDifferenceTotal(group) }}</td>
-                        <td class="px-4 py-3"></td>
-                        <td class="px-4 py-3"></td>
-                        <td class="px-4 py-3"></td>
-                        <td class="px-4 py-3"></td>
-                      </tr>
-                    </tfoot>
-                  </table>
+                <div class="flex flex-col">
+                  <div class="hidden md:grid md:grid-cols-[48px_minmax(160px,2fr)_120px_120px_120px_110px] gap-3 px-4 py-2.5 bg-slate-50/70 border-b border-slate-100">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">SN</span>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Description</span>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Request</span>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Received</span>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Difference</span>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider text-center">Action</span>
+                  </div>
+                  @for (rowEntry of getVisiblePaymentAllocations(group, i); track rowEntry.index; let visibleIndex = $index) {
+                    <div class="border-b last:border-b-0 border-slate-100 px-4 py-3">
+                      <div class="hidden md:grid md:grid-cols-[48px_minmax(160px,2fr)_120px_120px_120px_110px] gap-3 items-center">
+                        <div class="text-sm font-bold text-slate-700">{{ visibleIndex + 1 }}</div>
+                        <div class="text-sm font-semibold text-slate-700 truncate">{{ rowEntry.control.get('description')?.value || '\u2014' }}</div>
+                        <div class="text-sm text-slate-700">{{ rowEntry.control.get('requestAmount')?.value ?? 0 }}</div>
+                        <div class="text-sm text-slate-700">{{ rowEntry.control.get('paidAmount')?.value ?? 0 }}</div>
+                        <div class="text-sm font-bold text-amber-700">{{ getAllocationDifference(rowEntry.control) }}</div>
+                        <div class="flex justify-center">
+                          <button type="button" (click)="openAllocationRowEdit(i, rowEntry.index)" class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100">
+                            <i class="pi" [class.pi-pencil]="!isAllocationApproved(i)" [class.pi-eye]="isAllocationApproved(i)"></i>
+                            {{ isAllocationApproved(i) ? 'View' : 'Edit' }}
+                          </button>
+                        </div>
+                      </div>
+                      <div class="md:hidden flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                          <div class="text-[10px] font-black text-slate-400 uppercase tracking-wider">SN {{ visibleIndex + 1 }}</div>
+                          <div class="text-sm font-semibold text-slate-700 truncate">{{ rowEntry.control.get('description')?.value || '\u2014' }}</div>
+                          <div class="text-xs text-slate-500">Received: <strong class="text-slate-800">{{ rowEntry.control.get('paidAmount')?.value ?? 0 }}</strong></div>
+                        </div>
+                        <button type="button" (click)="openAllocationRowEdit(i, rowEntry.index)" class="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100">
+                          <i class="pi" [class.pi-pencil]="!isAllocationApproved(i)" [class.pi-eye]="isAllocationApproved(i)"></i>
+                          {{ isAllocationApproved(i) ? 'View' : 'Edit' }}
+                        </button>
+                      </div>
+                    </div>
+                  }
+                  <div class="border-t border-slate-100 bg-slate-50/70 px-4 py-3 grid grid-cols-3 gap-3">
+                    <div><div class="text-[9px] font-black uppercase tracking-wider text-slate-400">Total Request</div><div class="text-sm font-black text-slate-800">{{ getAllocationTotal(group, 'requestAmount') }}</div></div>
+                    <div><div class="text-[9px] font-black uppercase tracking-wider text-slate-400">Total Received</div><div class="text-sm font-black text-slate-800">{{ getAllocationTotal(group, 'paidAmount') }}</div></div>
+                    <div><div class="text-[9px] font-black uppercase tracking-wider text-amber-700">Difference</div><div class="text-sm font-black text-amber-700">{{ getAllocationDifferenceTotal(group) }}</div></div>
+                  </div>
                 </div>
                 @if (hasHiddenPaymentAllocations(group)) {
                   <div class="border-t border-slate-100 px-4 py-3 flex justify-center sm:justify-start">
@@ -897,3 +815,91 @@
     </div>
   }
 </p-dialog>
+
+
+<!-- Payment Allocation per-row edit modal -->
+@if (allocationRowEditVisible()) {
+  @let ctx = allocationRowEditCtx();
+  @let row = getEditingAllocationRow();
+  @if (ctx && row) {
+    @let si = ctx.shipmentIndex;
+    @let ri = ctx.rowIndex;
+    @let editable = isAllocationRowEditable(si);
+    <p-dialog
+      [header]="(editable ? 'Edit' : 'View') + ' Payment Allocation Row'"
+      [visible]="allocationRowEditVisible()"
+      (visibleChange)="allocationRowEditVisible.set($event)"
+      (onHide)="cancelAllocationRowEdit()"
+      [modal]="true"
+      [dismissableMask]="false"
+      [style]="{ width: '90vw', maxWidth: '620px' }"
+      [draggable]="false"
+      appendTo="body">
+      <div [formGroup]="$any(row)" class="flex flex-col gap-4 p-1">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Description</label>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700">{{ row.get('description')?.value || '\u2014' }}</div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Request Amount</label>
+            <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700">{{ row.get('requestAmount')?.value ?? 0 }}</div>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Received Amount</label>
+            <p-inputNumber formControlName="paidAmount" styleClass="w-full" inputStyleClass="table-input w-full" [readonly]="!editable" [minFractionDigits]="2" [maxFractionDigits]="2"></p-inputNumber>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[10px] font-bold text-amber-700 uppercase tracking-wider">Difference</label>
+            <div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-black text-amber-700">{{ getAllocationDifference(row) }}</div>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Payment To</label>
+            <p-select formControlName="paymentTo" [options]="paymentToOptions" optionLabel="label" optionValue="value" placeholder="Payment To" styleClass="w-full" appendTo="body" [disabled]="!editable" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Payment Term</label>
+            <p-select formControlName="paymentTerm" [options]="paymentTermOptions" optionLabel="label" optionValue="value" placeholder="Term" styleClass="w-full" appendTo="body" [disabled]="!editable" />
+          </div>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Reference</label>
+          <input pInputText formControlName="reference" class="table-input-text w-full" placeholder="Reference" [readonly]="!editable" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Attachment</label>
+          <div class="flex items-center gap-2">
+            @if (editable) {
+              <button type="button" (click)="clickAllocationAttachmentUpload(si, ri)" class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-600"><i class="pi pi-upload text-[10px]"></i> Upload</button>
+            }
+            @if (getAllocationAttachmentFile(si, ri)) {
+              <button type="button" (click)="openDocumentPreview(getAllocationAttachmentFile(si, ri)!, 'Payment Allocation Attachment')" class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 inline-flex items-center justify-center"><i class="pi pi-eye text-[10px]"></i></button>
+              @if (editable) {
+                <button type="button" (click)="clearAllocationAttachmentFile(si, ri)" class="h-9 w-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 inline-flex items-center justify-center"><i class="pi pi-trash text-[10px]"></i></button>
+              }
+            } @else if (row.get('attachmentDocumentUrl')?.value) {
+              <button type="button" (click)="openRemoteDocumentPreview(row.get('attachmentDocumentUrl')?.value, row.get('attachmentDocumentName')?.value || 'Payment Allocation Attachment')" class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 inline-flex items-center justify-center"><i class="pi pi-eye text-[10px]"></i></button>
+            }
+          </div>
+          @if (getAllocationAttachmentFile(si, ri)) {
+            <p class="text-[10px] text-slate-400 truncate">{{ getAllocationAttachmentFile(si, ri)?.name }}</p>
+          } @else if (row.get('attachmentDocumentName')?.value) {
+            <p class="text-[10px] text-slate-400 truncate">{{ row.get('attachmentDocumentName')?.value }}</p>
+          }
+        </div>
+        <div class="flex gap-3 pt-1">
+          <button type="button" (click)="cancelAllocationRowEdit()" class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50">
+            {{ editable ? 'Cancel' : 'Close' }}
+          </button>
+          @if (editable) {
+            <button type="button" (click)="saveAllocationRowEdit()" class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-600 hover:bg-emerald-100">
+              <i class="pi pi-check text-sm"></i> Save
+            </button>
+          }
+        </div>
+      </div>
+    </p-dialog>
+  }
+}

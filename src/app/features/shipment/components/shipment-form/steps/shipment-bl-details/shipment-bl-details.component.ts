@@ -244,6 +244,59 @@ export class ShipmentBlDetailsComponent {
     row.get('requestAmount')?.setValue(Number((qty * rate).toFixed(2)), { emitEvent: false });
   }
 
+  // ===== Clearing Advance per-row edit modal =====
+  readonly clearingRowEditVisible = signal(false);
+  readonly clearingRowEditCtx = signal<{ shipmentIndex: number; rowIndex: number } | null>(null);
+  private clearingRowSnapshot: any = null;
+
+  getEditingClearingRow(): FormGroup | null {
+    const ctx = this.clearingRowEditCtx();
+    if (!ctx) return null;
+    const group = this.formArray.at(ctx.shipmentIndex);
+    return (this.getCostSheetRows(group).at(ctx.rowIndex) as FormGroup) || null;
+  }
+
+  isClearingRowEditable(shipmentIndex: number): boolean {
+    return this.canEditClearingAdvance(shipmentIndex) && !this.isClearingAdvanceApproved(shipmentIndex);
+  }
+
+  openClearingRowEdit(shipmentIndex: number, rowIndex: number): void {
+    const group = this.formArray.at(shipmentIndex);
+    const row = this.getCostSheetRows(group).at(rowIndex);
+    if (!row) return;
+    // Snapshot so Cancel can revert in-memory edits (save is the only persistence path).
+    this.clearingRowSnapshot = row.getRawValue();
+    if (this.isClearingRowEditable(shipmentIndex)) {
+      this.enableCostSheetEdit(shipmentIndex);
+    }
+    this.clearingRowEditCtx.set({ shipmentIndex, rowIndex });
+    this.clearingRowEditVisible.set(true);
+  }
+
+  cancelClearingRowEdit(): void {
+    const ctx = this.clearingRowEditCtx();
+    if (ctx && this.clearingRowSnapshot) {
+      const group = this.formArray.at(ctx.shipmentIndex);
+      this.getCostSheetRows(group).at(ctx.rowIndex)?.patchValue(this.clearingRowSnapshot, { emitEvent: false });
+    }
+    this.clearingRowSnapshot = null;
+    this.clearingRowEditVisible.set(false);
+    this.clearingRowEditCtx.set(null);
+  }
+
+  saveClearingRowEdit(): void {
+    const ctx = this.clearingRowEditCtx();
+    if (!ctx) return;
+    const group = this.formArray.at(ctx.shipmentIndex);
+    const row = this.getCostSheetRows(group).at(ctx.rowIndex);
+    if (row) this.recalculateCostSheetRequestAmount(row);
+    // Keep edits (no revert) and hand off to the existing submit flow (cheque modal -> server).
+    this.clearingRowSnapshot = null;
+    this.clearingRowEditVisible.set(false);
+    this.clearingRowEditCtx.set(null);
+    this.saveCostSheet(ctx.shipmentIndex);
+  }
+
   /** POINT 8: Ensure accordion panel stays open after save */
   private ensureAccordionOpen(index: number): void {
     const panelValue = `bl-${index}`;
@@ -938,6 +991,14 @@ export class ShipmentBlDetailsComponent {
   getAllItemsAllocationTotal(group: AbstractControl): number {
     const itemAllocations = this.getStorageDecision(group).get('itemAllocations')?.value || [];
     return itemAllocations.reduce((sum: number, item: any) => sum + this.getItemAllocationTotal(item), 0);
+  }
+
+  /** Grand total of containers assigned across every shipment (shown once at the bottom). */
+  getAllShipmentsAllocationTotal(): number {
+    return this.formArray.controls.reduce(
+      (sum, group) => sum + this.getAllItemsAllocationTotal(group),
+      0
+    );
   }
 
   hasItemAllocationOverage(group: AbstractControl): boolean {

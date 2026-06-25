@@ -668,6 +668,15 @@ export class ShipmentStorageComponent {
   getArrivalDelayLabel(shipmentIndex: number, containerIndex: number): string {
     const row = this.getArrivalRow(shipmentIndex, containerIndex);
     if (!row) return '–';
+
+    // Only show a delay once the container's arrival has actually been recorded (received).
+    // receivedOnDate is pre-filled with "now" as a default, so calculating a delay before the
+    // arrival is recorded would measure against the current time rather than the real arrival.
+    // Mirror the Status column's "Recorded" condition (GRN + batch present).
+    const grn = row.get('grn')?.value;
+    const batch = row.get('batch')?.value;
+    if (!grn || !batch) return '–';
+
     const serial = row.get('containerSerialNo')?.value || '';
     const transport = this.getTransportationInfo(shipmentIndex, serial);
     const receivedDate = row.get('receivedOnDate')?.value;

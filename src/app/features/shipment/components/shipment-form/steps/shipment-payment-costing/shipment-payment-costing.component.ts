@@ -1039,6 +1039,56 @@ export class ShipmentPaymentCostingComponent {
     this.editingAllocations.update((current) => ({ ...current, [index]: true }));
   }
 
+  // ===== Payment Allocation per-row edit modal =====
+  readonly allocationRowEditVisible = signal(false);
+  readonly allocationRowEditCtx = signal<{ shipmentIndex: number; rowIndex: number } | null>(null);
+  private allocationRowSnapshot: any = null;
+
+  getEditingAllocationRow(): FormGroup | null {
+    const ctx = this.allocationRowEditCtx();
+    if (!ctx) return null;
+    const group = this.formArray.at(ctx.shipmentIndex);
+    return (this.getPaymentAllocations(group).at(ctx.rowIndex) as FormGroup) || null;
+  }
+
+  isAllocationRowEditable(index: number): boolean {
+    return !this.isAllocationApproved(index);
+  }
+
+  openAllocationRowEdit(shipmentIndex: number, rowIndex: number): void {
+    const group = this.formArray.at(shipmentIndex);
+    const row = this.getPaymentAllocations(group).at(rowIndex);
+    if (!row) return;
+    // Snapshot so Cancel can revert in-memory edits (save is the only persistence path).
+    this.allocationRowSnapshot = row.getRawValue();
+    if (this.isAllocationRowEditable(shipmentIndex)) {
+      this.startEditingAllocation(shipmentIndex);
+    }
+    this.allocationRowEditCtx.set({ shipmentIndex, rowIndex });
+    this.allocationRowEditVisible.set(true);
+  }
+
+  cancelAllocationRowEdit(): void {
+    const ctx = this.allocationRowEditCtx();
+    if (ctx && this.allocationRowSnapshot) {
+      const group = this.formArray.at(ctx.shipmentIndex);
+      this.getPaymentAllocations(group).at(ctx.rowIndex)?.patchValue(this.allocationRowSnapshot, { emitEvent: false });
+    }
+    this.allocationRowSnapshot = null;
+    this.allocationRowEditVisible.set(false);
+    this.allocationRowEditCtx.set(null);
+  }
+
+  saveAllocationRowEdit(): void {
+    const ctx = this.allocationRowEditCtx();
+    if (!ctx) return;
+    // Keep edits (no revert) and hand off to the existing save flow (confirm -> server).
+    this.allocationRowSnapshot = null;
+    this.allocationRowEditVisible.set(false);
+    this.allocationRowEditCtx.set(null);
+    void this.saveAllocation(ctx.shipmentIndex);
+  }
+
   private isFasManagerRole(): boolean {
     const role = this.authService.getCurrentUser()?.role || '';
     return role === 'FasManager' || role === 'Fas manager';
