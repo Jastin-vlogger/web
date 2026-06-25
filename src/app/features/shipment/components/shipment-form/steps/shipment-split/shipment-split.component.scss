@@ -40,6 +40,23 @@
         min-width: 0;
     }
 
+    /* Scheduled (planned) table: widen Qty MT / ETD / ETA so dates aren't truncated */
+    .planned-table .planned-col-qty {
+        min-width: 120px;
+    }
+
+    .planned-table .planned-col-date {
+        min-width: 185px;
+    }
+
+    .planned-table .planned-col-qty .p-inputnumber,
+    .planned-table .planned-col-qty .table-input,
+    .planned-table .planned-col-date .p-datepicker,
+    .planned-table .planned-col-date .p-inputtext {
+        width: 100%;
+        min-width: 0;
+    }
+
     .extraction-overlay {
         @apply fixed inset-0 z-[1200] flex items-center justify-center p-4;
     }

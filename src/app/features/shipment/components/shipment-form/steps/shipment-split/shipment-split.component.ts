@@ -721,13 +721,16 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     });
 
     const remainderMT = Math.round((totalQtyMT - allocatedMT) * 100) / 100;
+    // Derive remainder FCL from the same ratio used everywhere (Total MT ÷ Total FCL).
+    const qtyPerContainer = this.getQtyPerContainer();
+    const remainderFcl = qtyPerContainer > 0 ? Math.round(remainderMT / qtyPerContainer) : 0;
 
     if (remainderMT > 0) {
       // Need a remainder row
       if (remainderRowIndex >= 0) {
         // Update existing remainder row
         const remainderRow = this.plannedSplits.at(remainderRowIndex);
-        const newFcl = Math.ceil(remainderMT / 25);
+        const newFcl = remainderFcl;
         this.isRebalancingPlannedRows = true;
         remainderRow.get('qtyMT')?.setValue(remainderMT, { emitEvent: false });
         remainderRow.get('FCL')?.setValue(newFcl, { emitEvent: false });
@@ -738,7 +741,7 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
           .filter(c => !c.get('isRemainderRow')?.value)
           .slice(-1)[0];
         const lastVal = lastRow?.getRawValue() || {};
-        const newFcl = Math.ceil(remainderMT / 25);
+        const newFcl = remainderFcl;
         this.isRebalancingPlannedRows = true;
         // We emit via parent — use @Output to add row
         this.addRemainderRow.emit({ qtyMT: remainderMT, fcl: newFcl, copyFrom: lastVal });
@@ -786,20 +789,27 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
       });
     }
 
-    if (totalFcl > 0 && totalQtyMT > 0 && rowFcl > 0) {
-      const qtyPerContainer = totalQtyMT / totalFcl;
-      const autoQtyMT = this.roundQty(rowFcl * qtyPerContainer);
-      this.isRebalancingPlannedRows = true;
-      row.get('qtyMT')?.setValue(autoQtyMT, { emitEvent: false });
-      this.isRebalancingPlannedRows = false;
-    } else if (rowFcl === 0) {
-      this.isRebalancingPlannedRows = true;
-      row.get('qtyMT')?.setValue(0, { emitEvent: false });
-      this.isRebalancingPlannedRows = false;
-    }
+    // Recompute qtyMT for EVERY non-remainder row from its FCL using a single
+    // derived ratio (Total MT / Total FCL). This keeps the rows consistent so
+    // the scheduled total can never drift above Total MT when Σ FCL ≤ Total FCL.
+    const qtyPerContainer = this.getQtyPerContainer();
+    this.isRebalancingPlannedRows = true;
+    this.plannedSplits.controls.forEach((ctrl) => {
+      if (ctrl.get('isRemainderRow')?.value) return;
+      const f = Number(ctrl.get('FCL')?.value) || 0;
+      ctrl.get('qtyMT')?.setValue(qtyPerContainer > 0 ? this.roundQty(f * qtyPerContainer) : 0, { emitEvent: false });
+    });
+    this.isRebalancingPlannedRows = false;
 
     // Recalculate remainder row after FCL change
     this.recalculateRemainderRow();
+  }
+
+  /** Single source of truth for MT-per-container: Total MT ÷ Total FCL. */
+  private getQtyPerContainer(): number {
+    const totalFcl = Number(this.shipmentData()?.shipment?.fcl) || 0;
+    const totalQtyMT = Number(this.shipmentData()?.shipment?.plannedQtyMT ?? this.totalQtyMT) || 0;
+    return totalFcl > 0 ? totalQtyMT / totalFcl : 0;
   }
 
   getMaxAllowedPlannedFcl(rowIndex: number): number {
@@ -807,14 +817,17 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     const totalFcl = Number(this.shipmentData()?.shipment?.fcl) || 0;
     if (totalFcl <= 0) return 0;
 
-    const row = this.plannedSplits.at(rowIndex);
-    const currentRowFcl = Number(row?.get('FCL')?.value) || 0;
+    // Capacity left for this row = Total FCL minus what the OTHER manual rows already
+    // hold. The remainder row absorbs whatever is left, so it must not count here.
+    // (Previously this added currentRowFcl back, which made the cap always larger than
+    // the typed value — so it never actually capped and Σ FCL could exceed Total FCL.)
     const allocatedExcludingRow = this.plannedSplits.controls.reduce((sum, control, index) => {
       if (index === rowIndex) return sum;
+      if (control.get('isRemainderRow')?.value) return sum;
       return sum + (Number(control.get('FCL')?.value) || 0);
     }, 0);
 
-    return Math.max(0, totalFcl - allocatedExcludingRow + currentRowFcl);
+    return Math.max(0, totalFcl - allocatedExcludingRow);
   }
 
   private distributeRemainingFcl(totalFcl: number, rowCount: number): number[] {
