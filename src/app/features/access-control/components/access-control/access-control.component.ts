@@ -287,6 +287,7 @@ export class AccessControlComponent {
         'shipment.tab.bl_details.packaging_list.view',
         'shipment.tab.bl_details.packaging_list.edit',
         'shipment.tab.payment_costing.costing_table.approve_fas_manager',
+        'shipment.tab.payment_costing.payment_allocation.approve_fas_manager',
       ],
       children: [
         {
@@ -368,6 +369,14 @@ export class AccessControlComponent {
           tabKey: 'payment_costing',
           editPermissionKey: 'shipment.tab.payment_costing.costing_table.approve_fas_manager',
           editActionKey: 'costing_table_approve_fas_manager',
+        },
+        {
+          key: 'payment_allocation_approve_fas_manager',
+          label: 'Payment Allocation Approval (FAS Manager)',
+          description: 'Allows FasManager users to approve payment allocations after FAS saves it.',
+          tabKey: 'payment_costing',
+          editPermissionKey: 'shipment.tab.payment_costing.payment_allocation.approve_fas_manager',
+          editActionKey: 'payment_allocation_approve_fas_manager',
         },
       ],
     },

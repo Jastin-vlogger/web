@@ -43,6 +43,11 @@ export class ReportsLandingComponent implements OnInit {
   private shipmentService = inject(ShipmentService);
   private authService = inject(AuthService);
 
+  isFasUser(): boolean {
+    const role = String(this.authService.getCurrentUser()?.role || '').trim().toLowerCase();
+    return role === 'fas' || role === 'fasmanager' || role === 'fas manager';
+  }
+
   readonly loading = signal(true);
   readonly exporting = signal<ExportType | null>(null);
   readonly error = signal<string | null>(null);
