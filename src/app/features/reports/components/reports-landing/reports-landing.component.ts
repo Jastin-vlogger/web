@@ -2,7 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs/operators';
-import { ShipmentReportExportChildRow, ShipmentReportExportRow, StorageArrivalReportRow } from '../../../../core/models/shipment.model';
+import { ShipmentReportExportChildRow, ShipmentReportExportRow, StorageArrivalReportRow, FasDocumentTrackingRow } from '../../../../core/models/shipment.model';
 import { ShipmentReportFilters, ShipmentService } from '../../../../core/services/shipment.service';
 import { AuthService } from '../../../../core/services/auth.service';
 
@@ -23,7 +23,14 @@ type StorageArrivalReportColumn = {
   width: number;
 };
 
+type FasDocumentTrackingColumn = {
+  header: string;
+  key: keyof FasDocumentTrackingRow;
+  width: number;
+};
+
 type ExportType = 'excel' | 'pdf';
+type ActiveReport = 'default' | 'storage-arrival' | 'fas-document-tracking';
 
 @Component({
   selector: 'app-reports-landing',
@@ -54,7 +61,37 @@ export class ReportsLandingComponent implements OnInit {
   readonly storageArrivalGeneratedAt = signal<string | null>(null);
   readonly storageArrivalExporting = signal(false);
 
-  readonly activeReport = signal<'default' | 'storage-arrival'>('default');
+  readonly fasTrackingLoading = signal(false);
+  readonly fasTrackingError = signal<string | null>(null);
+  readonly fasTrackingRows = signal<FasDocumentTrackingRow[]>([]);
+  readonly fasTrackingGeneratedAt = signal<string | null>(null);
+  readonly fasTrackingExporting = signal(false);
+
+  readonly activeReport = signal<ActiveReport>('default');
+
+  readonly fasTrackingColumns: FasDocumentTrackingColumn[] = [
+    { header: 'Sl No', key: 'slNo', width: 8 },
+    { header: 'Courier Track No', key: 'courierTrackNo', width: 18 },
+    { header: 'Provider', key: 'provider', width: 12 },
+    { header: 'Receiver Type', key: 'receiverType', width: 14 },
+    { header: 'Receiver', key: 'receiver', width: 20 },
+    { header: 'Bank Name', key: 'bankName', width: 20 },
+    { header: 'Expected Doc Receipt Date', key: 'expectedDocDate', width: 16 },
+    { header: 'DA Received', key: 'daReceived', width: 12 },
+    { header: 'Submitted to Bank', key: 'submittedToBank', width: 14 },
+    { header: 'Bank Submission Date', key: 'bankSubmissionDate', width: 16 },
+    { header: 'DA Signed & Stamped', key: 'daSigned', width: 14 },
+    { header: 'Murabaha Required', key: 'murabahaRequired', width: 14 },
+    { header: 'Murabaha Released Date', key: 'murabahaReleasedDate', width: 16 },
+    { header: 'Murabaha Attached', key: 'murabahaAttached', width: 14 },
+    { header: 'Murabaha Submitted to Bank', key: 'murabahaSubmittedToBank', width: 16 },
+    { header: 'Murabaha Submission Date', key: 'murabahaSubmissionDate', width: 16 },
+    { header: 'Final Contract Received', key: 'finalContractReceived', width: 16 },
+    { header: 'Final Contract Attached', key: 'finalContractAttached', width: 16 },
+    { header: 'Final Contract Submission Date', key: 'finalContractSubmissionDate', width: 16 },
+    { header: 'Status', key: 'status', width: 16 },
+    { header: 'Remarks', key: 'remarks', width: 24 },
+  ];
 
   readonly columns: ReportColumn[] = [
     { header: 'S/N', key: 'sn', width: 8 },
@@ -178,6 +215,7 @@ export class ReportsLandingComponent implements OnInit {
   ngOnInit(): void {
     this.loadReportRows();
     this.loadStorageArrivalReport();
+    this.loadFasTrackingReport();
   }
 
   updateFilter(key: keyof ShipmentReportFilters, value: string): void {
@@ -228,14 +266,17 @@ export class ReportsLandingComponent implements OnInit {
   }
 
   openExportModal(type: ExportType): void {
-    if (this.activeReport() === 'default' && !this.rows().length) return;
-    if (this.activeReport() === 'storage-arrival' && !this.storageArrivalRows().length) return;
-
-    if (this.activeReport() === 'default') {
+    const report = this.activeReport();
+    if (report === 'default') {
+      if (!this.rows().length) return;
       this.pendingExportType.set(type);
       this.exportModalVisible.set(true);
-    } else {
+    } else if (report === 'storage-arrival') {
+      if (!this.storageArrivalRows().length) return;
       this.exportStorageArrivalReport();
+    } else if (report === 'fas-document-tracking') {
+      if (!this.fasTrackingRows().length) return;
+      this.exportFasTrackingReport();
     }
   }
 
@@ -452,5 +493,45 @@ export class ReportsLandingComponent implements OnInit {
       return `${baseClasses} border-emerald-200 bg-emerald-50 text-emerald-700`;
     }
     return `${baseClasses} border-amber-200 bg-amber-50 text-amber-700`;
+  }
+
+  loadFasTrackingReport(): void {
+    this.fasTrackingLoading.set(true);
+    this.fasTrackingError.set(null);
+
+    this.shipmentService
+      .getFasDocumentTrackingData()
+      .pipe(finalize(() => this.fasTrackingLoading.set(false)))
+      .subscribe({
+        next: (response) => {
+          this.fasTrackingRows.set(response.rows ?? []);
+          this.fasTrackingGeneratedAt.set(response.generatedAt ?? null);
+        },
+        error: () => {
+          this.fasTrackingError.set('Unable to load FAS document tracking data right now.');
+        },
+      });
+  }
+
+  exportFasTrackingReport(): void {
+    if (this.fasTrackingExporting() || !this.fasTrackingRows().length) return;
+
+    this.fasTrackingExporting.set(true);
+    this.shipmentService
+      .downloadFasDocumentTrackingReport()
+      .pipe(finalize(() => this.fasTrackingExporting.set(false)))
+      .subscribe({
+        next: (blob) => {
+          this.downloadBlob(blob, `royal-horizon-fas-document-tracking-${new Date().toISOString().slice(0, 10)}.xlsx`);
+        },
+        error: () => {
+          this.fasTrackingError.set('Unable to export FAS document tracking report right now.');
+        },
+      });
+  }
+
+  formatFasTrackingCellValue(value: unknown): string | number {
+    if (value == null || value === '') return '';
+    return String(value);
   }
 }

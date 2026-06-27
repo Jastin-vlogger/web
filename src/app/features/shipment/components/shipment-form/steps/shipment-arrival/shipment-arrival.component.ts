@@ -31,6 +31,7 @@ import {
 } from '../../../../../../store/shipment/shipment.selectors';
 import * as ShipmentActions from '../../../../../../store/shipment/shipment.actions';
 import { isDocumentationCompleteForCurrentFlow } from '../../shared/document-tracker-milestones';
+import { getMunicipalitySectionMissingFields } from '../../shared/logistics-section.util';
 
 type Step5DocKind =
   | 'arrivalNotice'
@@ -216,6 +217,7 @@ export class ShipmentArrivalComponent {
   readonly uploadingRepositoryDocument = signal(false);
   readonly customerInspectionFile = signal<Record<number, File | null>>({});
   readonly commercialDocumentFile = signal<Record<number, File | null>>({});
+  readonly arrivalDocumentFile = signal<Record<number, File | null>>({});
   readonly repositoryDocumentUploadInput?: ElementRef<HTMLInputElement>;
 
   // Transportation Transaction dialog
@@ -1233,15 +1235,11 @@ export class ShipmentArrivalComponent {
   }
 
   private validateMunicipalitySection(group: AbstractControl): string[] {
-    const missingFields: string[] = [];
-    if (!group.get('municipalityDate')?.value) {
-      missingFields.push('Municipality Clearance Application Date');
-    }
-    const status = String(group.get('municipalityStatus')?.value || 'open').toLowerCase();
-    if (!status) {
-      missingFields.push('Status');
-    }
-    return missingFields;
+    // Municipality Inspection Date is optional — only Status is required (see util).
+    return getMunicipalitySectionMissingFields({
+      municipalityStatus: group.get('municipalityStatus')?.value,
+      municipalityDate: group.get('municipalityDate')?.value,
+    });
   }
 
   private appendCustomsSubmissionDocuments(index: number, payload: FormData): void {
@@ -1338,6 +1336,8 @@ export class ShipmentArrivalComponent {
       payload.append('clearanceRemarks', group.get('clearanceRemarks')?.value || '');
       const commercialDoc = this.getCommercialDocumentFile(index);
       if (commercialDoc) payload.append('commercialDocument', commercialDoc, commercialDoc.name);
+      const arrivalDoc = this.getArrivalDocumentFile(index);
+      if (arrivalDoc) payload.append('arrivalDocument', arrivalDoc, arrivalDoc.name);
     } else if (section === 'customerInspection') {
       payload.append('customerInspectionDate', toDate(group.get('customerInspectionDate')?.value));
       payload.append('customerInspectionStatus', group.get('customerInspectionStatus')?.value || '');
@@ -1871,6 +1871,10 @@ export class ShipmentArrivalComponent {
         [index]: null,
       }));
     }
+    if (section === 'portClearance') {
+      this.commercialDocumentFile.update((current) => ({ ...current, [index]: null }));
+      this.arrivalDocumentFile.update((current) => ({ ...current, [index]: null }));
+    }
   }
 
   private patchSavedSection(index: number, section: LogisticsSectionKey, actual: any): void {
@@ -1882,6 +1886,8 @@ export class ShipmentArrivalComponent {
         commercialDocumentReceivedDate: actual.commercialDocumentReceivedDate ? new Date(actual.commercialDocumentReceivedDate) : null,
         commercialDocumentDocumentUrl: actual.commercialDocumentDocumentUrl || '',
         commercialDocumentDocumentName: actual.commercialDocumentDocumentName || '',
+        arrivalDocumentUrl: actual.arrivalDocumentUrl || '',
+        arrivalDocumentName: actual.arrivalDocumentName || '',
         arrivalOn: actual.arrivalOn ? new Date(actual.arrivalOn) : null,
         freeDetentionDays: actual.freeDetentionDays ?? 10,
         freeStorageDays: actual.freeStorageDays ?? 14,
@@ -2004,6 +2010,8 @@ export class ShipmentArrivalComponent {
         commercialDocumentReceivedDate: actual.commercialDocumentReceivedDate ? new Date(actual.commercialDocumentReceivedDate) : null,
         commercialDocumentDocumentUrl: actual.commercialDocumentDocumentUrl || '',
         commercialDocumentDocumentName: actual.commercialDocumentDocumentName || '',
+        arrivalDocumentUrl: actual.arrivalDocumentUrl || '',
+        arrivalDocumentName: actual.arrivalDocumentName || '',
         arrivalOn: actual.arrivalOn ? new Date(actual.arrivalOn) : null,
         freeDetentionDays: actual.freeDetentionDays ?? 10,
         freeStorageDays: actual.freeStorageDays ?? 14,
@@ -2681,6 +2689,25 @@ export class ShipmentArrivalComponent {
 
   clearCommercialDocumentFile(index: number): void {
     this.commercialDocumentFile.update((cur) => ({ ...cur, [index]: null }));
+  }
+
+  // ========== Arrival Document Methods ==========
+
+  getArrivalDocumentFile(index: number): File | null {
+    return this.arrivalDocumentFile()[index] ?? null;
+  }
+
+  onArrivalDocumentSelected(event: Event, index: number): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (file) {
+      this.arrivalDocumentFile.update((cur) => ({ ...cur, [index]: file }));
+    }
+    input.value = '';
+  }
+
+  clearArrivalDocumentFile(index: number): void {
+    this.arrivalDocumentFile.update((cur) => ({ ...cur, [index]: null }));
   }
 
   // ========== Transportation Transaction Methods ==========

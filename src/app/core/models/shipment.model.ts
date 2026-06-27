@@ -127,6 +127,35 @@ export interface StorageArrivalReportResponse {
   generatedAt: string;
 }
 
+export interface FasDocumentTrackingRow {
+  slNo: number;
+  courierTrackNo: string;
+  provider: string;
+  receiverType: string;
+  receiver: string;
+  bankName: string;
+  expectedDocDate: string;
+  daReceived: string;
+  submittedToBank: string;
+  bankSubmissionDate: string;
+  daSigned: string;
+  murabahaRequired: string;
+  murabahaReleasedDate: string;
+  murabahaAttached: string;
+  murabahaSubmittedToBank: string;
+  murabahaSubmissionDate: string;
+  finalContractReceived: string;
+  finalContractAttached: string;
+  finalContractSubmissionDate: string;
+  status: string;
+  remarks: string;
+}
+
+export interface FasDocumentTrackingResponse {
+  rows: FasDocumentTrackingRow[];
+  generatedAt: string;
+}
+
 export interface DashboardKpis {
   totalShipments: number;
   completedShipments: number;
@@ -247,6 +276,7 @@ export interface DashboardSummaryResponse {
   statusPivot?: DashboardStatusPivot;
   statusPivotByItem?: DashboardStatusPivot;
   departmentCharts?: DashboardDepartmentCharts;
+  fasDashboard?: any;
 }
 
 export interface DashboardShippingStatusOrder {
@@ -896,6 +926,7 @@ export interface ActualContainer {
   murabahaContractSubmittedDocumentUrl?: string;
   murabahaContractSubmittedDocumentName?: string;
   daSubmittedToBank?: boolean;
+  daSubmittedToBankDate?: string;
   murabahaSubmittedToBank?: boolean;
   submissionPackageDocumentUrl?: string;
   submissionPackageDocumentName?: string;

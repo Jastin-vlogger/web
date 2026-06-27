@@ -298,7 +298,40 @@
                       </div>
                     </div>
 
-                    <!-- Row 3: Remarks -->
+                    <!-- Row 3: Arrival Document -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Arrival Document</label>
+                        <div class="flex items-center gap-2">
+                          @if (!isLogisticsSectionLocked(i, 'portClearance')) {
+                          <button type="button" (click)="arrivalDocInput.click()"
+                            class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-600">
+                            <i class="pi pi-upload text-[10px]"></i> Upload
+                          </button>
+                          <input #arrivalDocInput type="file" class="hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onArrivalDocumentSelected($event, i)" />
+                          }
+                          @if (getArrivalDocumentFile(i)) {
+                            <button type="button" (click)="openDocumentPreview(getArrivalDocumentFile(i)!, 'Arrival Document')"
+                              class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0">
+                              <i class="pi pi-eye"></i>
+                            </button>
+                            <span class="text-[10px] text-slate-500 truncate">{{ getArrivalDocumentFile(i)?.name }}</span>
+                            <button type="button" (click)="clearArrivalDocumentFile(i)"
+                              class="h-9 w-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 shrink-0">
+                              <i class="pi pi-trash"></i>
+                            </button>
+                          } @else if (group.get('arrivalDocumentUrl')?.value) {
+                            <button type="button" (click)="openRemoteDocumentPreview(group.get('arrivalDocumentUrl')?.value, group.get('arrivalDocumentName')?.value || 'Arrival Document')"
+                              class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0">
+                              <i class="pi pi-eye"></i>
+                            </button>
+                            <span class="text-[10px] text-slate-500 truncate">{{ group.get('arrivalDocumentName')?.value || 'Arrival Document' }}</span>
+                          }
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Row 4: Remarks -->
                     <div class="flex flex-col gap-1.5">
                       <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Remarks</label>
                       <textarea pInputTextarea formControlName="clearanceRemarks" rows="2" class="table-input-text w-full resize-none" placeholder="Remarks..." [readonly]="isLogisticsSectionLocked(i, 'portClearance')"></textarea>
@@ -371,6 +404,7 @@
                                     class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0">
                                     <i class="pi pi-eye"></i>
                                   </button>
+                                  <span class="text-[10px] text-slate-500 truncate">{{ getFile(i, 'doReleased')?.name }}</span>
                                   <button type="button" (click)="clearFile(i, 'doReleased')"
                                     class="h-9 w-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 shrink-0">
                                     <i class="pi pi-trash"></i>
@@ -380,13 +414,9 @@
                                     class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0">
                                     <i class="pi pi-eye"></i>
                                   </button>
+                                  <span class="text-[10px] text-slate-500 truncate">{{ getSavedFileName(group, 'doReleased') || 'DO Attached' }}</span>
                                 }
                               </div>
-                              @if (getFile(i, 'doReleased')) {
-                                <p class="text-[10px] text-slate-400 truncate">{{ getFile(i, 'doReleased')?.name }}</p>
-                              } @else if (getSavedFileName(group, 'doReleased')) {
-                                <p class="text-[10px] text-slate-400 truncate">{{ getSavedFileName(group, 'doReleased') }}</p>
-                              }
                             </div>
                           </div>
                           <div class="flex flex-col gap-1.5">
@@ -403,7 +433,7 @@
                     <p-accordion-panel [value]="'boe-' + i" styleClass="border border-slate-100 rounded-lg">
                       <p-accordion-header styleClass="bg-slate-50 hover:bg-slate-100 px-3 py-2">
                         <div class="flex items-center justify-between w-full gap-2 pr-2">
-                          <span class="text-xs font-bold text-slate-700">Bill Processing</span>
+                          <span class="text-xs font-bold text-slate-700">Bill Of Entry</span>
                           <div class="flex items-center gap-2">
                             @if (isLogisticsSectionLocked(i, 'boePassingDate')) {
                               <span class="text-[9px] text-blue-600 uppercase font-bold flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded">
@@ -452,6 +482,7 @@
                                   class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0">
                                   <i class="pi pi-eye"></i>
                                 </button>
+                                <span class="text-[10px] text-slate-500 truncate">{{ getFile(i, 'boePassingDate')?.name }}</span>
                                 <button type="button" (click)="clearFile(i, 'boePassingDate')"
                                   class="h-9 w-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 shrink-0">
                                   <i class="pi pi-trash"></i>
@@ -461,13 +492,9 @@
                                   class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0">
                                   <i class="pi pi-eye"></i>
                                 </button>
+                                <span class="text-[10px] text-slate-500 truncate">{{ getSavedFileName(group, 'boePassingDate') || 'BOE Attached' }}</span>
                               }
                             </div>
-                            @if (getFile(i, 'boePassingDate')) {
-                              <p class="text-[10px] text-slate-400 truncate">{{ getFile(i, 'boePassingDate')?.name }}</p>
-                            } @else if (getSavedFileName(group, 'boePassingDate')) {
-                              <p class="text-[10px] text-slate-400 truncate">{{ getSavedFileName(group, 'boePassingDate') }}</p>
-                            }
                           </div>
                           <!-- Customer Inspection Required Toggle -->
                           <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex items-center justify-between gap-3">
@@ -576,18 +603,15 @@
                               @if (getFile(i, 'municipality')) {
                                 <button type="button" (click)="openDocumentPreview(getFile(i, 'municipality')!, 'Municipality Document')"
                                   class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0"><i class="pi pi-eye"></i></button>
+                                <span class="text-[10px] text-slate-500 truncate">{{ getFile(i, 'municipality')?.name }}</span>
                                 <button type="button" (click)="clearFile(i, 'municipality')"
                                   class="h-9 w-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 shrink-0"><i class="pi pi-trash"></i></button>
                               } @else if (getSavedFileUrl(group, 'municipality')) {
                                 <button type="button" (click)="openRemoteDocumentPreview(getSavedFileUrl(group, 'municipality'), getSavedFileName(group, 'municipality') || 'Municipality Document')"
                                   class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0"><i class="pi pi-eye"></i></button>
+                                <span class="text-[10px] text-slate-500 truncate">{{ getSavedFileName(group, 'municipality') || 'Attached' }}</span>
                               }
                             </div>
-                            @if (getFile(i, 'municipality')) {
-                              <p class="text-[10px] text-slate-400 truncate">{{ getFile(i, 'municipality')?.name }}</p>
-                            } @else if (getSavedFileName(group, 'municipality')) {
-                              <p class="text-[10px] text-slate-400 truncate">{{ getSavedFileName(group, 'municipality') }}</p>
-                            }
                           </div>
                           <!-- Row 3: Status + Released Date -->
                           <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -691,18 +715,15 @@
                               @if (getCustomerInspectionFile(i)) {
                                 <button type="button" (click)="openDocumentPreview(getCustomerInspectionFile(i)!, 'Inspection Document')"
                                   class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0"><i class="pi pi-eye"></i></button>
+                                <span class="text-[10px] text-slate-500 truncate">{{ getCustomerInspectionFile(i)?.name }}</span>
                                 <button type="button" (click)="clearCustomerInspectionFile(i)"
                                   class="h-9 w-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 shrink-0"><i class="pi pi-trash"></i></button>
                               } @else if (getSavedCustomerInspectionUrl(group)) {
                                 <button type="button" (click)="openRemoteDocumentPreview(getSavedCustomerInspectionUrl(group), getSavedCustomerInspectionName(group) || 'Inspection Document')"
                                   class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0"><i class="pi pi-eye"></i></button>
+                                <span class="text-[10px] text-slate-500 truncate">{{ getSavedCustomerInspectionName(group) || 'Attached' }}</span>
                               }
                             </div>
-                            @if (getCustomerInspectionFile(i)) {
-                              <p class="text-[10px] text-slate-400 truncate">{{ getCustomerInspectionFile(i)?.name }}</p>
-                            } @else if (getSavedCustomerInspectionName(group)) {
-                              <p class="text-[10px] text-slate-400 truncate">{{ getSavedCustomerInspectionName(group) }}</p>
-                            }
                           </div>
                           <div class="flex flex-col gap-1.5">
                             <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Comments</label>

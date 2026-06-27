@@ -325,6 +325,106 @@ export class DashboardComponent implements OnInit {
     );
   });
 
+  readonly fasReceiverTypeChartConfig = computed<ChartData<'doughnut'>>(() => {
+    const f = this.dashboard()?.fasDashboard?.receiverType;
+    return this.buildDoughnut(
+      [f?.bank ?? 0, f?.direct ?? 0],
+      ['#10b981', '#3b82f6'],
+      ['Bank Receiver', 'Direct Receiver']
+    );
+  });
+
+  readonly fasStatusBreakdownChartConfig = computed<ChartData<'doughnut'>>(() => {
+    const f = this.dashboard()?.fasDashboard?.statusBreakdown;
+    return this.buildDoughnut(
+      [f?.completed ?? 0, f?.inProgress ?? 0, f?.pending ?? 0, f?.overdue ?? 0],
+      ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
+      ['Completed', 'In Progress', 'Pending', 'Overdue']
+    );
+  });
+
+  readonly fasStageOverviewChartConfig = computed<ChartData<'bar'>>(() => {
+    const f = this.dashboard()?.fasDashboard?.stageOverview;
+    const totalBank = f?.totalBank ?? 0;
+    const labels = [
+      'DA Received',
+      'Submitted to Bank',
+      'DA Signed & Stamped',
+      'Murabaha Required',
+      'Murabaha Submitted to Bank',
+      'Final Contract Submitted'
+    ];
+    const completedData = [
+      f?.daReceived ?? 0,
+      f?.submittedToBank ?? 0,
+      f?.daSigned ?? 0,
+      f?.murabahaRequired ?? 0,
+      f?.murabahaSubmitted ?? 0,
+      f?.finalContract ?? 0
+    ];
+    const pendingData = completedData.map(v => Math.max(totalBank - v, 0));
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Completed',
+          data: completedData,
+          backgroundColor: '#10b981',
+          stack: 'stack0'
+        },
+        {
+          label: 'Pending',
+          data: pendingData,
+          backgroundColor: '#e2e8f0',
+          stack: 'stack0'
+        }
+      ]
+    };
+  });
+
+  readonly fasProviderWiseChartConfig = computed<ChartData<'bar'>>(() => {
+    const p = this.dashboard()?.fasDashboard?.providerWise || {};
+    const labels = ['DHL', 'Aramex', 'UPS', 'TNT'];
+    const data = [p.DHL ?? 0, p.Aramex ?? 0, p.UPS ?? 0, p.TNT ?? 0];
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+    return {
+      labels,
+      datasets: [
+        {
+          data,
+          backgroundColor: colors
+        }
+      ]
+    };
+  });
+
+  horizontalBarChartOptions: ChartConfiguration<'bar'>['options'] = {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false }
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { display: false } }
+    }
+  };
+
+  horizontalStackedBarChartOptions: ChartConfiguration<'bar'>['options'] = {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom' }
+    },
+    scales: {
+      x: { stacked: true, grid: { display: false } },
+      y: { stacked: true, grid: { display: false } }
+    }
+  };
+
   readonly logisticsChartStats = computed(() => {
     const l = this.dashboard()?.departmentCharts?.logistics;
     return [

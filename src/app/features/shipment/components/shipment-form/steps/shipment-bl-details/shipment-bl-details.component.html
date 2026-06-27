@@ -296,7 +296,7 @@
                       <button
                         type="button"
                         (click)="openClearingAdvanceInfo(i)"
-                        class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600"
+                        class="rbac-allow-interaction inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600"
                         title="View clearing advance details"
                       >
                         <i class="pi pi-info-circle"></i>
@@ -425,7 +425,7 @@
                           <div class="text-xs text-slate-600 truncate">{{ rowEntry.control.get('paymentTerm')?.value || '\u2014' }}</div>
                           <div class="flex justify-center">
                             <button type="button" (click)="openClearingRowEdit(i, rowEntry.index)"
-                              class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100">
+                              class="rbac-allow-interaction inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100">
                               <i class="pi" [class.pi-pencil]="canEditClearingAdvance(i) && !isClearingAdvanceApproved(i)" [class.pi-eye]="!(canEditClearingAdvance(i) && !isClearingAdvanceApproved(i))"></i>
                               {{ canEditClearingAdvance(i) && !isClearingAdvanceApproved(i) ? 'Edit' : 'View' }}
                             </button>
@@ -438,7 +438,7 @@
                             <div class="text-xs text-slate-500">Amount: <strong class="text-slate-800">{{ rowEntry.control.get('requestAmount')?.value }}</strong></div>
                           </div>
                           <button type="button" (click)="openClearingRowEdit(i, rowEntry.index)"
-                            class="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100">
+                            class="rbac-allow-interaction inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100">
                             <i class="pi" [class.pi-pencil]="canEditClearingAdvance(i) && !isClearingAdvanceApproved(i)" [class.pi-eye]="!(canEditClearingAdvance(i) && !isClearingAdvanceApproved(i))"></i>
                             {{ canEditClearingAdvance(i) && !isClearingAdvanceApproved(i) ? 'Edit' : 'View' }}
                           </button>
@@ -455,7 +455,7 @@
                       <button
                         type="button"
                         (click)="toggleCostSheetRows(i)"
-                        class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50"
+                        class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50"
                       >
                         <i class="pi" [class.pi-angle-down]="!expandedCostSheet()[i]" [class.pi-angle-up]="expandedCostSheet()[i]"></i>
                         {{ expandedCostSheet()[i] ? 'Show Less' : 'Show More' }}

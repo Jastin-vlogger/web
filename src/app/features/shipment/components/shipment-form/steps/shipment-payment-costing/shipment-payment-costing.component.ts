@@ -28,10 +28,12 @@ import { ShipmentService } from '../../../../../../core/services/shipment.servic
 import { NotificationService } from '../../../../../../core/services/notification.service';
 import { ConfirmDialogService } from '../../../../../../core/services/confirm-dialog.service';
 import { AuthService } from '../../../../../../core/services/auth.service';
+import { RbacService } from '../../../../../../core/services/rbac.service';
 import * as ShipmentActions from '../../../../../../store/shipment/shipment.actions';
 import { normalizeBlRole, normalizeBlVisibleTo, type BlVisibleRole } from '../../shared/bl-row-definitions';
 import { downloadAdvanceRequestReportPdf } from '../../shared/advance-request-report';
 import { getComputedShipmentStatus, getShipmentStatusSeverity, type ShipmentStatusSeverity } from '../../shared/shipment-status';
+import { canApprovePendingStep } from '../../shared/approval-gate.util';
 
 @Component({
   selector: 'app-shipment-payment-costing',
@@ -69,6 +71,7 @@ export class ShipmentPaymentCostingComponent {
   private notificationService = inject(NotificationService);
   private confirmDialog = inject(ConfirmDialogService);
   private authService = inject(AuthService);
+  private rbacService = inject(RbacService);
 
   readonly shipmentData = toSignal(this.store.select(selectShipmentData));
   readonly activeTabs = signal<Record<number, 'allocation' | 'costing'>>({});
@@ -1095,8 +1098,11 @@ export class ShipmentPaymentCostingComponent {
   }
 
   canApproveAllocation(index: number): boolean {
-    return this.getPaymentApprovalStatus(index) === 'pending_fas_manager' &&
-      (this.authService.isAdminLevelRole() || this.isFasManagerRole());
+    return canApprovePendingStep(this.getPaymentApprovalStatus(index), 'pending_fas_manager', {
+      isAdmin: this.authService.isAdminLevelRole(),
+      hasPermission: this.rbacService.hasPermission('shipment.tab.payment_costing.payment_allocation.approve_fas_manager'),
+      isLegacyApproverRole: this.isFasManagerRole(),
+    });
   }
 
   openPaymentAllocationInfo(index: number): void {

@@ -23,6 +23,7 @@ import {
 } from '../../../../../../store/shipment/shipment.selectors';
 import * as ShipmentActions from '../../../../../../store/shipment/shipment.actions';
 import { getComputedShipmentStatus, getShipmentStatusSeverity, type ShipmentStatusSeverity } from '../../shared/shipment-status';
+import { getMurabahaMissingFields } from '../../shared/murabaha-validation.util';
 import {
   DOCUMENT_MILESTONE_LABELS,
   type DocumentMilestoneKey,
@@ -856,9 +857,14 @@ export class ShipmentDocumentationComponent {
         return true;
       }
       case 'murabaha_process': {
-        const approvedDate = group.get('murabahaContractApprovedDate')?.value;
-        if (!approvedDate) {
-          this.notificationService.error('Required Fields Missing', 'Please fill: Murabaha Released Date.');
+        const skipMurabaha = group.get('skipMurabaha')?.value === true;
+        const releasedDate = group.get('murabahaContractReleasedDate')?.value
+          || group.get('murabahaContractApprovedDate')?.value;
+        const hasAttachment = !!this.getFile(index, 'murabahaContract')
+          || !!this.getSavedFileUrl(group, 'murabahaContract');
+        const missing = getMurabahaMissingFields({ skipMurabaha, releasedDate, hasAttachment });
+        if (missing.length) {
+          this.notificationService.error('Required Fields Missing', `Please complete: ${missing.join(', ')}.`);
           return false;
         }
         return true;
@@ -917,6 +923,20 @@ export class ShipmentDocumentationComponent {
 
     // Keep the accordion panel open after the save reloads data
     this.ensureAccordionOpen(`doc-${index}`);
+
+    if (milestone === 'murabaha_submit') {
+      const daControl = row.get('daSubmittedToBank');
+      const daDateControl = row.get('daSubmittedToBankDate');
+      if (daControl && !daControl.value && daDateControl) {
+        daDateControl.setValue(null);
+      }
+      const mbControl = row.get('murabahaSubmittedToBank');
+      const mbDateControl = row.get('murabahaContractSubmittedDate');
+      if (mbControl && !mbControl.value && mbDateControl) {
+        mbDateControl.setValue(null);
+      }
+    }
+
     const request = this.buildMilestoneRequest(index, milestone);
     if (!request?.containerId) return;
 
@@ -1039,9 +1059,8 @@ export class ShipmentDocumentationComponent {
       case 'murabaha_submit': {
         payload.append('murabahaContractSubmittedDate', toDate(formValue['murabahaContractSubmittedDate']));
         payload.append('daSubmittedToBank', formValue['daSubmittedToBank'] ?? false);
+        payload.append('daSubmittedToBankDate', toDate(formValue['daSubmittedToBankDate']));
         payload.append('murabahaSubmittedToBank', formValue['murabahaSubmittedToBank'] ?? false);
-        const sp = this.getFile(index, 'submissionPackage');
-        if (sp) payload.append('submissionPackageDocument', sp, sp.name);
         break;
       }
       case 'release': {
@@ -1091,9 +1110,8 @@ export class ShipmentDocumentationComponent {
       murabahaContractSubmittedDocumentUrl: actual.murabahaContractSubmittedDocumentUrl || '',
       murabahaContractSubmittedDocumentName: actual.murabahaContractSubmittedDocumentName || '',
       daSubmittedToBank: actual.daSubmittedToBank || false,
+      daSubmittedToBankDate: actual.daSubmittedToBankDate ? new Date(actual.daSubmittedToBankDate) : null,
       murabahaSubmittedToBank: actual.murabahaSubmittedToBank || false,
-      submissionPackageDocumentUrl: actual.submissionPackageDocumentUrl || '',
-      submissionPackageDocumentName: actual.submissionPackageDocumentName || '',
       documentsReleasedDate: actual.documentsReleasedDate ? new Date(actual.documentsReleasedDate) : null,
       documentsReleasedDocumentUrl: actual.documentsReleasedDocumentUrl || '',
       documentsReleasedDocumentName: actual.documentsReleasedDocumentName || '',

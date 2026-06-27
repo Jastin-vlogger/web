@@ -304,7 +304,7 @@
                       <div class="flex flex-col gap-4">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div class="flex flex-col gap-1.5 justify-center">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Bank Submitted to Bank</label>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Submitted to Bank</label>
                             <p-toggleswitch formControlName="bankSubmittedToBank"></p-toggleswitch>
                           </div>
                           <div class="flex flex-col gap-1.5">
@@ -348,7 +348,7 @@
                     } @else {
                       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-[11px]">
                         <div class="flex flex-col">
-                          <span class="text-slate-400 font-medium">Bank Submitted to Bank</span>
+                          <span class="text-slate-400 font-medium">Submitted to Bank</span>
                           <span class="text-slate-700 font-bold">{{ group.get('bankSubmittedToBank')?.value ? 'Yes' : 'No' }}</span>
                         </div>
                         <div class="flex flex-col">
@@ -422,7 +422,7 @@
                               <p-datepicker formControlName="murabahaContractReleasedDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [showIcon]="true" />
                             </div>
                             <div class="flex flex-col gap-1.5">
-                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Murabaha Contract Attached</label>
+                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Murabaha Contract Attached<span class="text-red-500 ml-0.5">*</span></label>
                               <div class="flex items-center gap-2">
                                 <button type="button" (click)="clickFileInput(i, 'murabahaContract')" class="inline-flex h-10 px-4 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50">
                                   <i class="pi pi-upload"></i>
@@ -463,23 +463,27 @@
                           <span class="text-slate-400 font-medium">Skip Murabaha</span>
                           <span class="text-slate-700 font-bold">{{ group.get('skipMurabaha')?.value ? 'Yes' : 'No' }}</span>
                         </div>
-                        @if (!group.get('skipMurabaha')?.value) {
-                          <div class="flex flex-col py-1">
-                            <span class="text-slate-400 font-medium">Murabaha Released Date</span>
+                        <div class="flex flex-col py-1">
+                          <span class="text-slate-400 font-medium">Murabaha Released Date</span>
+                          @if (group.get('skipMurabaha')?.value) {
+                            <span class="text-slate-500 font-bold">N/A</span>
+                          } @else {
                             <span class="text-slate-700 font-bold">{{ (group.get('murabahaContractReleasedDate')?.value | date:'dd/MM/yyyy') || 'N/A' }}</span>
-                          </div>
-                          <div class="flex flex-col py-1 gap-1">
-                            <span class="text-slate-400 font-medium">Murabaha Contract Attached</span>
-                            @if (getSavedFileUrl(group, 'murabahaContract')) {
-                              <div class="flex items-center gap-2">
-                                <span class="text-blue-600 bg-blue-50 px-2 py-1 rounded font-bold truncate max-w-[150px]" [title]="getSavedFileName(group, 'murabahaContract')">Contract Attached</span>
-                                <button type="button" (click)="openRemoteDocumentPreview(getSavedFileUrl(group, 'murabahaContract'), getSavedFileName(group, 'murabahaContract'))" class="icon-btn-secondary !h-7 !w-7"><i class="pi pi-eye text-[10px]"></i></button>
-                              </div>
-                            } @else {
-                              <span class="text-slate-500 font-bold">N/A</span>
-                            }
-                          </div>
-                        }
+                          }
+                        </div>
+                        <div class="flex flex-col py-1 gap-1">
+                          <span class="text-slate-400 font-medium">Murabaha Contract Attached</span>
+                          @if (group.get('skipMurabaha')?.value) {
+                            <span class="text-slate-500 font-bold">N/A</span>
+                          } @else if (getSavedFileUrl(group, 'murabahaContract')) {
+                            <div class="flex items-center gap-2">
+                              <span class="text-blue-600 bg-blue-50 px-2 py-1 rounded font-bold truncate max-w-[150px]" [title]="getSavedFileName(group, 'murabahaContract')">Contract Attached</span>
+                              <button type="button" (click)="openRemoteDocumentPreview(getSavedFileUrl(group, 'murabahaContract'), getSavedFileName(group, 'murabahaContract'))" class="icon-btn-secondary !h-7 !w-7"><i class="pi pi-eye text-[10px]"></i></button>
+                            </div>
+                          } @else {
+                            <span class="text-slate-500 font-bold">N/A</span>
+                          }
+                        </div>
                       </div>
                     }
                   </div>
@@ -524,39 +528,23 @@
                             <i class="pi pi-spin pi-spinner text-blue-500 text-2xl"></i>
                           </div>
                         }
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div class="flex flex-col gap-1.5 justify-center">
                             <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">DA Submitted to Bank</label>
                             <p-toggleswitch formControlName="daSubmittedToBank"></p-toggleswitch>
+                          </div>
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">DA Submission Date</label>
+                            <p-datepicker formControlName="daSubmittedToBankDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [showIcon]="true" [disabled]="!group.get('daSubmittedToBank')?.value" />
                           </div>
                           <div class="flex flex-col gap-1.5 justify-center">
                             <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Murabaha Submitted to Bank</label>
                             <p-toggleswitch formControlName="murabahaSubmittedToBank"></p-toggleswitch>
                           </div>
                           <div class="flex flex-col gap-1.5">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Submission Date<span class="text-red-500 ml-0.5">*</span></label>
-                            <p-datepicker formControlName="murabahaContractSubmittedDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [showIcon]="true" />
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Murabaha Submission Date</label>
+                            <p-datepicker formControlName="murabahaContractSubmittedDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [showIcon]="true" [disabled]="!group.get('murabahaSubmittedToBank')?.value" />
                           </div>
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Submission Package Attached</label>
-                          <div class="flex items-center gap-2">
-                            <button type="button" (click)="clickFileInput(i, 'submissionPackage')" class="inline-flex h-10 px-4 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50">
-                              <i class="pi pi-upload"></i>
-                              <span class="text-[10px] font-bold uppercase">Upload</span>
-                            </button>
-                            @if (getFile(i, 'submissionPackage')) {
-                              <button type="button" (click)="openDocumentPreview(getFile(i, 'submissionPackage')!, 'Submission Package')" class="icon-btn-secondary"><i class="pi pi-eye"></i></button>
-                              <button type="button" (click)="clearFile(i, 'submissionPackage')" class="icon-btn-danger"><i class="pi pi-trash"></i></button>
-                            } @else if (getSavedFileUrl(group, 'submissionPackage')) {
-                              <button type="button" (click)="openRemoteDocumentPreview(getSavedFileUrl(group, 'submissionPackage'), getSavedFileName(group, 'submissionPackage'))" class="icon-btn-secondary"><i class="pi pi-eye"></i></button>
-                            }
-                          </div>
-                          @if (getFile(i, 'submissionPackage')) {
-                            <p class="text-[11px] text-blue-600 font-medium">{{ getFile(i, 'submissionPackage')?.name }}</p>
-                          } @else if (getSavedFileName(group, 'submissionPackage')) {
-                            <p class="text-[11px] text-slate-400">{{ getSavedFileName(group, 'submissionPackage') }}</p>
-                          }
                         </div>
                         <div class="flex justify-end gap-2">
                           <button type="button" (click)="cancelEditMilestone(i, 'murabaha_submit')" class="secondary-cancel-btn" [disabled]="isMilestoneSaving(i, 'murabaha_submit')">
@@ -582,19 +570,16 @@
                           <span class="text-slate-700 font-bold">{{ group.get('murabahaSubmittedToBank')?.value ? 'Yes' : 'No' }}</span>
                         </div>
                         <div class="flex flex-col">
-                          <span class="text-slate-400 font-medium">Submission Date</span>
-                          <span class="text-slate-700 font-bold">{{ (group.get('murabahaContractSubmittedDate')?.value | date:'dd/MM/yyyy') || 'N/A' }}</span>
+                          <span class="text-slate-400 font-medium">DA Submission Date</span>
+                          <span class="text-slate-700 font-bold">
+                            {{ group.get('daSubmittedToBank')?.value ? ((group.get('daSubmittedToBankDate')?.value | date:'dd/MM/yyyy') || 'N/A') : 'N/A' }}
+                          </span>
                         </div>
-                        <div class="flex flex-col gap-1">
-                          <span class="text-slate-400 font-medium">Submission Package Attached</span>
-                          @if (getSavedFileUrl(group, 'submissionPackage')) {
-                            <div class="flex items-center gap-2">
-                              <span class="text-blue-600 bg-blue-50 px-2 py-1 rounded font-bold truncate max-w-[150px]" [title]="getSavedFileName(group, 'submissionPackage')">Package Attached</span>
-                              <button type="button" (click)="openRemoteDocumentPreview(getSavedFileUrl(group, 'submissionPackage'), getSavedFileName(group, 'submissionPackage'))" class="icon-btn-secondary !h-7 !w-7"><i class="pi pi-eye text-[10px]"></i></button>
-                            </div>
-                          } @else {
-                            <span class="text-slate-500 font-bold">N/A</span>
-                          }
+                        <div class="flex flex-col">
+                          <span class="text-slate-400 font-medium">Murabaha Submission Date</span>
+                          <span class="text-slate-700 font-bold">
+                            {{ group.get('murabahaSubmittedToBank')?.value ? ((group.get('murabahaContractSubmittedDate')?.value | date:'dd/MM/yyyy') || 'N/A') : 'N/A' }}
+                          </span>
                         </div>
                       </div>
                     }

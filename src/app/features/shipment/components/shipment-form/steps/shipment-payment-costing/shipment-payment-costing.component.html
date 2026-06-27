@@ -23,7 +23,7 @@
             >
               {{ getPaymentApprovalLabel(singleShipmentIndex!) }}
             </span>
-            <button type="button" (click)="openPaymentAllocationInfo(singleShipmentIndex!)" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600" title="View payment allocation details">
+            <button type="button" (click)="openPaymentAllocationInfo(singleShipmentIndex!)" class="rbac-allow-interaction inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600" title="View payment allocation details">
               <i class="pi pi-info-circle"></i>
             </button>
           </div>
@@ -91,7 +91,7 @@
                 <div class="text-sm text-slate-700">{{ rowEntry.control.get('paidAmount')?.value ?? 0 }}</div>
                 <div class="text-sm font-bold text-amber-700">{{ getAllocationDifference(rowEntry.control) }}</div>
                 <div class="flex justify-center">
-                  <button type="button" (click)="openAllocationRowEdit(singleShipmentIndex!, rowEntry.index)" class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100">
+                  <button type="button" (click)="openAllocationRowEdit(singleShipmentIndex!, rowEntry.index)" class="rbac-allow-interaction inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100">
                     <i class="pi" [class.pi-pencil]="!isAllocationApproved(singleShipmentIndex!)" [class.pi-eye]="isAllocationApproved(singleShipmentIndex!)"></i>
                     {{ isAllocationApproved(singleShipmentIndex!) ? 'View' : 'Edit' }}
                   </button>
@@ -103,7 +103,7 @@
                   <div class="text-sm font-semibold text-slate-700 truncate">{{ rowEntry.control.get('description')?.value || '\u2014' }}</div>
                   <div class="text-xs text-slate-500">Received: <strong class="text-slate-800">{{ rowEntry.control.get('paidAmount')?.value ?? 0 }}</strong></div>
                 </div>
-                <button type="button" (click)="openAllocationRowEdit(singleShipmentIndex!, rowEntry.index)" class="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100">
+                <button type="button" (click)="openAllocationRowEdit(singleShipmentIndex!, rowEntry.index)" class="rbac-allow-interaction shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100">
                   <i class="pi" [class.pi-pencil]="!isAllocationApproved(singleShipmentIndex!)" [class.pi-eye]="isAllocationApproved(singleShipmentIndex!)"></i>
                   {{ isAllocationApproved(singleShipmentIndex!) ? 'View' : 'Edit' }}
                 </button>
@@ -339,7 +339,7 @@
                     >
                       {{ getPaymentApprovalLabel(i) }}
                     </span>
-                    <button type="button" (click)="openPaymentAllocationInfo(i)" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600" title="View payment allocation details">
+                    <button type="button" (click)="openPaymentAllocationInfo(i)" class="rbac-allow-interaction inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600" title="View payment allocation details">
                       <i class="pi pi-info-circle"></i>
                     </button>
                   </div>
@@ -407,7 +407,7 @@
                         <div class="text-sm text-slate-700">{{ rowEntry.control.get('paidAmount')?.value ?? 0 }}</div>
                         <div class="text-sm font-bold text-amber-700">{{ getAllocationDifference(rowEntry.control) }}</div>
                         <div class="flex justify-center">
-                          <button type="button" (click)="openAllocationRowEdit(i, rowEntry.index)" class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100">
+                          <button type="button" (click)="openAllocationRowEdit(i, rowEntry.index)" class="rbac-allow-interaction inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100">
                             <i class="pi" [class.pi-pencil]="!isAllocationApproved(i)" [class.pi-eye]="isAllocationApproved(i)"></i>
                             {{ isAllocationApproved(i) ? 'View' : 'Edit' }}
                           </button>
@@ -419,7 +419,7 @@
                           <div class="text-sm font-semibold text-slate-700 truncate">{{ rowEntry.control.get('description')?.value || '\u2014' }}</div>
                           <div class="text-xs text-slate-500">Received: <strong class="text-slate-800">{{ rowEntry.control.get('paidAmount')?.value ?? 0 }}</strong></div>
                         </div>
-                        <button type="button" (click)="openAllocationRowEdit(i, rowEntry.index)" class="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100">
+                        <button type="button" (click)="openAllocationRowEdit(i, rowEntry.index)" class="rbac-allow-interaction shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:bg-blue-100">
                           <i class="pi" [class.pi-pencil]="!isAllocationApproved(i)" [class.pi-eye]="isAllocationApproved(i)"></i>
                           {{ isAllocationApproved(i) ? 'View' : 'Edit' }}
                         </button>

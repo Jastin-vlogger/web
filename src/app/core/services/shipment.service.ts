@@ -16,6 +16,7 @@ import {
   DashboardSummaryResponse,
   ShipmentReportExportResponse,
   StorageArrivalReportResponse,
+  FasDocumentTrackingResponse,
   BlRowDefinitionItem
 } from '../models/shipment.model';
 
@@ -296,6 +297,16 @@ export class ShipmentService {
 
   downloadStorageArrivalReport(): Observable<Blob> {
     return this.http.get(`${this.apiUrl}/reports/storage-arrival/excel`, {
+      responseType: 'blob',
+    });
+  }
+
+  getFasDocumentTrackingData(): Observable<FasDocumentTrackingResponse> {
+    return this.http.get<FasDocumentTrackingResponse>(`${this.apiUrl}/reports/fas-document-tracking/data`);
+  }
+
+  downloadFasDocumentTrackingReport(): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/reports/fas-document-tracking/excel`, {
       responseType: 'blob',
     });
   }
