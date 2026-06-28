@@ -75,27 +75,31 @@ export class ReportsLandingComponent implements OnInit {
   readonly activeReport = signal<ActiveReport>('default');
 
   readonly fasTrackingColumns: FasDocumentTrackingColumn[] = [
-    { header: 'Sl No', key: 'slNo', width: 8 },
-    { header: 'Courier Track No', key: 'courierTrackNo', width: 18 },
-    { header: 'Provider', key: 'provider', width: 12 },
-    { header: 'Receiver Type', key: 'receiverType', width: 14 },
-    { header: 'Receiver', key: 'receiver', width: 20 },
-    { header: 'Bank Name', key: 'bankName', width: 20 },
-    { header: 'Expected Doc Receipt Date', key: 'expectedDocDate', width: 16 },
-    { header: 'DA Received', key: 'daReceived', width: 12 },
-    { header: 'Submitted to Bank', key: 'submittedToBank', width: 14 },
-    { header: 'Bank Submission Date', key: 'bankSubmissionDate', width: 16 },
-    { header: 'DA Signed & Stamped', key: 'daSigned', width: 14 },
-    { header: 'Murabaha Required', key: 'murabahaRequired', width: 14 },
-    { header: 'Murabaha Released Date', key: 'murabahaReleasedDate', width: 16 },
-    { header: 'Murabaha Attached', key: 'murabahaAttached', width: 14 },
-    { header: 'Murabaha Submitted to Bank', key: 'murabahaSubmittedToBank', width: 16 },
-    { header: 'Murabaha Submission Date', key: 'murabahaSubmissionDate', width: 16 },
-    { header: 'Final Contract Received', key: 'finalContractReceived', width: 16 },
-    { header: 'Final Contract Attached', key: 'finalContractAttached', width: 16 },
-    { header: 'Final Contract Submission Date', key: 'finalContractSubmissionDate', width: 16 },
-    { header: 'Status', key: 'status', width: 16 },
-    { header: 'Remarks', key: 'remarks', width: 24 },
+    { header: 'Sl No',                          key: 'slNo',                        width: 7  },
+    { header: 'Shipment No',                    key: 'shipmentNo',                  width: 14 },
+    { header: 'LPO',                            key: 'lpo',                         width: 12 },
+    { header: 'BL No',                          key: 'blNo',                        width: 14 },
+    { header: 'Commercial No',                  key: 'commercialNo',                width: 16 },
+    { header: 'Courier Track No',               key: 'courierTrackNo',              width: 18 },
+    { header: 'Provider',                       key: 'provider',                    width: 10 },
+    { header: 'Receiver',                       key: 'receiver',                    width: 10 },
+    { header: 'Bank Name',                      key: 'bankName',                    width: 14 },
+    { header: 'Expected Document Receipt Date', key: 'expectedDocDate',             width: 16 },
+    { header: 'DA Received',                    key: 'daReceived',                  width: 12 },
+    { header: 'Submitted to Bank',              key: 'submittedToBank',             width: 14 },
+    { header: 'Bank Submission Date',           key: 'bankSubmissionDate',          width: 16 },
+    { header: 'DA Signed & Stamped',            key: 'daSigned',                    width: 16 },
+    { header: 'Murabaha Required',              key: 'murabahaRequired',            width: 14 },
+    { header: 'Murabaha Released Date',         key: 'murabahaReleasedDate',        width: 18 },
+    { header: 'Murabaha Attached',              key: 'murabahaAttached',            width: 14 },
+    { header: 'Murabaha Submitted to Bank',     key: 'murabahaSubmittedToBank',     width: 20 },
+    { header: 'Murabaha Submission Date',       key: 'murabahaSubmissionDate',      width: 18 },
+    { header: 'Final Contract Received',        key: 'finalContractReceived',       width: 18 },
+    { header: 'Final Contract Attached',        key: 'finalContractAttached',       width: 18 },
+    { header: 'Final Contract Submission Date', key: 'finalContractSubmissionDate', width: 20 },
+    { header: 'Payment Request Status',         key: 'paymentRequestStatus',        width: 20 },
+    { header: 'Payment Allocation Status',      key: 'paymentAllocationStatus',     width: 20 },
+    { header: 'Remarks',                        key: 'remarks',                     width: 24 },
   ];
 
   readonly columns: ReportColumn[] = [
@@ -515,7 +519,11 @@ export class ReportsLandingComponent implements OnInit {
       .pipe(finalize(() => this.fasTrackingLoading.set(false)))
       .subscribe({
         next: (response) => {
-          this.fasTrackingRows.set(response.rows ?? []);
+          const rows = (response.rows ?? []).map((row) => ({
+            ...row,
+            remarks: (row.remarks || '').split(' | ').filter((p) => p && p !== 'N/A').join(' | '),
+          }));
+          this.fasTrackingRows.set(rows);
           this.fasTrackingGeneratedAt.set(response.generatedAt ?? null);
         },
         error: () => {

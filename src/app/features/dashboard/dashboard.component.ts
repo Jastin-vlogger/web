@@ -9,6 +9,7 @@ import {
   DashboardStageBreakdown,
   DashboardStatusPivot,
   DashboardSummaryResponse,
+  StorekeeperWarehouseRow,
 } from '../../core/models/shipment.model';
 import { DashboardService } from './services/dashboard.service';
 import { RbacService } from '../../core/services/rbac.service';
@@ -363,6 +364,66 @@ export class DashboardComponent implements OnInit {
 
   // Width % for the received portion of a warehouse's allocated bar.
   warehouseReceivedWidth(row: { allocated: number; received: number }): string {
+    const allocated = Number(row?.allocated) || 0;
+    if (allocated <= 0) return '0%';
+    return `${Math.max(0, Math.min((Number(row?.received) || 0) / allocated * 100, 100))}%`;
+  }
+
+  // ── Storekeeper dashboard ─────────────────────────────────────────────────
+  readonly storekeeperDashboard = computed(() => this.dashboard()?.storekeeperDashboard ?? null);
+
+  readonly storekeeperReceivingStatusChartConfig = computed<ChartData<'doughnut'>>(() => {
+    const s = this.storekeeperDashboard()?.receivingStatus;
+    return this.buildDoughnut(
+      [s?.received ?? 0, s?.pendingReceiving ?? 0],
+      ['#10b981', '#f59e0b'],
+      ['Received', 'Pending Receiving']
+    );
+  });
+
+  readonly storekeeperReceivingTimelineChartConfig = computed<ChartData<'line'>>(() => {
+    const timeline = this.storekeeperDashboard()?.receivingTimeline ?? [];
+    return {
+      labels: timeline.map((p) => p.label),
+      datasets: [
+        {
+          label: 'Received (FCL)',
+          data: timeline.map((p) => p.received),
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16,185,129,0.08)',
+          tension: 0.3,
+          fill: true,
+          pointRadius: 3,
+        },
+        {
+          label: 'Pending (FCL)',
+          data: timeline.map((p) => p.pending),
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245,158,11,0.06)',
+          tension: 0.3,
+          fill: true,
+          pointRadius: 3,
+        },
+      ],
+    };
+  });
+
+  readonly lineChartOptions: ChartConfiguration<'line'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } },
+    scales: {
+      x: { ticks: { font: { size: 9 } }, grid: { display: false } },
+      y: { beginAtZero: true, ticks: { font: { size: 9 }, precision: 0 }, grid: { color: 'rgba(0,0,0,0.04)' } },
+    },
+  };
+
+  storekeeperProgressRing(progress: number): string {
+    const p = Math.max(0, Math.min(Number(progress) || 0, 100));
+    return `conic-gradient(#10b981 ${p}%, #e2e8f0 ${p}% 100%)`;
+  }
+
+  storekeeperReceivedWidth(row: StorekeeperWarehouseRow): string {
     const allocated = Number(row?.allocated) || 0;
     if (allocated <= 0) return '0%';
     return `${Math.max(0, Math.min((Number(row?.received) || 0) / allocated * 100, 100))}%`;

@@ -77,7 +77,8 @@ export class DashboardService {
         statusPivotByItem: response?.statusPivotByItem,
         departmentCharts: response?.departmentCharts,
         fasDashboard: response?.fasDashboard,
-        warehouseDashboard: response?.warehouseDashboard
+        warehouseDashboard: response?.warehouseDashboard,
+        storekeeperDashboard: response?.storekeeperDashboard
       };
   }
 

@@ -129,9 +129,12 @@ export interface StorageArrivalReportResponse {
 
 export interface FasDocumentTrackingRow {
   slNo: number;
+  shipmentNo: string;
+  lpo: string;
+  blNo: string;
+  commercialNo: string;
   courierTrackNo: string;
   provider: string;
-  receiverType: string;
   receiver: string;
   bankName: string;
   expectedDocDate: string;
@@ -147,7 +150,8 @@ export interface FasDocumentTrackingRow {
   finalContractReceived: string;
   finalContractAttached: string;
   finalContractSubmissionDate: string;
-  status: string;
+  paymentRequestStatus: string;
+  paymentAllocationStatus: string;
   remarks: string;
 }
 
@@ -278,6 +282,28 @@ export interface DashboardSummaryResponse {
   departmentCharts?: DashboardDepartmentCharts;
   fasDashboard?: any;
   warehouseDashboard?: WarehouseDashboard;
+  storekeeperDashboard?: StorekeeperDashboard;
+}
+
+export interface StorekeeperWarehouseRow {
+  warehouse: string;
+  allocated: number;
+  received: number;
+  pendingReceiving: number;
+  progress: number;
+}
+
+export interface StorekeeperTimelinePoint {
+  label: string;
+  received: number;
+  pending: number;
+}
+
+export interface StorekeeperDashboard {
+  warehouseNames: string[];
+  receivingStatus: { allocated: number; received: number; pendingReceiving: number; receivedPct: number; pendingPct: number };
+  receivingTimeline: StorekeeperTimelinePoint[];
+  byWarehouse: StorekeeperWarehouseRow[];
 }
 
 export interface WarehouseDashboardWarehouseRow {

@@ -168,6 +168,95 @@
         </div>
         }
 
+        <!-- Storekeeper Dashboard -->
+        @if (storekeeperDashboard()) {
+        @let sk = storekeeperDashboard()!;
+        <section class="flex flex-col gap-6 mb-6">
+            <!-- Row 1: Doughnut + Line chart -->
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+                <!-- Allocation & Receiving Status doughnut -->
+                <article class="sl-panel flex flex-col gap-4 p-5 bg-white border border-slate-200 rounded-xl shadow-sm">
+                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Allocation &amp; Receiving Status</h4>
+                    <div class="relative h-36 flex items-center justify-center">
+                        <canvas baseChart [data]="storekeeperReceivingStatusChartConfig()" [options]="doughnutChartOptions" [type]="'doughnut'"></canvas>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span class="text-xl font-black text-slate-800">{{ sk.receivingStatus.allocated }}</span>
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Allocated</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-1.5 mt-2 text-xs text-slate-600">
+                        <div class="flex items-center justify-between">
+                            <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>Received</span>
+                            <span class="font-bold text-slate-800">{{ sk.receivingStatus.received }} FCL ({{ sk.receivingStatus.receivedPct }}%)</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-amber-500"></span>Pending Receiving</span>
+                            <span class="font-bold text-slate-800">{{ sk.receivingStatus.pendingReceiving }} FCL ({{ sk.receivingStatus.pendingPct }}%)</span>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- Receiving Progress Over Time line chart -->
+                <article class="sl-panel flex flex-col gap-4 p-5 bg-white border border-slate-200 rounded-xl shadow-sm xl:col-span-2">
+                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Receiving Progress Over Time</h4>
+                    @if (sk.receivingTimeline.length > 0) {
+                    <div class="h-44">
+                        <canvas baseChart [data]="storekeeperReceivingTimelineChartConfig()" [options]="lineChartOptions" [type]="'line'"></canvas>
+                    </div>
+                    } @else {
+                    <div class="flex h-44 items-center justify-center text-xs text-slate-400">No receiving activity recorded yet.</div>
+                    }
+                </article>
+            </div>
+
+            <!-- Row 2: Per-warehouse Summary cards -->
+            @if (sk.byWarehouse.length > 0) {
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                @for (row of sk.byWarehouse; track row.warehouse) {
+                <article class="sl-panel flex flex-col gap-4 p-5 bg-white border border-slate-200 rounded-xl shadow-sm">
+                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Summary for {{ row.warehouse }}</h4>
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div class="flex flex-col gap-0.5">
+                            <span class="text-[10px] font-bold uppercase text-slate-400">Total Assigned</span>
+                            <span class="text-lg font-black text-slate-800">{{ row.allocated }} <span class="text-xs font-bold text-slate-400">FCL</span></span>
+                        </div>
+                        <div class="flex flex-col gap-0.5">
+                            <span class="text-[10px] font-bold uppercase text-slate-400">Receiving Progress</span>
+                            <div class="flex items-center gap-2 mt-1">
+                                <div class="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0" [style.background]="storekeeperProgressRing(row.progress)">
+                                    <span class="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[9px] font-black text-slate-700">{{ row.progress }}%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-0.5">
+                            <span class="text-[10px] font-bold uppercase text-slate-400">Received</span>
+                            <span class="text-base font-black text-emerald-600">{{ row.received }} <span class="text-xs font-bold text-emerald-400">FCL</span></span>
+                        </div>
+                        <div class="flex flex-col gap-0.5">
+                            <span class="text-[10px] font-bold uppercase text-slate-400">Pending Receiving</span>
+                            <span class="text-base font-black text-amber-500">{{ row.pendingReceiving }} <span class="text-xs font-bold text-amber-300">FCL</span></span>
+                        </div>
+                    </div>
+                    <!-- Received vs Pending bar -->
+                    <div class="relative h-5 w-full rounded bg-amber-400 overflow-hidden mt-1">
+                        <div class="absolute inset-y-0 left-0 bg-emerald-500 transition-all duration-500" [style.width]="storekeeperReceivedWidth(row)"></div>
+                        <span class="absolute inset-0 flex items-center justify-center text-[10px] font-black text-white">{{ row.received }} Received / {{ row.pendingReceiving }} Pending</span>
+                    </div>
+                    @if (row.pendingReceiving > 0) {
+                    <p class="text-[10px] text-amber-600 bg-amber-50 rounded-lg px-3 py-2 font-medium leading-relaxed">
+                        You have <strong>{{ row.pendingReceiving }} FCL</strong> pending to be received. Please follow up with the warehouse team.
+                    </p>
+                    } @else {
+                    <p class="text-[10px] text-emerald-600 bg-emerald-50 rounded-lg px-3 py-2 font-medium">All containers received.</p>
+                    }
+                </article>
+                }
+            </div>
+            }
+        </section>
+        }
+
         <!-- Warehouse Manager Dashboard: Allocation & Receiving -->
         @if (warehouseDashboard() && (canViewDashboardSection('dashboard.section.warehouse_allocation_status.view') || canViewDashboardSection('dashboard.section.warehouse_allocation_table.view') || canViewDashboardSection('dashboard.section.warehouse_receiving_status.view'))) {
         @let wh = warehouseDashboard()!;
