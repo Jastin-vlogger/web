@@ -218,6 +218,12 @@ export class ReportsLandingComponent implements OnInit {
   ]);
 
   ngOnInit(): void {
+    // FAS users only get the FAS Document Tracking report (no report-type dropdown).
+    if (this.isFasUser()) {
+      this.activeReport.set('fas-document-tracking');
+      this.loadFasTrackingReport();
+      return;
+    }
     this.loadReportRows();
     this.loadStorageArrivalReport();
     this.loadFasTrackingReport();

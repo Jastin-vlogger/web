@@ -277,6 +277,22 @@ export interface DashboardSummaryResponse {
   statusPivotByItem?: DashboardStatusPivot;
   departmentCharts?: DashboardDepartmentCharts;
   fasDashboard?: any;
+  warehouseDashboard?: WarehouseDashboard;
+}
+
+export interface WarehouseDashboardWarehouseRow {
+  warehouse: string;
+  allocated: number;
+  received: number;
+  pendingReceiving: number;
+  progress: number;
+}
+
+export interface WarehouseDashboard {
+  allocationStatus: { total: number; allocated: number; pendingAllocation: number; allocatedPct: number; pendingPct: number };
+  receivingStatus: { allocated: number; received: number; pendingReceiving: number; receivedPct: number; pendingPct: number };
+  byWarehouse: WarehouseDashboardWarehouseRow[];
+  totals: { allocated: number; received: number; pendingReceiving: number; progress: number };
 }
 
 export interface DashboardShippingStatusOrder {

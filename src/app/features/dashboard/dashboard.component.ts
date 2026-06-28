@@ -334,6 +334,40 @@ export class DashboardComponent implements OnInit {
     );
   });
 
+  // ── Warehouse Manager dashboard ───────────────────────────────────────────
+  readonly warehouseDashboard = computed(() => this.dashboard()?.warehouseDashboard ?? null);
+
+  readonly warehouseAllocationStatusChartConfig = computed<ChartData<'doughnut'>>(() => {
+    const a = this.warehouseDashboard()?.allocationStatus;
+    return this.buildDoughnut(
+      [a?.allocated ?? 0, a?.pendingAllocation ?? 0],
+      ['#10b981', '#f59e0b'],
+      ['Allocated', 'Pending Allocation']
+    );
+  });
+
+  readonly warehouseReceivingStatusChartConfig = computed<ChartData<'doughnut'>>(() => {
+    const r = this.warehouseDashboard()?.receivingStatus;
+    return this.buildDoughnut(
+      [r?.received ?? 0, r?.pendingReceiving ?? 0],
+      ['#10b981', '#f59e0b'],
+      ['Received', 'Pending Receiving']
+    );
+  });
+
+  // Progress ring (conic-gradient) for a per-warehouse row.
+  warehouseProgressRing(progress: number): string {
+    const p = Math.max(0, Math.min(Number(progress) || 0, 100));
+    return `conic-gradient(#10b981 ${p}%, #e2e8f0 ${p}% 100%)`;
+  }
+
+  // Width % for the received portion of a warehouse's allocated bar.
+  warehouseReceivedWidth(row: { allocated: number; received: number }): string {
+    const allocated = Number(row?.allocated) || 0;
+    if (allocated <= 0) return '0%';
+    return `${Math.max(0, Math.min((Number(row?.received) || 0) / allocated * 100, 100))}%`;
+  }
+
   readonly fasStatusBreakdownChartConfig = computed<ChartData<'doughnut'>>(() => {
     const f = this.dashboard()?.fasDashboard?.statusBreakdown;
     return this.buildDoughnut(
