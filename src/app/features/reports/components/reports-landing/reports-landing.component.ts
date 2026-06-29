@@ -48,6 +48,11 @@ export class ReportsLandingComponent implements OnInit {
     return role === 'fas' || role === 'fasmanager' || role === 'fas manager';
   }
 
+  isStorekeeper(): boolean {
+    const role = String(this.authService.getCurrentUser()?.role || '').trim().toLowerCase();
+    return role === 'storekeeper';
+  }
+
   readonly loading = signal(true);
   readonly exporting = signal<ExportType | null>(null);
   readonly error = signal<string | null>(null);
@@ -222,11 +227,10 @@ export class ReportsLandingComponent implements OnInit {
   ]);
 
   ngOnInit(): void {
-    // FAS users only get the FAS Document Tracking report (no report-type dropdown).
     if (this.isFasUser()) {
-      this.activeReport.set('fas-document-tracking');
-      this.loadFasTrackingReport();
-      return;
+      this.activeReport.set('default');
+    } else if (this.isStorekeeper()) {
+      this.activeReport.set('storage-arrival');
     }
     this.loadReportRows();
     this.loadStorageArrivalReport();

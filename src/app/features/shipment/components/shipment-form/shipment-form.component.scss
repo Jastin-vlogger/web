@@ -83,6 +83,11 @@
             }
         }
 
+        .rbac-allow-interaction,
+        .rbac-allow-interaction * {
+            pointer-events: auto !important;
+        }
+
         /* High-Density Table Styling */
         .custom-tracker-table {
             .p-datatable-header { @apply hidden; }

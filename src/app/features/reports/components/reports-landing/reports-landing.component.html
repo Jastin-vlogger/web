@@ -20,19 +20,24 @@
               }
             </p>
           </div>
-          @if (!isFasUser()) {
             <div class="flex flex-col gap-2">
               <label class="text-xs font-black uppercase tracking-[0.16em] text-blue-200">Report Type</label>
               <select
                 class="rounded-xl border border-white/20 bg-slate-900/50 px-4 py-2 text-sm font-semibold text-white focus:outline-none"
                 [value]="activeReport()"
                 (change)="activeReport.set($any($event.target).value)">
-                <option value="default">Default</option>
-                <option value="storage-arrival">Storage Arrival</option>
-                <option value="fas-document-tracking">FAS Document Tracking</option>
+                @if (isFasUser()) {
+                  <option value="default">Transit</option>
+                  <option value="fas-document-tracking">Reports</option>
+                } @else if (isStorekeeper()) {
+                  <option value="storage-arrival">Storage Arrival</option>
+                } @else {
+                  <option value="default">Default</option>
+                  <option value="storage-arrival">Storage Arrival</option>
+                  <option value="fas-document-tracking">FAS Document Tracking</option>
+                }
               </select>
             </div>
-          }
         </div>
       </div>
 

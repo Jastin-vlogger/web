@@ -176,6 +176,12 @@ export class ShipmentPaymentCostingComponent {
     return normalizeBlRole(this.authService.getCurrentUser()?.role) === 'fas';
   }
 
+  canEditPaymentAllocation(): boolean {
+    if (this.authService.isAdminLevelRole()) return true;
+    return this.rbacService.hasPermission('shipment.tab.payment_costing.payment_allocation.view') &&
+           this.rbacService.hasPermission('shipment.tab.payment_costing.payment_allocation.edit');
+  }
+
   private formatCurrency(value: unknown): string {
     return Number(value ?? 0).toFixed(2);
   }
@@ -1055,7 +1061,7 @@ export class ShipmentPaymentCostingComponent {
   }
 
   isAllocationRowEditable(index: number): boolean {
-    return !this.isAllocationApproved(index);
+    return !this.isAllocationApproved(index) && this.canEditPaymentAllocation();
   }
 
   openAllocationRowEdit(shipmentIndex: number, rowIndex: number): void {
