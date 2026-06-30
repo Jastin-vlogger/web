@@ -6,6 +6,8 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 
+import * as XLSX from 'xlsx';
+
 import { ShipmentService } from '../../core/services/shipment.service';
 import { FlatShipmentRow } from '../../core/models/shipment.model';
 
@@ -33,6 +35,7 @@ export class AllShipmentsComponent implements OnInit {
   totalPages = signal(0);
   searchQuery = signal('');
   selectedStatuses = signal<string[]>([]);
+  exporting = signal(false);
 
   // Point 6: status filter options (values match the backend per-container status strings).
   readonly statusOptions = [
@@ -90,6 +93,39 @@ export class AllShipmentsComponent implements OnInit {
     this.selectedStatuses.set(statuses ?? []);
     this.currentPage.set(1);
     this.fetchShipments();
+  }
+
+  /** Task #3: export the full filtered Shipments list to Excel. */
+  exportExcel(): void {
+    if (this.exporting()) return;
+    this.exporting.set(true);
+    // limit high enough to pull every matching row for the export.
+    this.shipmentService
+      .getAllShipmentsFlat(1, 100000, this.searchQuery(), this.selectedStatuses())
+      .subscribe({
+        next: (response) => {
+          const data = response.shipments.map((row, idx) => ({
+            'S No.': idx + 1,
+            'Shipment ID': row.shipmentId,
+            'BL No': row.blNo || '',
+            'Order Date': row.orderDate ? new Date(row.orderDate).toLocaleDateString('en-GB') : '',
+            'Supplier': row.supplier || '',
+            'Description': row.description || '',
+            'Buying Qty': row.buyingQty,
+            'FCL': row.fcl,
+            'Status': this.getDisplayStageName(row.status),
+          }));
+          const worksheet = XLSX.utils.json_to_sheet(data);
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, 'Shipments');
+          XLSX.writeFile(workbook, `shipments-${new Date().toISOString().slice(0, 10)}.xlsx`);
+          this.exporting.set(false);
+        },
+        error: (error) => {
+          console.error('Error exporting shipments:', error);
+          this.exporting.set(false);
+        },
+      });
   }
 
   onPageChange(page: number): void {

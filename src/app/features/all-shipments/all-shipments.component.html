@@ -37,6 +37,19 @@
           </button>
         }
       </div>
+      <!-- Task #3: export -->
+      <button
+        type="button"
+        (click)="exportExcel()"
+        [disabled]="exporting()"
+        class="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-bold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+        aria-label="Export shipments to Excel">
+        @if (exporting()) {
+          <i class="pi pi-spin pi-spinner text-[13px]"></i><span>Exporting...</span>
+        } @else {
+          <i class="pi pi-file-export text-[13px]"></i><span>Export</span>
+        }
+      </button>
     </div>
   </header>
 

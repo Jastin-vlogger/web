@@ -218,7 +218,6 @@ export class ShipmentArrivalComponent {
   readonly customerInspectionFile = signal<Record<number, File | null>>({});
   readonly commercialDocumentFile = signal<Record<number, File | null>>({});
   readonly arrivalDocumentFile = signal<Record<number, File | null>>({});
-  readonly finalContractDocumentFile = signal<Record<number, File | null>>({});
   readonly repositoryDocumentUploadInput?: ElementRef<HTMLInputElement>;
 
   // Transportation Transaction dialog
@@ -1365,9 +1364,6 @@ export class ShipmentArrivalComponent {
       if (commercialDoc) payload.append('commercialDocument', commercialDoc, commercialDoc.name);
       const arrivalDoc = this.getArrivalDocumentFile(index);
       if (arrivalDoc) payload.append('arrivalDocument', arrivalDoc, arrivalDoc.name);
-      // Point 17: Final Contract document.
-      const finalContractDoc = this.getFinalContractDocumentFile(index);
-      if (finalContractDoc) payload.append('finalContractDocument', finalContractDoc, finalContractDoc.name);
     } else if (section === 'customerInspection') {
       payload.append('customerInspectionDate', toDate(group.get('customerInspectionDate')?.value));
       payload.append('customerInspectionStatus', group.get('customerInspectionStatus')?.value || '');
@@ -1904,7 +1900,6 @@ export class ShipmentArrivalComponent {
     if (section === 'portClearance') {
       this.commercialDocumentFile.update((current) => ({ ...current, [index]: null }));
       this.arrivalDocumentFile.update((current) => ({ ...current, [index]: null }));
-      this.finalContractDocumentFile.update((current) => ({ ...current, [index]: null }));
     }
   }
 
@@ -1919,8 +1914,6 @@ export class ShipmentArrivalComponent {
         commercialDocumentDocumentName: actual.commercialDocumentDocumentName || '',
         arrivalDocumentUrl: actual.arrivalDocumentUrl || '',
         arrivalDocumentName: actual.arrivalDocumentName || '',
-        finalContractDocumentUrl: actual.finalContractDocumentUrl || '',
-        finalContractDocumentName: actual.finalContractDocumentName || '',
         arrivalOn: actual.arrivalOn ? new Date(actual.arrivalOn) : null,
         freeDetentionDays: actual.freeDetentionDays ?? 10,
         freeStorageDays: actual.freeStorageDays ?? 14,
@@ -2045,8 +2038,6 @@ export class ShipmentArrivalComponent {
         commercialDocumentDocumentName: actual.commercialDocumentDocumentName || '',
         arrivalDocumentUrl: actual.arrivalDocumentUrl || '',
         arrivalDocumentName: actual.arrivalDocumentName || '',
-        finalContractDocumentUrl: actual.finalContractDocumentUrl || '',
-        finalContractDocumentName: actual.finalContractDocumentName || '',
         arrivalOn: actual.arrivalOn ? new Date(actual.arrivalOn) : null,
         freeDetentionDays: actual.freeDetentionDays ?? 10,
         freeStorageDays: actual.freeStorageDays ?? 14,
@@ -2473,7 +2464,7 @@ export class ShipmentArrivalComponent {
    * Mapped document URLs already captured in the BL Details step. These live on the
    * actual container (the arrival form array does not carry them), so read from there.
    */
-  getMappedDocUrl(index: number, kind: 'bl' | 'commercialInvoice' | 'packingList'): string {
+  getMappedDocUrl(index: number, kind: 'bl' | 'commercialInvoice' | 'packingList' | 'finalContract'): string {
     const actual = this.shipmentData()?.actual?.[index] as any;
     if (!actual) return '';
     switch (kind) {
@@ -2489,10 +2480,13 @@ export class ShipmentArrivalComponent {
           || actual.packingListDocumentUrl
           || actual.customsOriginalDocuments?.packingList?.documentUrl
           || '';
+      case 'finalContract':
+        // Sourced from the Document Tracker "Final Contract Received From Bank" upload.
+        return actual.documentsReleasedDocumentUrl || '';
     }
   }
 
-  getMappedDocName(index: number, kind: 'bl' | 'commercialInvoice' | 'packingList'): string {
+  getMappedDocName(index: number, kind: 'bl' | 'commercialInvoice' | 'packingList' | 'finalContract'): string {
     const actual = this.shipmentData()?.actual?.[index] as any;
     if (!actual) return '';
     switch (kind) {
@@ -2508,6 +2502,8 @@ export class ShipmentArrivalComponent {
           || actual.packingListDocumentName
           || actual.customsOriginalDocuments?.packingList?.documentName
           || '';
+      case 'finalContract':
+        return actual.documentsReleasedDocumentName || '';
     }
   }
 
@@ -2743,25 +2739,6 @@ export class ShipmentArrivalComponent {
 
   clearArrivalDocumentFile(index: number): void {
     this.arrivalDocumentFile.update((cur) => ({ ...cur, [index]: null }));
-  }
-
-  // ========== Final Contract Document Methods (Point 17) ==========
-
-  getFinalContractDocumentFile(index: number): File | null {
-    return this.finalContractDocumentFile()[index] ?? null;
-  }
-
-  onFinalContractDocumentSelected(event: Event, index: number): void {
-    const input = event.target as HTMLInputElement;
-    const file = input.files?.[0];
-    if (file) {
-      this.finalContractDocumentFile.update((cur) => ({ ...cur, [index]: file }));
-    }
-    input.value = '';
-  }
-
-  clearFinalContractDocumentFile(index: number): void {
-    this.finalContractDocumentFile.update((cur) => ({ ...cur, [index]: null }));
   }
 
   // ========== Transportation Transaction Methods ==========

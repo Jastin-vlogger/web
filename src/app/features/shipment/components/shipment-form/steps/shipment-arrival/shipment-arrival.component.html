@@ -157,6 +157,23 @@
                         }
                       </div>
                     </div>
+                    <!-- Task #2: Final Contract — view-only, sourced from Document Tracker -->
+                    <div class="flex flex-col gap-2 p-3 rounded-xl border border-slate-100 bg-slate-50/40">
+                      <div class="flex items-start gap-2">
+                        <i class="pi pi-file text-slate-400 text-[12px] mt-0.5 shrink-0"></i>
+                        <div class="min-w-0 flex-1">
+                          <p class="text-[11px] font-bold text-slate-700">Final Contract</p>
+                          <p class="text-[10px] text-slate-400 truncate">{{ getMappedDocName(i, 'finalContract') || (getMappedDocUrl(i, 'finalContract') ? 'Document available' : 'Not uploaded') }}</p>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-2 justify-end pt-1">
+                        @if (getMappedDocUrl(i, 'finalContract')) {
+                          <button type="button" (click)="openRemoteDocumentPreview(getMappedDocUrl(i, 'finalContract'), getMappedDocName(i, 'finalContract') || 'Final Contract')" class="h-8 w-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 inline-flex items-center justify-center"><i class="pi pi-eye text-[12px]"></i></button>
+                        } @else {
+                          <span class="text-[10px] text-slate-400 italic">—</span>
+                        }
+                      </div>
+                    </div>
                     @let cooDoc = getRepositoryDocByType(group, 'certificate_of_origin');
                     <div class="flex flex-col gap-2 p-3 rounded-xl border border-slate-100 bg-slate-50/40">
                       <div class="flex items-start gap-2">
@@ -347,36 +364,6 @@
                         </div>
                       </div>
 
-                      <!-- Point 17: Final Contract Document -->
-                      <div class="flex flex-col gap-1.5">
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Final Contract Document</label>
-                        <div class="flex items-center gap-2">
-                          @if (!isLogisticsSectionLocked(i, 'portClearance')) {
-                          <button type="button" (click)="finalContractDocInput.click()"
-                            class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-600">
-                            <i class="pi pi-upload text-[10px]"></i> Upload
-                          </button>
-                          <input #finalContractDocInput type="file" class="hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onFinalContractDocumentSelected($event, i)" />
-                          }
-                          @if (getFinalContractDocumentFile(i)) {
-                            <button type="button" (click)="openDocumentPreview(getFinalContractDocumentFile(i)!, 'Final Contract Document')"
-                              class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0">
-                              <i class="pi pi-eye"></i>
-                            </button>
-                            <span class="text-[10px] text-slate-500 truncate">{{ getFinalContractDocumentFile(i)?.name }}</span>
-                            <button type="button" (click)="clearFinalContractDocumentFile(i)"
-                              class="h-9 w-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 shrink-0">
-                              <i class="pi pi-trash"></i>
-                            </button>
-                          } @else if (group.get('finalContractDocumentUrl')?.value) {
-                            <button type="button" (click)="openRemoteDocumentPreview(group.get('finalContractDocumentUrl')?.value, group.get('finalContractDocumentName')?.value || 'Final Contract Document')"
-                              class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0">
-                              <i class="pi pi-eye"></i>
-                            </button>
-                            <span class="text-[10px] text-slate-500 truncate">{{ group.get('finalContractDocumentName')?.value || 'Final Contract Document' }}</span>
-                          }
-                        </div>
-                      </div>
                     </div>
 
                     <!-- Row 4: Remarks -->
