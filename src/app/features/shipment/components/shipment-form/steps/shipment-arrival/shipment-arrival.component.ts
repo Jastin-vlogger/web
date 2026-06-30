@@ -2850,4 +2850,71 @@ export class ShipmentArrivalComponent {
       });
     });
   }
+
+  // TEMP: manual delete of a transportation transaction shown in the Milestone 4 table.
+  // A "transaction" here is a group of transportation rows sharing the same transactionId.
+  // Deleting clears the transaction fields on those rows (returning the containers to the
+  // unassigned pool) and persists via a partial logistics save. Comment out after cleanup.
+  deleteTransactionGroup(index: number, transaction: { transactionId: string; rows: any[] }): void {
+    const group = this.formArray.at(index);
+    const containerId = group?.get('containerId')?.value;
+    const shipmentId = this.shipmentData()?.shipment?._id;
+    const targetId = (transaction?.transactionId || '').trim();
+    if (!group || !containerId || !shipmentId || !targetId) return;
+
+    this.confirmDialog.ask({
+      message: 'Delete this transportation transaction? The containers will be returned to the unassigned pool.',
+      header: 'Confirm Delete',
+      acceptLabel: 'Yes, Delete',
+    }).then((confirmed) => {
+      if (!confirmed) return;
+
+      const rows = this.getTransportationRows(group);
+      rows.controls.forEach((row) => {
+        if (String(row.get('transactionId')?.value || '').trim() !== targetId) return;
+        row.patchValue({
+          transactionId: '',
+          transportCompanyName: '',
+          warehouse: '',
+          bookedDate: null,
+          bookingTime: null,
+          transportDate: null,
+          transportTime: null,
+        }, { emitEvent: false });
+        row.updateValueAndValidity({ emitEvent: false });
+      });
+
+      // The backend persists the whole transportationBooked array but, in partial-save mode,
+      // requires at least one *selected* row that has a transport company. Select the surviving
+      // rows (those still carrying a company) so validation passes while the cleared rows are saved.
+      const bookedRows = this.buildTransportationBookedPayload(group).map((r: any) => ({
+        ...r,
+        bulkSelected: String(r.transportCompanyName || '').trim().length > 0,
+      }));
+
+      if (!bookedRows.some((r: any) => r.bulkSelected)) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Cannot Delete Here',
+          detail: 'No other arranged container remains to anchor the save. Remove via "Manage Shipments" instead.',
+        });
+        return;
+      }
+
+      const payload = new FormData();
+      payload.append('sectionKey', 'transportation');
+      payload.append('transportationPartialSave', 'true');
+      payload.append('transportationBooked', JSON.stringify(bookedRows));
+
+      this.shipmentService.submitLogistics(containerId, payload).subscribe({
+        next: () => {
+          this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+          this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Transportation transaction deleted.' });
+        },
+        error: (err) => {
+          this.messageService.add({ severity: 'error', summary: 'Delete Failed', detail: err?.error?.message || 'Could not delete transaction.' });
+        }
+      });
+    });
+  }
 }
