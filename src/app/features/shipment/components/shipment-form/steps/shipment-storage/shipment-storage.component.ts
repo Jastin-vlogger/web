@@ -187,6 +187,17 @@ export class ShipmentStorageComponent {
     return base?.trim() ? `${base}-${index + 1}` : '–';
   }
 
+  // Point 10: BL / Commercial Invoice numbers for the accordion header.
+  getBlNo(index: number): string {
+    const actual = this.actualOverrides()?.[index] || this.shipmentData()?.actual?.[index];
+    return String(actual?.BLNo || '').trim();
+  }
+
+  getCommercialInvoiceNo(index: number): string {
+    const actual = this.actualOverrides()?.[index] || this.shipmentData()?.actual?.[index];
+    return String(actual?.commercialInvoiceNo || '').trim();
+  }
+
   private shouldEnforceTabPermissions(): boolean {
     const role = this.authService.getCurrentUser()?.role;
     return role !== 'Admin' && role !== 'Manager';

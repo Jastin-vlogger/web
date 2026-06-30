@@ -9,7 +9,7 @@ import { AccessPermission, AccessPermissionGroup, AccessRole, AccessUser, BlRowD
 import { AuthService } from '../../../../core/services/auth.service';
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 
-type AccessTabKey = 'roles' | 'menu' | 'dashboard' | 'permissions' | 'users';
+type AccessTabKey = 'roles' | 'menu' | 'dashboard' | 'reports' | 'permissions' | 'users';
 
 /** One row in the permission matrix — one screen/tab per row */
 interface PermissionMatrixRow {
@@ -131,7 +131,7 @@ export class AccessControlComponent {
   private readonly ROW_DEFINITIONS: RowDefinition[] = [
     {
       key: 'create_shipment',
-      label: 'Create Shipment',
+      label: 'Create Order',
       screenKey: 'create_shipment',
     },
     {
@@ -336,7 +336,7 @@ export class AccessControlComponent {
         },
         {
           key: 'packaging_list',
-          label: 'Packaging List',
+          label: 'Packing List Confirmation',
           description: 'Packaging list preview showing container information, bag counts, and packaging summary.',
           tabKey: 'bl_details',
           viewPermissionKey: 'shipment.tab.bl_details.packaging_list.view',
@@ -346,7 +346,7 @@ export class AccessControlComponent {
         },
         {
           key: 'payment_allocation',
-          label: 'Payment Allocation',
+          label: 'Clearing Advance Process',
           tabKey: 'payment_costing',
           viewPermissionKey: 'shipment.tab.payment_costing.payment_allocation.view',
           editPermissionKey: 'shipment.tab.payment_costing.payment_allocation.edit',
@@ -372,8 +372,8 @@ export class AccessControlComponent {
         },
         {
           key: 'payment_allocation_approve_fas_manager',
-          label: 'Payment Allocation Approval (FAS Manager)',
-          description: 'Allows FasManager users to approve payment allocations after FAS saves it.',
+          label: 'Clearing Advance Process Approval (FAS Manager)',
+          description: 'Allows FasManager users to approve the clearing advance process after FAS saves it.',
           tabKey: 'payment_costing',
           editPermissionKey: 'shipment.tab.payment_costing.payment_allocation.approve_fas_manager',
           editActionKey: 'payment_allocation_approve_fas_manager',
@@ -678,6 +678,13 @@ export class AccessControlComponent {
   readonly dashboardPermissionGroups = computed(() =>
     this.permissionGroups().filter((g) =>
       g.permissions.some((p) => p.resource === 'dashboard')
+    )
+  );
+
+  // Point 23: report-tab permissions, grouped for the Reports access tab.
+  readonly reportsPermissionGroups = computed(() =>
+    this.permissionGroups().filter((g) =>
+      g.permissions.some((p) => p.resource === 'reports')
     )
   );
 

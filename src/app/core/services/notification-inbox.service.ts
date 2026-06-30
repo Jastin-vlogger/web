@@ -9,12 +9,15 @@ import { AppNotification, NotificationListResponse, NotificationUnreadCountRespo
 export class NotificationInboxService {
   private http = inject(HttpClient);
 
+  // Point 24: background fetches opt out of the global loader to avoid flicker.
+  private readonly skipLoaderOptions = { headers: { 'X-Skip-Loader': '1' } };
+
   list(): Observable<NotificationListResponse> {
-    return this.http.get<NotificationListResponse>('notifications');
+    return this.http.get<NotificationListResponse>('notifications', this.skipLoaderOptions);
   }
 
   unreadCount(): Observable<NotificationUnreadCountResponse> {
-    return this.http.get<NotificationUnreadCountResponse>('notifications/unread-count');
+    return this.http.get<NotificationUnreadCountResponse>('notifications/unread-count', this.skipLoaderOptions);
   }
 
   markAsRead(id: string): Observable<{ message: string; notification: AppNotification; unreadCount: number }> {

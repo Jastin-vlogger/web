@@ -90,6 +90,10 @@ export class ShipmentFormComponent implements OnDestroy {
   shipmentId: string | null = null;
   readonly blRowDefinitions = signal<BlRowDefinition[]>([...BL_ROW_DEFINITIONS]);
 
+  // Point 5: deep-link target from the Shipments list "Track" action.
+  readonly focusShipmentIndex = signal<number | null>(null);
+  private readonly pendingBlFocus = signal(false);
+
   // Signals from store
   readonly loading = toSignal(this.store.select(selectShipmentLoading), { initialValue: false });
   readonly currentStep = toSignal(this.store.select(selectCurrentStep), { initialValue: 0 });
@@ -271,6 +275,31 @@ export class ShipmentFormComponent implements OnDestroy {
         this.shipmentId = id;
         this.store.dispatch(ShipmentActions.loadShipmentDetail({ id }));
       }
+    });
+
+    // Point 5: "Track" deep-link — open BL Details on a specific shipment row.
+    this.route.queryParams.subscribe((qp) => {
+      const idxRaw = qp['shipmentIndex'];
+      const idx = idxRaw != null && idxRaw !== '' ? Number(idxRaw) : null;
+      if (idx != null && Number.isInteger(idx) && idx >= 0) {
+        this.focusShipmentIndex.set(idx);
+      }
+      if (qp['tab'] === 'bl_details') {
+        this.pendingBlFocus.set(true);
+      }
+    });
+
+    // Once the tracker steps are available, jump to BL Details for the deep-link.
+    effect(() => {
+      if (!this.pendingBlFocus()) return;
+      const visibleSteps = this.accessibleTrackerSteps();
+      if (!visibleSteps.length) return;
+      const blStep = this.trackerStepConfigs().find((step) => step.tabKey === 'bl_details');
+      if (!blStep) return;
+      if (visibleSteps.some((step) => step.index === blStep.index)) {
+        this.store.dispatch(ShipmentActions.setCurrentStep({ step: blStep.index }));
+      }
+      this.pendingBlFocus.set(false);
     });
   }
 
@@ -980,6 +1009,8 @@ export class ShipmentFormComponent implements OnDestroy {
             commercialDocumentDocumentName: [(actualData as any)?.commercialDocumentDocumentName || ''],
             arrivalDocumentUrl: [(actualData as any)?.arrivalDocumentUrl || ''],
             arrivalDocumentName: [(actualData as any)?.arrivalDocumentName || ''],
+            finalContractDocumentUrl: [(actualData as any)?.finalContractDocumentUrl || ''],
+            finalContractDocumentName: [(actualData as any)?.finalContractDocumentName || ''],
             arrivalOn: [actualData?.arrivalOn ? new Date(actualData.arrivalOn) : null],
             freeDetentionDays: [(actualData as any)?.freeDetentionDays ?? 10],
             freeStorageDays: [(actualData as any)?.freeStorageDays ?? 14],
@@ -1372,6 +1403,8 @@ export class ShipmentFormComponent implements OnDestroy {
           commercialDocumentDocumentName: [''],
           arrivalDocumentUrl: [''],
           arrivalDocumentName: [''],
+          finalContractDocumentUrl: [''],
+          finalContractDocumentName: [''],
           freeDetentionDays: [10],
           freeStorageDays: [14],
           clearanceRemarks: [''],

@@ -5,6 +5,7 @@ import { map } from 'rxjs/operators';
 import {
   Shipment,
   ShipmentListResponse,
+  FlatShipmentListResponse,
   ShipmentDetail,
   CreateShipmentPayload,
   CreateShipmentResponse,
@@ -225,21 +226,39 @@ export class ShipmentService {
 
   constructor(private http: HttpClient) { }
 
-  getShipments(page: number = 1, limit: number = 20): Observable<ShipmentListResponse> {
-    const params = new HttpParams()
+  getShipments(page: number = 1, limit: number = 20, statuses: string[] = []): Observable<ShipmentListResponse> {
+    let params = new HttpParams()
       .set('page', page.toString())
       .set('limit', limit.toString());
+    if (statuses.length) params = params.set('statuses', statuses.join(','));
 
     return this.http.get<ShipmentListResponse>(this.apiUrl, { params });
   }
 
-  searchShipments(query: string, page: number = 1, limit: number = 20): Observable<ShipmentListResponse> {
-    const params = new HttpParams()
+  searchShipments(query: string, page: number = 1, limit: number = 20, statuses: string[] = []): Observable<ShipmentListResponse> {
+    let params = new HttpParams()
       .set('q', query)
       .set('page', page.toString())
       .set('limit', limit.toString());
+    if (statuses.length) params = params.set('statuses', statuses.join(','));
 
     return this.http.get<ShipmentListResponse>(`${this.apiUrl}/search`, { params });
+  }
+
+  /** Point 4: flat list of every individual shipment (one row per split) across all LPOs. */
+  getAllShipmentsFlat(
+    page: number = 1,
+    limit: number = 20,
+    search: string = '',
+    statuses: string[] = []
+  ): Observable<FlatShipmentListResponse> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('limit', limit.toString());
+    if (search) params = params.set('search', search);
+    if (statuses.length) params = params.set('statuses', statuses.join(','));
+
+    return this.http.get<FlatShipmentListResponse>(`${this.apiUrl}/all-shipments`, { params });
   }
 
   getShipmentById(id: string): Observable<ShipmentDetailsResponse> {
@@ -469,6 +488,21 @@ export class ShipmentService {
 
   approveStorageArrival(containerId: string): Observable<ShipmentContainerApprovalResponse> {
     return this.http.patch<ShipmentContainerApprovalResponse>(`${this.apiUrl}/container/storage/${containerId}/approve`, {});
+  }
+
+  /**
+   * Point 9: save edited "No of Bags" on the Packing List Confirmation tab.
+   * PATCH /shipment/container/bl-details/:id/packaging-bags
+   * @param bags array of { index, no_of_bags } targeting packagingList.containerInfo rows
+   */
+  updatePackagingBags(
+    containerId: string,
+    bags: { index: number; no_of_bags: number }[]
+  ): Observable<{ message: string; packagingList: any }> {
+    return this.http.patch<{ message: string; packagingList: any }>(
+      `${this.apiUrl}/container/bl-details/${containerId}/packaging-bags`,
+      { bags }
+    );
   }
 
   /**

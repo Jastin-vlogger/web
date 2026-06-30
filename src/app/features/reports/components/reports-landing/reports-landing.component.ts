@@ -5,6 +5,7 @@ import { finalize } from 'rxjs/operators';
 import { ShipmentReportExportChildRow, ShipmentReportExportRow, StorageArrivalReportRow, FasDocumentTrackingRow } from '../../../../core/models/shipment.model';
 import { ShipmentReportFilters, ShipmentService } from '../../../../core/services/shipment.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { RbacService } from '../../../../core/services/rbac.service';
 
 type ReportColumn = {
   header: string;
@@ -42,6 +43,29 @@ type ActiveReport = 'default' | 'storage-arrival' | 'fas-document-tracking';
 export class ReportsLandingComponent implements OnInit {
   private shipmentService = inject(ShipmentService);
   private authService = inject(AuthService);
+  private rbacService = inject(RbacService);
+
+  // Point 23: per-report view permission keys (one per dropdown report).
+  private readonly reportPermissionKeys: Record<ActiveReport, string> = {
+    'default': 'report.quality_activity.view',
+    'storage-arrival': 'report.warehouse_activity.view',
+    'fas-document-tracking': 'report.fas_activity.view',
+  };
+
+  canViewReport(report: ActiveReport): boolean {
+    if (this.authService.isAdminLevelRole?.()) return true;
+    return this.rbacService.hasPermission(this.reportPermissionKeys[report]);
+  }
+
+  /** Reports the current user is allowed to see, in dropdown order. */
+  readonly availableReports = computed<ActiveReport[]>(() => {
+    void this.permissionsVersion();
+    return (['default', 'storage-arrival', 'fas-document-tracking'] as ActiveReport[])
+      .filter((report) => this.canViewReport(report));
+  });
+
+  // Bumped whenever effective permissions change so availableReports recomputes.
+  private readonly permissionsVersion = signal(0);
 
   isFasUser(): boolean {
     const role = String(this.authService.getCurrentUser()?.role || '').trim().toLowerCase();
@@ -78,6 +102,28 @@ export class ReportsLandingComponent implements OnInit {
   readonly fasTrackingExporting = signal(false);
 
   readonly activeReport = signal<ActiveReport>('default');
+
+  // Point 22: client-side search for the Warehouse / FAS Activity Status reports.
+  readonly storageArrivalSearch = signal('');
+  readonly fasTrackingSearch = signal('');
+
+  readonly filteredStorageArrivalRows = computed(() => {
+    const term = this.storageArrivalSearch().trim().toLowerCase();
+    const rows = this.storageArrivalRows();
+    if (!term) return rows;
+    return rows.filter((row) =>
+      Object.values(row).some((value) => String(value ?? '').toLowerCase().includes(term))
+    );
+  });
+
+  readonly filteredFasTrackingRows = computed(() => {
+    const term = this.fasTrackingSearch().trim().toLowerCase();
+    const rows = this.fasTrackingRows();
+    if (!term) return rows;
+    return rows.filter((row) =>
+      Object.values(row).some((value) => String(value ?? '').toLowerCase().includes(term))
+    );
+  });
 
   readonly fasTrackingColumns: FasDocumentTrackingColumn[] = [
     { header: 'Sl No',                          key: 'slNo',                        width: 7  },
@@ -227,6 +273,16 @@ export class ReportsLandingComponent implements OnInit {
   ]);
 
   ngOnInit(): void {
+    // Point 23: keep availableReports reactive to permission loads, and ensure the
+    // active report is one the user is actually allowed to view.
+    this.rbacService.permissions$.subscribe(() => {
+      this.permissionsVersion.update((v) => v + 1);
+      const allowed = this.availableReports();
+      if (allowed.length && !allowed.includes(this.activeReport())) {
+        this.activeReport.set(allowed[0]);
+      }
+    });
+
     if (this.isFasUser()) {
       this.activeReport.set('default');
     } else if (this.isStorekeeper()) {
@@ -235,6 +291,14 @@ export class ReportsLandingComponent implements OnInit {
     this.loadReportRows();
     this.loadStorageArrivalReport();
     this.loadFasTrackingReport();
+  }
+
+  /** Point 23: guard the dropdown change against reports the user can't view. */
+  onActiveReportChange(value: string): void {
+    const report = value as ActiveReport;
+    if (this.canViewReport(report)) {
+      this.activeReport.set(report);
+    }
   }
 
   updateFilter(key: keyof ShipmentReportFilters, value: string): void {

@@ -7,6 +7,7 @@ import {
   DashboardArrivalSummary,
   DashboardMonthlyTrend,
   DashboardStageBreakdown,
+  DashboardShippingStatusMetric,
   DashboardStatusPivot,
   DashboardSummaryResponse,
   StorekeeperWarehouseRow,
@@ -156,39 +157,42 @@ export class DashboardComponent implements OnInit {
     return rows.filter((row) => (row.orderStatus || '').toLowerCase() === selected.toLowerCase());
   });
 
-  readonly volumeTodayStats = computed(() => {
-    const summary = this.dashboard()?.shippingStatus?.volumeToday ?? [];
-    const normalizeLabel = (label: string) => String(label || '').trim().toLowerCase();
-    const priorityByLabel = new Map([
-      ['at the port', 0],
-      ['on transit', 1],
-      ['etd yet to due', 2],
-      ['eta yet to due', 2],
-      ['etd yet to be confirmed', 3],
-      ['total lpo', 4],
-      ['total lpos', 4],
-    ]);
-    const displayLabel = (label: string) => {
-      const normalized = normalizeLabel(label);
-      if (normalized === 'eta yet to due') return 'ETD Yet To Due';
-      if (normalized === 'total lpo') return 'Total LPOs';
-      return label;
-    };
-    if (summary.length) {
-      return summary
-        .filter((metric) => this.canViewDashboardPermission(metric.permissionKey))
-        .map((metric, index) => ({ ...metric, label: displayLabel(metric.label), __index: index }))
-        .sort((left, right) => {
-          const leftPriority = priorityByLabel.get(normalizeLabel(left.label)) ?? Number.MAX_SAFE_INTEGER;
-          const rightPriority = priorityByLabel.get(normalizeLabel(right.label)) ?? Number.MAX_SAFE_INTEGER;
-          return leftPriority === rightPriority ? left.__index - right.__index : leftPriority - rightPriority;
-        })
-        .map(({ __index, ...metric }) => metric);
+  /**
+   * Status Snapshot table rows (STATUS / QUANTITY / FCL / MT), ordered to match the
+   * operations dashboard design. Each entry maps one or more backend metric labels to a
+   * display label + icon; rows the user can't view (by permission) are dropped.
+   */
+  private readonly STATUS_SNAPSHOT_CONFIG: { match: string[]; label: string; icon: string }[] = [
+    { match: ['total lpo', 'total lpos'], label: 'Total LPOs', icon: 'pi pi-clipboard' },
+    { match: ['completed lpo', 'completed'], label: 'Completed', icon: 'pi pi-box' },
+    { match: ['open lpo', 'open'], label: 'Open', icon: 'pi pi-inbox' },
+    { match: ['total shipments', 'no. of shipments', 'no of shipments'], label: 'No. of Shipments', icon: 'pi pi-server' },
+    { match: ['at the port', 'at port'], label: 'At the Port', icon: 'pi pi-compass' },
+    { match: ['on transit'], label: 'On Transit', icon: 'pi pi-truck' },
+    { match: ['etd yet to due', 'eta yet to due'], label: 'ETA Yet To Due', icon: 'pi pi-calendar' },
+    { match: ['etd yet to be confirmed'], label: 'ETD Yet To Be Confirmed', icon: 'pi pi-question-circle' },
+  ];
+
+  readonly statusSnapshotRows = computed(() => {
+    const metrics = this.dashboard()?.shippingStatus?.volumeToday ?? [];
+    const byLabel = new Map<string, DashboardShippingStatusMetric>();
+    for (const metric of metrics) {
+      byLabel.set(String(metric.label || '').trim().toLowerCase(), metric);
     }
-    const dashboard = this.dashboard();
-    if (!dashboard) return [];
-    return [{ label: 'Total Shipments', value: dashboard.kpis.totalShipments, permissionKey: 'dashboard.snapshot.total_shipments.view' }]
-      .filter((metric) => this.canViewDashboardPermission(metric.permissionKey));
+
+    return this.STATUS_SNAPSHOT_CONFIG
+      .map((config) => {
+        const metric = config.match.map((key) => byLabel.get(key)).find((found) => !!found);
+        if (!metric || !this.canViewDashboardPermission(metric.permissionKey)) return null;
+        return {
+          label: config.label,
+          icon: config.icon,
+          quantity: metric.quantity ?? metric.value ?? 0,
+          fcl: metric.fcl ?? 0,
+          mt: metric.mt ?? 0,
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null);
   });
 
   readonly inventoryRows = computed(() => {

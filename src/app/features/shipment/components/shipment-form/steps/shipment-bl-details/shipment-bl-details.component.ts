@@ -65,6 +65,12 @@ export class ShipmentBlDetailsComponent {
   /** POINT 7: Payment Allocation + Payment Costing form array (moved from Step 8) */
   @Input() paymentFormArray: FormArray | null = null;
 
+  /** Point 5: when navigated from the Shipments list "Track", open this shipment's accordion. */
+  @Input() set focusShipmentIndex(index: number | null | undefined) {
+    if (index == null || index < 0) return;
+    queueMicrotask(() => this.ensureAccordionOpen(index));
+  }
+
   private sanitizer = inject(DomSanitizer);
   private store = inject(Store);
   private shipmentService = inject(ShipmentService);
@@ -421,10 +427,11 @@ export class ShipmentBlDetailsComponent {
   }
 
   private getDefaultVisibleTab(): 'cost' | 'storage' | 'packaging' | 'payment_allocation' | 'payment_costing' {
+    // Point 9: Packing List Confirmation is now the first tab.
     const tabs: Array<'cost' | 'storage' | 'packaging' | 'payment_allocation' | 'payment_costing'> = [
+      'packaging',
       'cost',
       'storage',
-      'packaging',
       'payment_allocation',
       'payment_costing',
     ];
@@ -464,6 +471,92 @@ export class ShipmentBlDetailsComponent {
   canEditPackagingList(): boolean {
     if (this.authService.isAdminLevelRole()) return true;
     return this.canViewPackagingList() && this.rbacService.hasPermission('shipment.tab.bl_details.packaging_list.edit');
+  }
+
+  // ── Point 9: per-row editable "No of Bags" on the Packing List Confirmation tab ──
+  /** Working values for rows currently in edit mode, keyed by `${shipmentIndex}:${rowIndex}`. */
+  private readonly packagingBagEdits = signal<Record<string, string>>({});
+  /** Rows with an in-flight save, keyed the same way. */
+  private readonly packagingBagSaving = signal<Record<string, boolean>>({});
+
+  private packagingBagKey(shipmentIndex: number, rowIndex: number): string {
+    return `${shipmentIndex}:${rowIndex}`;
+  }
+
+  isPackagingRowEditing(shipmentIndex: number, rowIndex: number): boolean {
+    return this.packagingBagKey(shipmentIndex, rowIndex) in this.packagingBagEdits();
+  }
+
+  isPackagingRowSaving(shipmentIndex: number, rowIndex: number): boolean {
+    return !!this.packagingBagSaving()[this.packagingBagKey(shipmentIndex, rowIndex)];
+  }
+
+  startPackagingRowEdit(shipmentIndex: number, rowIndex: number, currentBags: number | null | undefined): void {
+    if (!this.canEditPackagingList()) return;
+    const key = this.packagingBagKey(shipmentIndex, rowIndex);
+    this.packagingBagEdits.update((current) => ({ ...current, [key]: String(currentBags ?? 0) }));
+  }
+
+  getPackagingRowBagValue(shipmentIndex: number, rowIndex: number): string {
+    return this.packagingBagEdits()[this.packagingBagKey(shipmentIndex, rowIndex)] ?? '';
+  }
+
+  setPackagingRowBagValue(shipmentIndex: number, rowIndex: number, value: string): void {
+    const key = this.packagingBagKey(shipmentIndex, rowIndex);
+    this.packagingBagEdits.update((current) => ({ ...current, [key]: value }));
+  }
+
+  cancelPackagingRowEdit(shipmentIndex: number, rowIndex: number): void {
+    const key = this.packagingBagKey(shipmentIndex, rowIndex);
+    this.packagingBagEdits.update((current) => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  }
+
+  savePackagingRowBags(shipmentIndex: number, rowIndex: number): void {
+    if (!this.canEditPackagingList()) return;
+    const row = this.formArray.at(shipmentIndex);
+    const containerId = row?.get('containerId')?.value;
+    if (!containerId) {
+      this.notificationService.warn('Missing container', 'This shipment row is not linked to a container yet.');
+      return;
+    }
+
+    const key = this.packagingBagKey(shipmentIndex, rowIndex);
+    const raw = this.packagingBagEdits()[key];
+    const noOfBags = raw === '' || raw == null ? 0 : Number(raw);
+    if (!Number.isFinite(noOfBags) || noOfBags < 0) {
+      this.notificationService.error('Invalid value', 'No of Bags must be a number of 0 or more.');
+      return;
+    }
+
+    this.packagingBagSaving.update((current) => ({ ...current, [key]: true }));
+    this.shipmentService.updatePackagingBags(containerId, [{ index: rowIndex, no_of_bags: noOfBags }]).subscribe({
+      next: (response) => {
+        // Reflect the saved value back into the form control so the display updates.
+        const control = row?.get('packagingList');
+        if (control && response?.packagingList) {
+          control.patchValue(response.packagingList);
+        }
+        this.packagingBagSaving.update((current) => {
+          const next = { ...current };
+          delete next[key];
+          return next;
+        });
+        this.cancelPackagingRowEdit(shipmentIndex, rowIndex);
+        this.notificationService.success('Saved', 'No of Bags updated successfully.');
+      },
+      error: (error) => {
+        this.packagingBagSaving.update((current) => {
+          const next = { ...current };
+          delete next[key];
+          return next;
+        });
+        this.notificationService.error('Save failed', error?.error?.message || 'Could not update No of Bags.');
+      },
+    });
   }
 
   /** Returns true if the current user can see the Payment Allocation tab */

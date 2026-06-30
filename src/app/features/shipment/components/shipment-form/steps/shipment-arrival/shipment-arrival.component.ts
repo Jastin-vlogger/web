@@ -218,6 +218,7 @@ export class ShipmentArrivalComponent {
   readonly customerInspectionFile = signal<Record<number, File | null>>({});
   readonly commercialDocumentFile = signal<Record<number, File | null>>({});
   readonly arrivalDocumentFile = signal<Record<number, File | null>>({});
+  readonly finalContractDocumentFile = signal<Record<number, File | null>>({});
   readonly repositoryDocumentUploadInput?: ElementRef<HTMLInputElement>;
 
   // Transportation Transaction dialog
@@ -718,6 +719,17 @@ export class ShipmentArrivalComponent {
     if (this.formArray?.controls[index] == null) return '–';
     const base = this.shipmentData()?.shipment?.shipmentNo?.replace(/\([^)]*\)/g, '').trim();
     return base?.trim() ? `${base}-${index + 1}` : '–';
+  }
+
+  // Point 10: BL / Commercial Invoice numbers for the accordion header.
+  getBlNo(index: number): string {
+    const actual = this.shipmentData()?.actual?.[index];
+    return String(actual?.BLNo || '').trim();
+  }
+
+  getCommercialInvoiceNo(index: number): string {
+    const actual = this.shipmentData()?.actual?.[index];
+    return String(actual?.commercialInvoiceNo || '').trim();
   }
 
   isRowSubmitted(index: number): boolean {
@@ -1312,6 +1324,21 @@ export class ShipmentArrivalComponent {
       }
     }
 
+    if (section === 'portClearance') {
+      // Point 16: Arrival Document is mandatory before Port & Clearance can be saved.
+      const hasArrivalDocument =
+        !!this.getArrivalDocumentFile(index) ||
+        String(group.get('arrivalDocumentUrl')?.value || '').trim().length > 0;
+      if (!hasArrivalDocument) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Arrival Document Required',
+          detail: 'Please attach the Arrival Document before saving Port & Clearance.',
+        });
+        return;
+      }
+    }
+
     const sectionLabel = section === 'transportation'
       ? 'Transportation Arranged'
       : this.step5DocConfig.find((doc) => doc.kind === section)?.label || section;
@@ -1338,6 +1365,9 @@ export class ShipmentArrivalComponent {
       if (commercialDoc) payload.append('commercialDocument', commercialDoc, commercialDoc.name);
       const arrivalDoc = this.getArrivalDocumentFile(index);
       if (arrivalDoc) payload.append('arrivalDocument', arrivalDoc, arrivalDoc.name);
+      // Point 17: Final Contract document.
+      const finalContractDoc = this.getFinalContractDocumentFile(index);
+      if (finalContractDoc) payload.append('finalContractDocument', finalContractDoc, finalContractDoc.name);
     } else if (section === 'customerInspection') {
       payload.append('customerInspectionDate', toDate(group.get('customerInspectionDate')?.value));
       payload.append('customerInspectionStatus', group.get('customerInspectionStatus')?.value || '');
@@ -1874,6 +1904,7 @@ export class ShipmentArrivalComponent {
     if (section === 'portClearance') {
       this.commercialDocumentFile.update((current) => ({ ...current, [index]: null }));
       this.arrivalDocumentFile.update((current) => ({ ...current, [index]: null }));
+      this.finalContractDocumentFile.update((current) => ({ ...current, [index]: null }));
     }
   }
 
@@ -1888,6 +1919,8 @@ export class ShipmentArrivalComponent {
         commercialDocumentDocumentName: actual.commercialDocumentDocumentName || '',
         arrivalDocumentUrl: actual.arrivalDocumentUrl || '',
         arrivalDocumentName: actual.arrivalDocumentName || '',
+        finalContractDocumentUrl: actual.finalContractDocumentUrl || '',
+        finalContractDocumentName: actual.finalContractDocumentName || '',
         arrivalOn: actual.arrivalOn ? new Date(actual.arrivalOn) : null,
         freeDetentionDays: actual.freeDetentionDays ?? 10,
         freeStorageDays: actual.freeStorageDays ?? 14,
@@ -2012,6 +2045,8 @@ export class ShipmentArrivalComponent {
         commercialDocumentDocumentName: actual.commercialDocumentDocumentName || '',
         arrivalDocumentUrl: actual.arrivalDocumentUrl || '',
         arrivalDocumentName: actual.arrivalDocumentName || '',
+        finalContractDocumentUrl: actual.finalContractDocumentUrl || '',
+        finalContractDocumentName: actual.finalContractDocumentName || '',
         arrivalOn: actual.arrivalOn ? new Date(actual.arrivalOn) : null,
         freeDetentionDays: actual.freeDetentionDays ?? 10,
         freeStorageDays: actual.freeStorageDays ?? 14,
@@ -2708,6 +2743,25 @@ export class ShipmentArrivalComponent {
 
   clearArrivalDocumentFile(index: number): void {
     this.arrivalDocumentFile.update((cur) => ({ ...cur, [index]: null }));
+  }
+
+  // ========== Final Contract Document Methods (Point 17) ==========
+
+  getFinalContractDocumentFile(index: number): File | null {
+    return this.finalContractDocumentFile()[index] ?? null;
+  }
+
+  onFinalContractDocumentSelected(event: Event, index: number): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (file) {
+      this.finalContractDocumentFile.update((cur) => ({ ...cur, [index]: file }));
+    }
+    input.value = '';
+  }
+
+  clearFinalContractDocumentFile(index: number): void {
+    this.finalContractDocumentFile.update((cur) => ({ ...cur, [index]: null }));
   }
 
   // ========== Transportation Transaction Methods ==========

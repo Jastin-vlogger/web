@@ -220,14 +220,11 @@ export class ShipmentPaymentCostingComponent {
   }
 
   private getUserDisplay(user: any): string {
+    // Point 11: show the actual requester/approver name (populated name/email/role),
+    // not a generic "Logistic Dept User" label.
     if (!user) return '—';
-    if (typeof user === 'string') {
-      if (user === 'Admin User' || user === 'Admin' || user.toLowerCase().includes('admin')) return 'Logistic Dept User';
-      return user || '—';
-    }
-    const name = String(user.name || user.email || user._id || '—');
-    if (name === 'Admin User' || name === 'Admin' || name.toLowerCase().includes('admin')) return 'Logistic Dept User';
-    return name;
+    if (typeof user === 'string') return user || '—';
+    return String(user.name || user.email || user._id || '—');
   }
 
   private getDownloadedByLabel(): string {

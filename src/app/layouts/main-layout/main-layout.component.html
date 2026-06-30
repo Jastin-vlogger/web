@@ -18,3 +18,10 @@
 
 <!-- Global confirmation dialog — rendered once at layout level -->
 <app-confirm-dialog></app-confirm-dialog>
+
+<!-- Point 24: global loader overlay, shown while any tracked API call is in flight -->
+@if (isLoading()) {
+  <div class="global-loader-overlay" role="status" aria-live="polite" aria-label="Loading">
+    <div class="global-loader-spinner"></div>
+  </div>
+}

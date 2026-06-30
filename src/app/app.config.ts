@@ -22,6 +22,7 @@ import { routes } from './app.routes';
 import { apiInterceptor } from './core/interceptors/api.interceptor';
 import { authTokenInterceptor } from './core/interceptors/auth-token.interceptor';
 import { httpErrorInterceptor } from './core/interceptors/http-error.interceptor';
+import { loadingInterceptor } from './core/interceptors/loading.interceptor';
 import * as AuthActions from './store/auth/auth.actions';
 
 export const appConfig: ApplicationConfig = {
@@ -31,7 +32,7 @@ export const appConfig: ApplicationConfig = {
     provideCharts(withDefaultRegisterables()),
     provideAnimationsAsync(),
     provideHttpClient(
-      withInterceptors([apiInterceptor, authTokenInterceptor, httpErrorInterceptor])
+      withInterceptors([apiInterceptor, authTokenInterceptor, httpErrorInterceptor, loadingInterceptor])
     ),
     provideClientHydration(withEventReplay()),
     providePrimeNG({

@@ -48,6 +48,21 @@
                 </span>
               </div>
             </div>
+            <!-- Point 10: BL No & Commercial Invoice No -->
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              @if (getBlNo(i, $any(group))) {
+                <div class="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200/60 rounded-lg px-2.5 py-1">
+                  <span class="text-[9px] font-black uppercase tracking-wider text-slate-400">B/L No:</span>
+                  <span class="font-bold text-slate-700">{{ getBlNo(i, $any(group)) }}</span>
+                </div>
+              }
+              @if (getCommercialInvoiceNo(i)) {
+                <div class="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200/60 rounded-lg px-2.5 py-1">
+                  <span class="text-[9px] font-black uppercase tracking-wider text-slate-400">Comm. No:</span>
+                  <span class="font-bold text-slate-700">{{ getCommercialInvoiceNo(i) }}</span>
+                </div>
+              }
+            </div>
             <div class="flex items-center gap-2 shrink-0">
               <button
                 type="button"

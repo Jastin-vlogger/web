@@ -1,7 +1,9 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { SkeletonModule } from 'primeng/skeleton';
+import { MultiSelectModule } from 'primeng/multiselect';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 
 import { PrimaryButtonDirective } from '../../../../shared/directives/button.directive';
@@ -13,10 +15,12 @@ import { RbacService } from '../../../../core/services/rbac.service';
     selector: 'app-shipment-list',
     standalone: true,
     imports: [
-        CommonModule, 
-        PrimaryButtonDirective, 
+        CommonModule,
+        FormsModule,
+        PrimaryButtonDirective,
         RouterLink,
-        SkeletonModule
+        SkeletonModule,
+        MultiSelectModule
     ],
     templateUrl: './shipment-list.component.html',
     styleUrls: ['./shipment-list.component.scss']
@@ -34,6 +38,15 @@ export class ShipmentListComponent implements OnInit {
     totalRecords = signal(0);
     totalPages = signal(0);
     searchQuery = signal('');
+    // Point 3: multi-select status filter (values match the backend computed status strings).
+    selectedStatuses = signal<string[]>([]);
+    readonly statusOptions = [
+        { label: 'On Transit', value: 'On Transit' },
+        { label: 'At Port of Discharge', value: 'At Port of Discharge' },
+        { label: 'Delivered WH', value: 'Delivered WH' },
+        { label: 'ETD Yet To Due', value: 'ETD yet to Due' },
+        { label: 'ETD Yet To Be Confirmed', value: 'ETD yet to be confirmed' },
+    ];
     readonly canCreateShipment = computed(() =>
         this.rbacService.hasPermission('shipment.screen.create_shipment.view')
     );
@@ -53,9 +66,10 @@ export class ShipmentListComponent implements OnInit {
     fetchShipments() {
         this.loading.set(true);
 
+        const statuses = this.selectedStatuses();
         const request$ = this.searchQuery()
-            ? this.shipmentService.searchShipments(this.searchQuery(), this.currentPage(), this.pageSize())
-            : this.shipmentService.getShipments(this.currentPage(), this.pageSize());
+            ? this.shipmentService.searchShipments(this.searchQuery(), this.currentPage(), this.pageSize(), statuses)
+            : this.shipmentService.getShipments(this.currentPage(), this.pageSize(), statuses);
 
         request$.subscribe({
             next: (response) => {
@@ -86,6 +100,12 @@ export class ShipmentListComponent implements OnInit {
 
     clearSearch(): void {
         this.searchQuery.set('');
+        this.currentPage.set(1);
+        this.fetchShipments();
+    }
+
+    onStatusFilterChange(statuses: string[]): void {
+        this.selectedStatuses.set(statuses ?? []);
         this.currentPage.set(1);
         this.fetchShipments();
     }

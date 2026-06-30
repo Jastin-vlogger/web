@@ -64,6 +64,21 @@
                 Shipment No: {{ getShipmentNoLabel(i) }}
               </span>
             </div>
+            <!-- Point 10: BL No & Commercial Invoice No -->
+            <div class="flex flex-wrap items-center gap-2 shrink-0 ml-auto">
+              @if (getBlNo(i)) {
+                <div class="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200/60 rounded-lg px-2.5 py-1">
+                  <span class="text-[9px] font-black uppercase tracking-wider text-slate-400">B/L No:</span>
+                  <span class="font-bold text-slate-700">{{ getBlNo(i) }}</span>
+                </div>
+              }
+              @if (getCommercialInvoiceNo(i)) {
+                <div class="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200/60 rounded-lg px-2.5 py-1">
+                  <span class="text-[9px] font-black uppercase tracking-wider text-slate-400">Comm. No:</span>
+                  <span class="font-bold text-slate-700">{{ getCommercialInvoiceNo(i) }}</span>
+                </div>
+              }
+            </div>
             @if (!isRowSubmitted(i) && hasPendingEditableBulkSections(i)) {
               <button
                 type="button"
@@ -298,10 +313,10 @@
                       </div>
                     </div>
 
-                    <!-- Row 3: Arrival Document -->
+                    <!-- Row 3: Arrival Document (mandatory) + Final Contract Document -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       <div class="flex flex-col gap-1.5">
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Arrival Document</label>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Arrival Document <span class="text-red-500">*</span></label>
                         <div class="flex items-center gap-2">
                           @if (!isLogisticsSectionLocked(i, 'portClearance')) {
                           <button type="button" (click)="arrivalDocInput.click()"
@@ -326,6 +341,39 @@
                               <i class="pi pi-eye"></i>
                             </button>
                             <span class="text-[10px] text-slate-500 truncate">{{ group.get('arrivalDocumentName')?.value || 'Arrival Document' }}</span>
+                          } @else {
+                            <span class="text-[10px] text-amber-600 italic">Required</span>
+                          }
+                        </div>
+                      </div>
+
+                      <!-- Point 17: Final Contract Document -->
+                      <div class="flex flex-col gap-1.5">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Final Contract Document</label>
+                        <div class="flex items-center gap-2">
+                          @if (!isLogisticsSectionLocked(i, 'portClearance')) {
+                          <button type="button" (click)="finalContractDocInput.click()"
+                            class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-600">
+                            <i class="pi pi-upload text-[10px]"></i> Upload
+                          </button>
+                          <input #finalContractDocInput type="file" class="hidden" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" (change)="onFinalContractDocumentSelected($event, i)" />
+                          }
+                          @if (getFinalContractDocumentFile(i)) {
+                            <button type="button" (click)="openDocumentPreview(getFinalContractDocumentFile(i)!, 'Final Contract Document')"
+                              class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0">
+                              <i class="pi pi-eye"></i>
+                            </button>
+                            <span class="text-[10px] text-slate-500 truncate">{{ getFinalContractDocumentFile(i)?.name }}</span>
+                            <button type="button" (click)="clearFinalContractDocumentFile(i)"
+                              class="h-9 w-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 shrink-0">
+                              <i class="pi pi-trash"></i>
+                            </button>
+                          } @else if (group.get('finalContractDocumentUrl')?.value) {
+                            <button type="button" (click)="openRemoteDocumentPreview(group.get('finalContractDocumentUrl')?.value, group.get('finalContractDocumentName')?.value || 'Final Contract Document')"
+                              class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:bg-blue-50 shrink-0">
+                              <i class="pi pi-eye"></i>
+                            </button>
+                            <span class="text-[10px] text-slate-500 truncate">{{ group.get('finalContractDocumentName')?.value || 'Final Contract Document' }}</span>
                           }
                         </div>
                       </div>

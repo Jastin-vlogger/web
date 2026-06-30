@@ -2,10 +2,23 @@
   <!-- Header Section - Stacked on mobile, side-by-side on md+ -->
   <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
     <div class="w-full sm:w-auto">
-      <h1 class="font-bold text-xl md:text-2xl text-slate-900 tracking-tight">Shipments</h1>
+      <h1 class="font-bold text-xl md:text-2xl text-slate-900 tracking-tight">Order</h1>
       <p class="text-slate-500 text-xs md:text-sm">Monitor and manage your active logistics fleet</p>
     </div>
     <div class="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+      <!-- Point 3: multi-select status filter (applied server-side) -->
+      <p-multiSelect
+        [options]="statusOptions"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="selectedStatuses()"
+        (ngModelChange)="onStatusFilterChange($event)"
+        placeholder="Filter status"
+        [showClear]="true"
+        styleClass="w-full sm:w-[260px]"
+        [maxSelectedLabels]="2"
+        selectedItemsLabel="{0} statuses">
+      </p-multiSelect>
       <div class="relative w-full sm:w-[320px]">
         <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
         <input
@@ -25,9 +38,9 @@
         }
       </div>
       @if (canCreateShipment()) {
-        <button appButton routerLink="/shipments/create" class="w-full sm:w-auto shadow-sm" aria-label="Create new shipment">
+        <button appButton routerLink="/shipments/create" class="w-full sm:w-auto shadow-sm" aria-label="Create new order">
           <i class="pi pi-plus-circle mr-2" aria-hidden="true"></i>
-          <span>Create Shipment</span>
+          <span>Create Order</span>
         </button>
       }
     </div>

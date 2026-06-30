@@ -16,7 +16,7 @@
       <div class="rounded-2xl border border-slate-200 overflow-hidden">
         <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-slate-50 border-b border-slate-100">
           <div class="flex flex-wrap items-center gap-2">
-            <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Payment Allocation</span>
+            <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Clearing Advance Process</span>
             <span
               class="inline-flex items-center rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wider"
               [ngClass]="getPaymentApprovalBadgeClasses(singleShipmentIndex!)"
@@ -28,6 +28,8 @@
             </button>
           </div>
           <div class="flex flex-wrap items-center gap-2">
+            <!-- Point 13: hide Generate Report while the clearing advance is still in draft. -->
+            @if (isAllocationSaved(singleShipmentIndex!)) {
             <button
               type="button"
               (click)="generateAllocationReport(singleShipmentIndex!)"
@@ -36,6 +38,7 @@
               <i class="pi pi-file-export"></i>
               Generate Report
             </button>
+            }
             @if (canApproveAllocation(singleShipmentIndex!)) {
               <button
                 type="button"
@@ -111,7 +114,7 @@
             </div>
           }
           <div class="border-t border-slate-100 bg-slate-50/70 px-4 py-3 grid grid-cols-3 gap-3">
-            <div><div class="text-[9px] font-black uppercase tracking-wider text-slate-400">Total Request</div><div class="text-sm font-black text-slate-800">{{ getAllocationTotal(group, 'requestAmount') }}</div></div>
+            <div class="text-center"><div class="text-[9px] font-black uppercase tracking-wider text-slate-400">Total Request</div><div class="text-sm font-black text-slate-800">{{ getAllocationTotal(group, 'requestAmount') }}</div></div>
             <div><div class="text-[9px] font-black uppercase tracking-wider text-slate-400">Total Received</div><div class="text-sm font-black text-slate-800">{{ getAllocationTotal(group, 'paidAmount') }}</div></div>
             <div><div class="text-[9px] font-black uppercase tracking-wider text-amber-700">Difference</div><div class="text-sm font-black text-amber-700">{{ getAllocationDifferenceTotal(group) }}</div></div>
           </div>
@@ -303,7 +306,7 @@
                   [class.text-white]="getActiveTab(i) === 'allocation'"
                   [class.bg-slate-100]="getActiveTab(i) !== 'allocation'"
                   [class.text-slate-500]="getActiveTab(i) !== 'allocation'">
-                  Payment Allocation
+                  Clearing Advance Process
                 </button>
               } @else {
                 <span class="inline-flex items-center rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-amber-700">
@@ -323,7 +326,7 @@
                 </button>
               } @else {
                 <span class="inline-flex items-center rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-amber-700">
-                  Awaiting Payment Allocation Save
+                  Awaiting Clearing Advance Process Save
                 </span>
               }
             </div>
@@ -332,7 +335,7 @@
               <div class="rounded-2xl border border-slate-200 overflow-hidden">
                 <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-slate-50 border-b border-slate-100">
                   <div class="flex flex-wrap items-center gap-2">
-                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Payment Allocation</span>
+                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Clearing Advance Process</span>
                     <span
                       class="inline-flex items-center rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wider"
                       [ngClass]="getPaymentApprovalBadgeClasses(i)"
@@ -344,6 +347,8 @@
                     </button>
                   </div>
                   <div class="flex flex-wrap items-center gap-2">
+                    <!-- Point 13: hide Generate Report while the clearing advance is still in draft. -->
+                    @if (isAllocationSaved(i)) {
                     <button
                       type="button"
                       (click)="generateAllocationReport(i)"
@@ -352,6 +357,7 @@
                       <i class="pi pi-file-export"></i>
                       Generate Report
                     </button>
+                    }
                     @if (canApproveAllocation(i)) {
                       <button
                         type="button"
@@ -427,7 +433,7 @@
                     </div>
                   }
                   <div class="border-t border-slate-100 bg-slate-50/70 px-4 py-3 grid grid-cols-3 gap-3">
-                    <div><div class="text-[9px] font-black uppercase tracking-wider text-slate-400">Total Request</div><div class="text-sm font-black text-slate-800">{{ getAllocationTotal(group, 'requestAmount') }}</div></div>
+                    <div class="text-center"><div class="text-[9px] font-black uppercase tracking-wider text-slate-400">Total Request</div><div class="text-sm font-black text-slate-800">{{ getAllocationTotal(group, 'requestAmount') }}</div></div>
                     <div><div class="text-[9px] font-black uppercase tracking-wider text-slate-400">Total Received</div><div class="text-sm font-black text-slate-800">{{ getAllocationTotal(group, 'paidAmount') }}</div></div>
                     <div><div class="text-[9px] font-black uppercase tracking-wider text-amber-700">Difference</div><div class="text-sm font-black text-amber-700">{{ getAllocationDifferenceTotal(group) }}</div></div>
                   </div>
@@ -817,7 +823,7 @@
 </p-dialog>
 
 
-<!-- Payment Allocation per-row edit modal -->
+<!-- Clearing Advance Process per-row edit modal -->
 @if (allocationRowEditVisible()) {
   @let ctx = allocationRowEditCtx();
   @let row = getEditingAllocationRow();
@@ -826,7 +832,7 @@
     @let ri = ctx.rowIndex;
     @let editable = isAllocationRowEditable(si);
     <p-dialog
-      [header]="(editable ? 'Edit' : 'View') + ' Payment Allocation Row'"
+      [header]="(editable ? 'Edit' : 'View') + ' Clearing Advance Process Row'"
       [visible]="allocationRowEditVisible()"
       (visibleChange)="allocationRowEditVisible.set($event)"
       (onHide)="cancelAllocationRowEdit()"
@@ -875,12 +881,12 @@
               <button type="button" (click)="clickAllocationAttachmentUpload(si, ri)" class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-600"><i class="pi pi-upload text-[10px]"></i> Upload</button>
             }
             @if (getAllocationAttachmentFile(si, ri)) {
-              <button type="button" (click)="openDocumentPreview(getAllocationAttachmentFile(si, ri)!, 'Payment Allocation Attachment')" class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 inline-flex items-center justify-center"><i class="pi pi-eye text-[10px]"></i></button>
+              <button type="button" (click)="openDocumentPreview(getAllocationAttachmentFile(si, ri)!, 'Clearing Advance Process Attachment')" class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 inline-flex items-center justify-center"><i class="pi pi-eye text-[10px]"></i></button>
               @if (editable) {
                 <button type="button" (click)="clearAllocationAttachmentFile(si, ri)" class="h-9 w-9 rounded-lg border border-red-100 bg-red-50 text-red-500 hover:bg-red-100 inline-flex items-center justify-center"><i class="pi pi-trash text-[10px]"></i></button>
               }
             } @else if (row.get('attachmentDocumentUrl')?.value) {
-              <button type="button" (click)="openRemoteDocumentPreview(row.get('attachmentDocumentUrl')?.value, row.get('attachmentDocumentName')?.value || 'Payment Allocation Attachment')" class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 inline-flex items-center justify-center"><i class="pi pi-eye text-[10px]"></i></button>
+              <button type="button" (click)="openRemoteDocumentPreview(row.get('attachmentDocumentUrl')?.value, row.get('attachmentDocumentName')?.value || 'Clearing Advance Process Attachment')" class="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 inline-flex items-center justify-center"><i class="pi pi-eye text-[10px]"></i></button>
             }
           </div>
           @if (getAllocationAttachmentFile(si, ri)) {

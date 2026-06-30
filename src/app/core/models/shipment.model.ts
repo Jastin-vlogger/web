@@ -30,6 +30,31 @@ export interface ShipmentListResponse {
   shipments: Shipment[];
 }
 
+/** Point 4: one row per individual shipment (split/container) across all LPOs. */
+export interface FlatShipmentRow {
+  shipmentId: string;
+  parentId: string;
+  childIndex: number;
+  shipmentNo: string;
+  orderNumber?: string;
+  orderDate: string;
+  supplier: string | null;
+  description: string | null;
+  blNo: string;
+  commercialInvoiceNo: string;
+  buyingQty: number;
+  fcl: number;
+  status: string;
+}
+
+export interface FlatShipmentListResponse {
+  page: number;
+  limit: number;
+  totalPages: number;
+  totalRecords: number;
+  shipments: FlatShipmentRow[];
+}
+
 export interface ShipmentReportExportChildRow {
   rowType: 'child';
   shipmentNo: string;
@@ -331,6 +356,12 @@ export interface DashboardShippingStatusOrder {
 export interface DashboardShippingStatusMetric {
   label: string;
   value: number;
+  /** Count of records in this status bucket (same as value); shown in the Quantity column. */
+  quantity?: number;
+  /** Summed Full Container Load count across the bucket. */
+  fcl?: number;
+  /** Summed buying quantity in metric tonnes across the bucket. */
+  mt?: number;
   permissionKey?: string;
 }
 
