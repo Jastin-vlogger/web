@@ -347,6 +347,26 @@ export class ShipmentBlDetailsComponent {
     });
   }
 
+  /**
+   * Resolves the saved destination warehouse(s), falling back to the unique warehouses on
+   * `storageAllocationSplits` so a saved single-item allocation renders after refresh even if
+   * `warehousesSelected` wasn't persisted.
+   */
+  private deriveStorageWarehousesSelected(actual: any): string[] {
+    const fromDecision = actual?.storageAllocationDecision?.warehousesSelected;
+    if (Array.isArray(fromDecision) && fromDecision.length) {
+      return fromDecision;
+    }
+    const splits = Array.isArray(actual?.storageAllocationSplits) ? actual.storageAllocationSplits : [];
+    return [
+      ...new Set(
+        splits
+          .map((split: any) => String(split?.warehouse || '').trim())
+          .filter((warehouse: string) => warehouse.length > 0)
+      ),
+    ] as string[];
+  }
+
   private patchStorageAllocationsFromActual(index: number, actual: any): void {
     const row = this.formArray.at(index);
     if (!row || !actual) return;
@@ -374,7 +394,7 @@ export class ShipmentBlDetailsComponent {
         splitQuantity: Number(savedDecision.splitQuantity ?? actual.storageAllocationSplits?.length ?? 1) || 1,
         singleItem: savedDecision.singleItem ?? true,
         allocateSameWarehouse: savedDecision.allocateSameWarehouse ?? true,
-        warehousesSelected: savedDecision.warehousesSelected || [],
+        warehousesSelected: this.deriveStorageWarehousesSelected(actual),
         itemAllocations: savedDecision.itemAllocations || [],
       }, { emitEvent: false });
       this.syncItemAllocations(index);
@@ -669,8 +689,28 @@ export class ShipmentBlDetailsComponent {
       actual.lockedLogisticsSections.includes('transportation');
   }
 
+  /**
+   * Storage arrival has been recorded on any split (received date/time, GRN, batch,
+   * production/expiry date, or a document) — after this point the allocation is locked.
+   */
+  isStorageArrived(index: number): boolean {
+    const actual = this.getActualShipment(index);
+    const rows = Array.isArray(actual?.storageSplits) ? actual.storageSplits : [];
+    return rows.some((row: any) =>
+      !!row?.receivedOnDate ||
+      String(row?.receivedOnTime || '').trim().length > 0 ||
+      String(row?.grn || '').trim().length > 0 ||
+      String(row?.batch || '').trim().length > 0 ||
+      !!row?.productionDate ||
+      !!row?.expiryDate ||
+      String(row?.documentUrl || '').trim().length > 0
+    );
+  }
+
   isStorageAllocationFrozen(index: number): boolean {
-    return this.isStorageAllocationsApproved(index) || this.isTransportationArranged(index);
+    // Allow edits even after approval — only freeze once transportation is arranged or
+    // the storage has physically arrived (so an approved allocation stays editable).
+    return this.isStorageArrived(index) || this.isTransportationArranged(index);
   }
 
   isStorageAllocationHasSavedData(index: number): boolean {
@@ -1074,6 +1114,21 @@ export class ShipmentBlDetailsComponent {
   getWarehouseCount(group: AbstractControl): number {
     const decision = this.getStorageDecision(group);
     return Array.isArray(decision.get('warehousesSelected')?.value) ? decision.get('warehousesSelected')?.value.length : 0;
+  }
+
+  /**
+   * Warehouse options for the destination dropdown, guaranteed to include the currently
+   * selected warehouse value(s). Otherwise a saved warehouse that is now inactive/renamed —
+   * or that loaded before the options list — has no matching option and the dropdown shows
+   * its placeholder instead of the saved selection.
+   */
+  getWarehouseOptionsForRow(group: AbstractControl): Array<{ label: string; value: string }> {
+    const base = this.warehouseOptions();
+    const selected: string[] = this.getStorageDecision(group).get('warehousesSelected')?.value || [];
+    const missing = selected
+      .filter((value) => value && !base.some((option) => option.value === value))
+      .map((value) => ({ label: value, value }));
+    return missing.length ? [...base, ...missing] : base;
   }
 
   getItemAllocationTotal(itemRow: any): number {

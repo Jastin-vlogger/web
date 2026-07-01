@@ -32,12 +32,13 @@
             </div>
         </header>
 
-        <!-- 1st Block: Status Snapshot & Shipment Status as of the date -->
-        @if (canViewDashboardSection('dashboard.section.status_snapshot.view') || canViewDashboardSection('dashboard.section.shipment_status_chart.view')) {
-        <section class="flex flex-col gap-6 mb-6">
-            <!-- Status Snapshot (full width, stacked above the chart) -->
+        <!-- Top row: Status Snapshot (3/4) + FAS right rail (1/4) -->
+        @if (canViewDashboardSection('dashboard.section.status_snapshot.view') || canViewDashboardSection('dashboard.section.fas_chart.view')) {
+        <section class="grid grid-cols-1 xl:grid-cols-4 gap-6 mb-6">
+            <!-- Status Snapshot -->
             @if (canViewDashboardSection('dashboard.section.status_snapshot.view')) {
-                <article class="status-panel border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm w-full">
+                <article class="status-panel border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm"
+                    [ngClass]="canViewDashboardSection('dashboard.section.fas_chart.view') ? 'xl:col-span-3' : 'xl:col-span-4'">
                     <div class="status-panel-title bg-slate-50/50 py-3 px-6 border-b border-slate-100 font-bold text-slate-700">Status Snapshot</div>
                     <div class="p-3 flex-1 overflow-x-auto">
                         <table class="w-full border-collapse">
@@ -71,8 +72,83 @@
                 </article>
             }
 
-            <!-- Shipment Status chart (full width, below the snapshot) -->
-            @if (canViewDashboardSection('dashboard.section.shipment_status_chart.view')) {
+            <!-- FAS right rail: Documents by Receiver Type, Provider Wise, Pending cards -->
+            @if (canViewDashboardSection('dashboard.section.fas_chart.view')) {
+            <div class="flex flex-col gap-6"
+                [ngClass]="canViewDashboardSection('dashboard.section.status_snapshot.view') ? 'xl:col-span-1' : 'xl:col-span-4'">
+                <!-- Documents by Receiver Type -->
+                <article class="sl-panel flex flex-col gap-4 p-5 bg-white border border-slate-200 rounded-xl shadow-sm">
+                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Documents by Receiver Type</h4>
+                    <div class="relative h-36 flex items-center justify-center">
+                        <canvas baseChart [data]="fasReceiverTypeChartConfig()" [options]="doughnutChartOptions" [type]="'doughnut'"></canvas>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span class="text-xl font-black text-slate-800">{{ dashboard()?.fasDashboard?.receiverType?.total ?? 0 }}</span>
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-1.5 mt-2">
+                        <div class="flex items-center justify-between text-xs text-slate-600">
+                            <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>Bank Receiver</span>
+                            <span class="font-bold text-slate-800">{{ dashboard()?.fasDashboard?.receiverType?.bank ?? 0 }}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-xs text-slate-600">
+                            <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-blue-500"></span>Direct Receiver</span>
+                            <span class="font-bold text-slate-800">{{ dashboard()?.fasDashboard?.receiverType?.direct ?? 0 }}</span>
+                        </div>
+                    </div>
+                </article>
+                <!-- Provider Wise Documents -->
+                <article class="sl-panel flex flex-col gap-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Provider Wise Documents</h4>
+                    <div class="relative h-[110px] w-full">
+                        <canvas baseChart [data]="fasProviderWiseChartConfig()" [options]="horizontalBarChartOptions" [type]="'bar'"></canvas>
+                    </div>
+                </article>
+                <!-- Pending cards -->
+                <a routerLink="/shipments" [queryParams]="{ stage: 'document_tracker' }" class="flex items-center justify-between p-4 bg-emerald-50/50 hover:bg-emerald-50 border border-emerald-100 rounded-xl transition-all shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500 text-white shadow-sm">
+                            <i class="pi pi-wallet text-sm"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Pending Payment Requested</span>
+                            <strong class="text-xl font-black text-slate-800 leading-none mt-1">{{ dashboard()?.fasDashboard?.pendingPaymentRequested ?? 0 }}</strong>
+                        </div>
+                    </div>
+                    <i class="pi pi-chevron-right text-slate-400 text-xs"></i>
+                </a>
+                <a routerLink="/shipments" [queryParams]="{ stage: 'payment_costing' }" class="flex items-center justify-between p-4 bg-amber-50/50 hover:bg-amber-50 border border-amber-100 rounded-xl transition-all shadow-sm">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm">
+                            <i class="pi pi-calculator text-sm"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Payment Allocation Pending</span>
+                            <strong class="text-xl font-black text-slate-800 leading-none mt-1">{{ dashboard()?.fasDashboard?.paymentAllocationPending ?? 0 }}</strong>
+                        </div>
+                    </div>
+                    <i class="pi pi-chevron-right text-slate-400 text-xs"></i>
+                </a>
+            </div>
+            }
+        </section>
+        }
+
+        <!-- Document Stage Overview (Bank Receiver Only) — full width -->
+        @if (canViewDashboardSection('dashboard.section.fas_chart.view')) {
+        <section class="mb-6">
+            <article class="sl-panel flex flex-col gap-4 p-5 bg-white border border-slate-200 rounded-xl shadow-sm w-full">
+                <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Document Stage Overview (Bank Receiver Only)</h4>
+                <div class="relative h-[300px] w-full">
+                    <canvas baseChart [data]="fasStageOverviewChartConfig()" [options]="horizontalStackedBarChartOptions" [type]="'bar'"></canvas>
+                </div>
+            </article>
+        </section>
+        }
+
+        <!-- Shipment Status as of the date — full width -->
+        @if (canViewDashboardSection('dashboard.section.shipment_status_chart.view')) {
+        <section class="mb-6">
             <article class="sl-panel flex flex-col p-6 bg-white border border-slate-200 rounded-xl shadow-sm w-full">
                 @if (statusPivot(); as pivot) {
                     <div class="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -108,82 +184,7 @@
                     <div class="flex h-[320px] items-center justify-center text-slate-400">No shipment status data available.</div>
                 }
             </article>
-            }
         </section>
-        }
-
-        <!-- 2nd Block: FAS Section (4-chart / cards layout) -->
-        @if (canViewDashboardSection('dashboard.section.fas_chart.view')) {
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-6">
-            <!-- Card 1: Documents by Receiver Type -->
-            <article class="sl-panel flex flex-col gap-4 p-5 bg-white border border-slate-200 rounded-xl shadow-sm">
-                <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Documents by Receiver Type</h4>
-                <div class="relative h-36 flex items-center justify-center">
-                    <canvas baseChart [data]="fasReceiverTypeChartConfig()" [options]="doughnutChartOptions" [type]="'doughnut'"></canvas>
-                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span class="text-xl font-black text-slate-800">{{ dashboard()?.fasDashboard?.receiverType?.total ?? 0 }}</span>
-                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total</span>
-                    </div>
-                </div>
-                <div class="flex flex-col gap-1.5 mt-2">
-                    <div class="flex items-center justify-between text-xs text-slate-600">
-                        <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>Bank Receiver</span>
-                        <span class="font-bold text-slate-800">{{ dashboard()?.fasDashboard?.receiverType?.bank ?? 0 }}</span>
-                    </div>
-                    <div class="flex items-center justify-between text-xs text-slate-600">
-                        <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-blue-500"></span>Direct Receiver</span>
-                        <span class="font-bold text-slate-800">{{ dashboard()?.fasDashboard?.receiverType?.direct ?? 0 }}</span>
-                    </div>
-                </div>
-            </article>
-
-            <!-- Card 3: Document Stage Overview (Bank Receiver Only) -->
-            <article class="sl-panel flex flex-col gap-4 p-5 bg-white border border-slate-200 rounded-xl shadow-sm xl:col-span-2">
-                <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Document Stage Overview (Bank Receiver Only)</h4>
-                <div class="relative h-[240px] w-full">
-                    <canvas baseChart [data]="fasStageOverviewChartConfig()" [options]="horizontalStackedBarChartOptions" [type]="'bar'"></canvas>
-                </div>
-            </article>
-
-            <!-- Card 4: Provider Wise Documents & Pending cards -->
-            <div class="flex flex-col gap-5 xl:col-span-1 justify-between">
-                <!-- Provider Wise chart -->
-                <article class="sl-panel flex flex-col gap-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm flex-1">
-                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Provider Wise Documents</h4>
-                    <div class="relative h-[110px] w-full">
-                        <canvas baseChart [data]="fasProviderWiseChartConfig()" [options]="horizontalBarChartOptions" [type]="'bar'"></canvas>
-                    </div>
-                </article>
-
-                <!-- Pending Approvals cards -->
-                <div class="flex flex-col gap-3">
-                    <a routerLink="/shipments" [queryParams]="{ stage: 'document_tracker' }" class="flex items-center justify-between p-4 bg-emerald-50/50 hover:bg-emerald-50 border border-emerald-100 rounded-xl transition-all shadow-sm">
-                        <div class="flex items-center gap-3">
-                            <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500 text-white shadow-sm">
-                                <i class="pi pi-wallet text-sm"></i>
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Pending Payment Requested</span>
-                                <strong class="text-xl font-black text-slate-800 leading-none mt-1">{{ dashboard()?.fasDashboard?.pendingPaymentRequested ?? 0 }}</strong>
-                            </div>
-                        </div>
-                        <i class="pi pi-chevron-right text-slate-400 text-xs"></i>
-                    </a>
-                    <a routerLink="/shipments" [queryParams]="{ stage: 'payment_costing' }" class="flex items-center justify-between p-4 bg-amber-50/50 hover:bg-amber-50 border border-amber-100 rounded-xl transition-all shadow-sm">
-                        <div class="flex items-center gap-3">
-                            <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm">
-                                <i class="pi pi-calculator text-sm"></i>
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Payment Allocation Pending</span>
-                                <strong class="text-xl font-black text-slate-800 leading-none mt-1">{{ dashboard()?.fasDashboard?.paymentAllocationPending ?? 0 }}</strong>
-                            </div>
-                        </div>
-                        <i class="pi pi-chevron-right text-slate-400 text-xs"></i>
-                    </a>
-                </div>
-            </div>
-        </div>
         }
 
         <!-- Storekeeper Dashboard -->
@@ -382,12 +383,12 @@
         </section>
         }
 
-        <!-- 3rd Block: Logistics -->
+        <!-- 3rd Block: Logistics (full width) -->
         @if (canViewDashboardSection('dashboard.section.logistics_chart.view')) {
-        <section class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <section class="mb-6">
             <!-- Logistics — Clearance Advance -->
             @if (canViewDashboardSection('dashboard.section.logistics_chart.view')) {
-            <article class="sl-panel flex flex-col gap-5 p-6 bg-white border border-slate-200 rounded-xl shadow-sm">
+            <article class="sl-panel flex flex-col gap-5 p-6 bg-white border border-slate-200 rounded-xl shadow-sm w-full">
                 <div class="flex items-center gap-3">
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
                         <i class="pi pi-truck"></i>

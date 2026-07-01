@@ -1521,6 +1521,29 @@ export class ShipmentFormComponent implements OnDestroy {
     }
   }
 
+  /**
+   * Resolves the saved destination warehouse(s) for the storage-allocation decision.
+   * Prefers `storageAllocationDecision.warehousesSelected`, but falls back to the unique
+   * warehouses stored on `storageAllocationSplits` so a saved single-item allocation still
+   * renders after a refresh even if `warehousesSelected` wasn't persisted.
+   */
+  private deriveStorageWarehousesSelected(actualData?: any): string[] {
+    const fromDecision = (actualData as any)?.storageAllocationDecision?.warehousesSelected;
+    if (Array.isArray(fromDecision) && fromDecision.length) {
+      return fromDecision;
+    }
+    const splits = Array.isArray((actualData as any)?.storageAllocationSplits)
+      ? (actualData as any).storageAllocationSplits
+      : [];
+    return [
+      ...new Set(
+        splits
+          .map((split: any) => String(split?.warehouse || '').trim())
+          .filter((warehouse: string) => warehouse.length > 0)
+      ),
+    ] as string[];
+  }
+
   private createBlDetailsGroup(
     plannedContainer?: any,
     actualData?: any,
@@ -1602,7 +1625,7 @@ export class ShipmentFormComponent implements OnDestroy {
         ],
         singleItem: [(actualData as any)?.storageAllocationDecision?.singleItem ?? true],
         allocateSameWarehouse: [(actualData as any)?.storageAllocationDecision?.allocateSameWarehouse ?? true],
-        warehousesSelected: [(actualData as any)?.storageAllocationDecision?.warehousesSelected || []],
+        warehousesSelected: [this.deriveStorageWarehousesSelected(actualData)],
         itemAllocations: [(actualData as any)?.storageAllocationDecision?.itemAllocations || []],
       }),
       storageAllocationSplits: this.createStorageAllocationSplitRows(

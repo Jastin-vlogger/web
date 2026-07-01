@@ -775,21 +775,21 @@
                         <div class="rounded-xl border border-slate-200 bg-white px-4 py-3 flex flex-col gap-1.5">
                           <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Destination Warehouse(s)</div>
                           @if (getStorageDecision(group).get('allocateSameWarehouse')?.value) {
-                            <p-select 
-                              [options]="warehouseOptions()" 
-                              optionLabel="label" 
-                              optionValue="value" 
-                              placeholder="Select Warehouse" 
+                            <p-select
+                              [options]="getWarehouseOptionsForRow(group)"
+                              optionLabel="label"
+                              optionValue="value"
+                              placeholder="Select Warehouse"
                               styleClass="w-full"
                               appendTo="body"
-                              [ngModel]="getStorageDecision(group).get('warehousesSelected')?.value?.[0]" 
-                              [ngModelOptions]="{standalone: true}" 
+                              [ngModel]="getStorageDecision(group).get('warehousesSelected')?.value?.[0]"
+                              [ngModelOptions]="{standalone: true}"
                               (onChange)="onWarehouseSelectedChange(group, $event.value, i)">
                             </p-select>
                           } @else {
                             <p-multiselect
                               formControlName="warehousesSelected"
-                              [options]="warehouseOptions()"
+                              [options]="getWarehouseOptionsForRow(group)"
                               optionLabel="label"
                               optionValue="value"
                               placeholder="Select Warehouses"
