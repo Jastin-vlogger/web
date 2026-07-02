@@ -341,14 +341,16 @@
                           <i class="pi pi-pencil"></i>
                         </button>
                       }
-                      <button
-                        type="button"
-                        (click)="generateCostSheetReport(i)"
-                        class="rbac-allow-interaction inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 text-[10px] font-black uppercase tracking-wider text-blue-600 hover:bg-blue-100"
-                      >
-                        <i class="pi pi-file-export text-[10px]"></i>
-                        Generate Report
-                      </button>
+                      @if (isCostSheetSaved(i)) {
+                        <button
+                          type="button"
+                          (click)="generateCostSheetReport(i)"
+                          class="rbac-allow-interaction inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 text-[10px] font-black uppercase tracking-wider text-blue-600 hover:bg-blue-100"
+                        >
+                          <i class="pi pi-file-export text-[10px]"></i>
+                          Generate Report
+                        </button>
+                      }
                       @if (canCreateAdditionalClearingRequest(i)) {
                         <button
                           type="button"
