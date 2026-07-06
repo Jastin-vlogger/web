@@ -105,10 +105,10 @@
             <!-- ===== STORAGE ALLOCATION TABLE ===== -->
             @if (getShipmentTab(i) === 'allocation') {
               <div class="storage-allocation-shell rounded-xl border border-slate-200 overflow-hidden">
-                <div class="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200">
-                  <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Storage Allocation</span>
+                <div class="flex items-center justify-between px-5 py-4 bg-slate-50 border-b border-slate-200">
+                  <span class="text-sm font-black text-slate-500 uppercase tracking-wider">Storage Allocation</span>
                   <span
-                    class="inline-flex items-center rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wider"
+                    class="inline-flex items-center rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider"
                     [class.bg-emerald-50]="getStorageAllocationApprovalStatus(i) === 'approved'"
                     [class.text-emerald-600]="getStorageAllocationApprovalStatus(i) === 'approved'"
                     [class.bg-amber-50]="getStorageAllocationApprovalStatus(i) === 'pending_warehouse_manager'"
@@ -123,41 +123,89 @@
                 @let decision = getAllocationDecision(i);
                 @let splits = getAllocationSplits(i);
                 @if (decision) {
-                  <div class="px-4 py-3 border-b border-slate-100 bg-white">
-                    <div class="flex flex-wrap gap-2 mb-3">
-                      <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold"
+                  <div class="px-5 py-4 border-b border-slate-100 bg-white flex flex-col gap-4">
+                    <div class="flex flex-wrap gap-2.5">
+                      <span class="inline-flex items-center rounded-full px-3.5 py-1.5 text-xs font-semibold"
                         [class.bg-sky-50]="decision.singleItem" [class.text-sky-700]="decision.singleItem"
                         [class.bg-violet-50]="!decision.singleItem" [class.text-violet-700]="!decision.singleItem">
                         {{ decision.singleItem ? 'Single Item' : 'Multiple Items' }}
                       </span>
-                      <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold"
+                      <span class="inline-flex items-center rounded-full px-3.5 py-1.5 text-xs font-semibold"
                         [class.bg-emerald-50]="decision.allocateSameWarehouse" [class.text-emerald-700]="decision.allocateSameWarehouse"
                         [class.bg-orange-50]="!decision.allocateSameWarehouse" [class.text-orange-700]="!decision.allocateSameWarehouse">
                         {{ decision.allocateSameWarehouse ? 'Same Warehouse' : 'Split Warehouses' }}
                       </span>
                       @if (decision.warehousesSelected?.length) {
                         @for (wh of decision.warehousesSelected; track $index) {
-                          <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-medium text-slate-600">{{ wh }}</span>
+                          <span class="inline-flex items-center rounded-full bg-slate-100 px-3.5 py-1.5 text-xs font-medium text-slate-600">{{ wh }}</span>
                         }
                       }
                     </div>
+
+                    <!-- Per-item / per-warehouse container-count breakdown -->
+                    @if (decision.itemAllocations?.length) {
+                      <div class="flex flex-col gap-3">
+                        @for (item of decision.itemAllocations; track $index; let itemIdx = $index) {
+                          <div class="rounded-xl border border-slate-200 overflow-hidden">
+                            <button
+                              type="button"
+                              (click)="toggleAllocationItem(i, itemIdx)"
+                              class="w-full flex items-center justify-between gap-4 px-4 py-3.5 bg-slate-50 hover:bg-slate-100 transition-colors"
+                            >
+                              <div class="flex items-center gap-2.5 min-w-0">
+                                <i class="pi pi-box text-slate-400 text-sm shrink-0"></i>
+                                <span class="text-sm font-bold text-slate-700 truncate">{{ item.itemName || ('Item ' + (itemIdx + 1)) }}</span>
+                              </div>
+                              <div class="flex items-center gap-3 shrink-0">
+                                <div class="hidden sm:block h-2 w-24 rounded-full bg-slate-200 overflow-hidden">
+                                  <div class="h-full bg-blue-500" [style.width.%]="getAllocationProgressPct(item)"></div>
+                                </div>
+                                <span class="text-xs font-black uppercase tracking-wider"
+                                  [class.text-emerald-600]="getAllocationProgressPct(item) >= 100"
+                                  [class.text-slate-500]="getAllocationProgressPct(item) < 100">
+                                  {{ getAllocatedContainerCount(item) }} / {{ item.expectedContainers || 0 }} containers
+                                </span>
+                                <i class="pi text-slate-400 text-xs" [class.pi-chevron-down]="!isAllocationItemExpanded(i, itemIdx)" [class.pi-chevron-up]="isAllocationItemExpanded(i, itemIdx)"></i>
+                              </div>
+                            </button>
+                            @if (isAllocationItemExpanded(i, itemIdx)) {
+                              <div class="flex flex-wrap gap-3 px-4 py-3.5 bg-white border-t border-slate-100">
+                                @for (a of item.allocations; track $index) {
+                                  <div class="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-2.5 min-w-[190px]">
+                                    <i class="pi pi-warehouse text-sm text-blue-500 shrink-0"></i>
+                                    <div class="flex flex-col leading-tight min-w-0">
+                                      <span class="text-[11px] font-black uppercase tracking-wider text-slate-400 truncate">{{ a.warehouse || 'Unassigned' }}</span>
+                                      <span class="text-base font-bold text-slate-800">{{ a.containersAssigned || 0 }} <span class="text-sm font-medium text-slate-400">container(s)</span></span>
+                                    </div>
+                                  </div>
+                                }
+                                @if (!item.allocations?.length) {
+                                  <span class="text-sm text-slate-400 italic py-1">No warehouse allocated yet.</span>
+                                }
+                              </div>
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
+
                     @if (splits.length > 0) {
-                      <table class="w-full text-xs border border-slate-200 rounded-lg overflow-hidden">
+                      <table class="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
                         <thead>
                           <tr class="bg-slate-50">
-                            <th class="px-3 py-2 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider w-10">#</th>
-                            <th class="px-3 py-2 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider">Item</th>
-                            <th class="px-3 py-2 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider w-32">Qty / Containers</th>
-                            <th class="px-3 py-2 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider">Warehouse</th>
+                            <th class="px-4 py-3 text-left text-[11px] font-black text-slate-400 uppercase tracking-wider w-12">#</th>
+                            <th class="px-4 py-3 text-left text-[11px] font-black text-slate-400 uppercase tracking-wider">Item</th>
+                            <th class="px-4 py-3 text-left text-[11px] font-black text-slate-400 uppercase tracking-wider w-36">Qty / Containers</th>
+                            <th class="px-4 py-3 text-left text-[11px] font-black text-slate-400 uppercase tracking-wider">Warehouse</th>
                           </tr>
                         </thead>
                         <tbody>
                           @for (split of splits; track $index) {
                             <tr class="border-t border-slate-100">
-                              <td class="px-3 py-2 text-slate-500 font-semibold">{{ split.sn || $index + 1 }}</td>
-                              <td class="px-3 py-2 text-slate-700">{{ split.itemName || '–' }}</td>
-                              <td class="px-3 py-2 text-slate-700">{{ split.quantity ?? '–' }}</td>
-                              <td class="px-3 py-2 font-medium text-slate-800">{{ split.warehouse || '–' }}</td>
+                              <td class="px-4 py-3 text-slate-500 font-semibold">{{ split.sn || $index + 1 }}</td>
+                              <td class="px-4 py-3 text-slate-700">{{ split.itemName || '–' }}</td>
+                              <td class="px-4 py-3 text-slate-700">{{ split.quantity ?? '–' }}</td>
+                              <td class="px-4 py-3 font-medium text-slate-800">{{ split.warehouse || '–' }}</td>
                             </tr>
                           }
                         </tbody>
@@ -167,7 +215,7 @@
                 }
 
                 @if (!decision) {
-                  <div class="px-4 py-8 text-center text-xs text-slate-400 italic">
+                  <div class="px-5 py-10 text-center text-sm text-slate-400 italic">
                     No storage allocation saved yet.
                   </div>
                 }

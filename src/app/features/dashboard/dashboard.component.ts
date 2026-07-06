@@ -484,15 +484,19 @@ export class DashboardComponent implements OnInit {
 
   readonly fasProviderWiseChartConfig = computed<ChartData<'bar'>>(() => {
     const p = this.dashboard()?.fasDashboard?.providerWise || {};
-    const labels = ['DHL', 'Aramex', 'UPS', 'TNT'];
-    const data = [p.DHL ?? 0, p.Aramex ?? 0, p.UPS ?? 0, p.TNT ?? 0];
-    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+    const allProviders = [
+      { label: 'DHL', value: p.DHL ?? 0, color: '#3b82f6' },
+      { label: 'Aramex', value: p.Aramex ?? 0, color: '#10b981' },
+      { label: 'UPS', value: p.UPS ?? 0, color: '#f59e0b' },
+      { label: 'TNT', value: p.TNT ?? 0, color: '#ef4444' },
+    ];
+    const providers = allProviders.filter((provider) => provider.value > 0);
     return {
-      labels,
+      labels: providers.map((provider) => provider.label),
       datasets: [
         {
-          data,
-          backgroundColor: colors
+          data: providers.map((provider) => provider.value),
+          backgroundColor: providers.map((provider) => provider.color)
         }
       ]
     };

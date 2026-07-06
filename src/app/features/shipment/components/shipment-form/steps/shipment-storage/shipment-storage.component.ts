@@ -114,6 +114,7 @@ export class ShipmentStorageComponent {
   readonly activeTabs = signal<Record<string, 'allocation' | 'arrival'>>({});
   readonly openAccordionPanels = signal<string[]>([]);
   readonly expandedContainers = signal<Record<number, boolean>>({});
+  readonly expandedAllocationItems = signal<Record<string, boolean>>({});
   readonly savingRowKey = signal<string | null>(null);
   readonly rowFiles = signal<Record<string, File | null>>({});
   readonly globalFiles = signal<Record<number, File | null>>({});
@@ -213,6 +214,26 @@ export class ShipmentStorageComponent {
 
   getAllocationSplits(index: number): any[] {
     return this.getActualRow(index)?.storageAllocationSplits || [];
+  }
+
+  // ===== Per-item / per-warehouse container-count breakdown (Storage Allocation summary) =====
+  toggleAllocationItem(shipmentIndex: number, itemIndex: number): void {
+    const key = `${shipmentIndex}-${itemIndex}`;
+    this.expandedAllocationItems.update((current) => ({ ...current, [key]: !current[key] }));
+  }
+
+  isAllocationItemExpanded(shipmentIndex: number, itemIndex: number): boolean {
+    return !!this.expandedAllocationItems()[`${shipmentIndex}-${itemIndex}`];
+  }
+
+  getAllocatedContainerCount(item: { allocations?: Array<{ containersAssigned?: number }> }): number {
+    return (item?.allocations || []).reduce((sum, a) => sum + (Number(a?.containersAssigned) || 0), 0);
+  }
+
+  getAllocationProgressPct(item: { expectedContainers?: number; allocations?: Array<{ containersAssigned?: number }> }): number {
+    const expected = Number(item?.expectedContainers) || 0;
+    if (!expected) return 0;
+    return Math.min(100, Math.round((this.getAllocatedContainerCount(item) / expected) * 100));
   }
 
   private applyActualOverride(index: number, actual: any): void {

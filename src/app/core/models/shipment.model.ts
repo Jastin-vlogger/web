@@ -45,6 +45,78 @@ export interface FlatShipmentRow {
   buyingQty: number;
   fcl: number;
   status: string;
+  // ===== Full-detail export columns, matching the "Final Data.xlsx" reference format =====
+  // Purchase Department
+  itemCode?: string;
+  commodity?: string;
+  brandName?: string;
+  packing?: string;
+  variant?: string;
+  barcode?: string;
+  countryOfOrigin?: string;
+  hsCode?: string;
+  bags?: number;
+  pallet?: number;
+  portOfLoading?: string;
+  portOfDischarge?: string;
+  bankName?: string;
+  incoterms?: string;
+  etd?: string | null;
+  eta?: string | null;
+  shipOnBoardDate?: string | null;
+  shippingLine?: string;
+  noOfContainers?: number | string;
+  freeDetentionDays?: number | string;
+  maximumDetentionDays?: number | string;
+  shipmentArrived?: string;
+  courierTrackNo?: string;
+  provider?: string;
+  receiver?: string;
+  expectedDocDate?: string | null;
+  arrivalDocumentReceived?: string;
+  // Logistics Department (Clearing Advance request)
+  clearingAdvanceRequestDate?: string | null;
+  clearingAdvanceAmount?: number;
+  // FAS Department (Clearing Advance approval)
+  clearingAdvanceApprovedDate?: string | null;
+  chequeNo?: string;
+  chequeDate?: string | null;
+  // Warehouse Department (Warehouse Manager)
+  storageAllocationDate?: string | null;
+  allocateSameWarehouse?: string;
+  destinationWarehouses?: string;
+  // FAS Department (Bank / Murabaha submission)
+  daSubmittedToBank?: string;
+  submissionDate?: string | null;
+  skipMurabaha?: string;
+  murabahaReleasedDate?: string | null;
+  murabahaSubmittedToBank?: string;
+  murabahaSubmissionDate?: string | null;
+  finalContractReceivedDate?: string | null;
+  // Logistics Department (Port & Clearance)
+  commercialDocumentReceivedDate?: string | null;
+  arrivalDate?: string | null;
+  shippingLineFreeDetentionDays?: number | string;
+  portFreeStorageDays?: number | string;
+  doDate?: string | null;
+  boeNumber?: string;
+  boeDate?: string | null;
+  customerInspectionRequired?: string;
+  municipalityRefNo?: string;
+  municipalityInspectionDate?: string | null;
+  municipalityStatus?: string;
+  municipalityReleasedDate?: string | null;
+  transportationArrangement?: string;
+  transportCompany?: string;
+  plannedContainers?: number;
+  notPlannedContainers?: number;
+  // FAS / Warehouse (Storekeepers) — Payment
+  paymentAllocationRequestDate?: string | null;
+  paymentReceivedAmount?: number;
+  paymentApprovedDate?: string | null;
+  differenceAmount?: number;
+  containersReceived?: number;
+  containersRemaining?: number;
 }
 
 export interface FlatShipmentListResponse {

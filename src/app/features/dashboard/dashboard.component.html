@@ -78,7 +78,7 @@
                 [ngClass]="canViewDashboardSection('dashboard.section.status_snapshot.view') ? 'xl:col-span-1' : 'xl:col-span-4'">
                 <!-- Documents by Receiver Type -->
                 <article class="sl-panel flex flex-col gap-4 p-5 bg-white border border-slate-200 rounded-xl shadow-sm">
-                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Documents by Receiver Type</h4>
+                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Documents Received By</h4>
                     <div class="relative h-36 flex items-center justify-center">
                         <canvas baseChart [data]="fasReceiverTypeChartConfig()" [options]="doughnutChartOptions" [type]="'doughnut'"></canvas>
                         <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -88,47 +88,41 @@
                     </div>
                     <div class="flex flex-col gap-1.5 mt-2">
                         <div class="flex items-center justify-between text-xs text-slate-600">
-                            <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>Bank Receiver</span>
+                            <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>Bank</span>
                             <span class="font-bold text-slate-800">{{ dashboard()?.fasDashboard?.receiverType?.bank ?? 0 }}</span>
                         </div>
                         <div class="flex items-center justify-between text-xs text-slate-600">
-                            <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-blue-500"></span>Direct Receiver</span>
+                            <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-blue-500"></span>Direct</span>
                             <span class="font-bold text-slate-800">{{ dashboard()?.fasDashboard?.receiverType?.direct ?? 0 }}</span>
                         </div>
                     </div>
                 </article>
                 <!-- Provider Wise Documents -->
                 <article class="sl-panel flex flex-col gap-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Provider Wise Documents</h4>
+                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Provider</h4>
                     <div class="relative h-[110px] w-full">
                         <canvas baseChart [data]="fasProviderWiseChartConfig()" [options]="horizontalBarChartOptions" [type]="'bar'"></canvas>
                     </div>
                 </article>
                 <!-- Pending cards -->
-                <a routerLink="/shipments" [queryParams]="{ stage: 'document_tracker' }" class="flex items-center justify-between p-4 bg-emerald-50/50 hover:bg-emerald-50 border border-emerald-100 rounded-xl transition-all shadow-sm">
-                    <div class="flex items-center gap-3">
-                        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500 text-white shadow-sm">
-                            <i class="pi pi-wallet text-sm"></i>
-                        </div>
-                        <div class="flex flex-col">
-                            <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Pending Payment Requested</span>
-                            <strong class="text-xl font-black text-slate-800 leading-none mt-1">{{ dashboard()?.fasDashboard?.pendingPaymentRequested ?? 0 }}</strong>
-                        </div>
+                <div class="flex items-center gap-3 p-4 bg-emerald-50/50 border border-emerald-100 rounded-xl shadow-sm">
+                    <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500 text-white shadow-sm">
+                        <i class="pi pi-wallet text-sm"></i>
                     </div>
-                    <i class="pi pi-chevron-right text-slate-400 text-xs"></i>
-                </a>
-                <a routerLink="/shipments" [queryParams]="{ stage: 'payment_costing' }" class="flex items-center justify-between p-4 bg-amber-50/50 hover:bg-amber-50 border border-amber-100 rounded-xl transition-all shadow-sm">
-                    <div class="flex items-center gap-3">
-                        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm">
-                            <i class="pi pi-calculator text-sm"></i>
-                        </div>
-                        <div class="flex flex-col">
-                            <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Payment Allocation Pending</span>
-                            <strong class="text-xl font-black text-slate-800 leading-none mt-1">{{ dashboard()?.fasDashboard?.paymentAllocationPending ?? 0 }}</strong>
-                        </div>
+                    <div class="flex flex-col">
+                        <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Pending Payment Requested</span>
+                        <strong class="text-xl font-black text-slate-800 leading-none mt-1">{{ dashboard()?.fasDashboard?.pendingPaymentRequested ?? 0 }}</strong>
                     </div>
-                    <i class="pi pi-chevron-right text-slate-400 text-xs"></i>
-                </a>
+                </div>
+                <div class="flex items-center gap-3 p-4 bg-amber-50/50 border border-amber-100 rounded-xl shadow-sm">
+                    <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm">
+                        <i class="pi pi-calculator text-sm"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Payment Allocation Pending</span>
+                        <strong class="text-xl font-black text-slate-800 leading-none mt-1">{{ dashboard()?.fasDashboard?.paymentAllocationPending ?? 0 }}</strong>
+                    </div>
+                </div>
             </div>
             }
         </section>
