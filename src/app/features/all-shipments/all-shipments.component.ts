@@ -6,7 +6,9 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 
-import * as XLSX from 'xlsx';
+// xlsx-js-style is a drop-in replacement for xlsx that also writes cell styling
+// (fills/fonts) — the plain "xlsx" community package silently drops style writes.
+import * as XLSX from 'xlsx-js-style';
 
 import { ShipmentService } from '../../core/services/shipment.service';
 import { FlatShipmentRow } from '../../core/models/shipment.model';
@@ -100,7 +102,7 @@ export class AllShipmentsComponent implements OnInit {
    * "Final Data.xlsx" reference format: 74 columns, grouped under department
    * headers (Purchase / Logistics / FAS / Warehouse) on row 1, column names on row 2.
    */
-  private buildExportColumns(): Array<{ group: string; header: string; value: (row: FlatShipmentRow, idx: number) => string | number }> {
+  private buildExportColumns(): Array<{ group: string; header: string; colorGroup?: string; value: (row: FlatShipmentRow, idx: number) => string | number }> {
     const PURCHASE = 'Purchase Department';
     const LOGISTICS = 'Logistics Department';
     const FAS = 'FAS Department';
@@ -182,9 +184,10 @@ export class AllShipmentsComponent implements OnInit {
       { group: LOGISTICS, header: 'Transport Companies', value: (r) => r.transportCompany || '' },
       { group: LOGISTICS, header: 'Planned (Containers)', value: (r) => r.plannedContainers ?? '' },
       { group: LOGISTICS, header: 'Not Planned (Containers)', value: (r) => r.notPlannedContainers ?? '' },
-      // Ungrouped — Payment
-      { group: '', header: 'Payment Allocation Request Date', value: (r) => fmt(r.paymentAllocationRequestDate) },
-      { group: '', header: 'Payment Received Amount', value: (r) => r.paymentReceivedAmount ?? '' },
+      // Ungrouped (no department label) — but colored to match the Logistics band either
+      // side of it, same as the reference file.
+      { group: '', colorGroup: LOGISTICS, header: 'Payment Allocation Request Date', value: (r) => fmt(r.paymentAllocationRequestDate) },
+      { group: '', colorGroup: LOGISTICS, header: 'Payment Received Amount', value: (r) => r.paymentReceivedAmount ?? '' },
       // FAS Department
       { group: FAS, header: 'Payment Approved Date', value: (r) => fmt(r.paymentApprovedDate) },
       { group: FAS, header: 'Diiference Amount', value: (r) => r.differenceAmount ?? '' },
@@ -233,6 +236,8 @@ export class AllShipmentsComponent implements OnInit {
           worksheet['!merges'] = merges;
           worksheet['!cols'] = columns.map(() => ({ wch: 20 }));
 
+          this.applyExportStyles(worksheet, columns, dataRows.length);
+
           const workbook = XLSX.utils.book_new();
           XLSX.utils.book_append_sheet(workbook, worksheet, 'Shipments');
           XLSX.writeFile(workbook, `shipments-${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -243,6 +248,69 @@ export class AllShipmentsComponent implements OnInit {
           this.exporting.set(false);
         },
       });
+  }
+
+  /**
+   * Applies the same color combination used in the "Final Data.xlsx" reference file:
+   * department-coded fills on the group header row, a black/white header row, and thin
+   * borders throughout. Colors were extracted directly from that file's theme (accent6
+   * for Purchase/Logistics, dk2 for FAS, an explicit green for Warehouse).
+   */
+  private applyExportStyles(
+    worksheet: XLSX.WorkSheet,
+    columns: Array<{ group: string; colorGroup?: string }>,
+    dataRowCount: number
+  ): void {
+    const PURCHASE = 'Purchase Department';
+    const LOGISTICS = 'Logistics Department';
+    const FAS = 'FAS Department';
+    const WH_MANAGER = 'Warehouse Department (Warehouse Manager)';
+    const WH_STOREKEEPER = 'Warehouse Department (Storekeepers)';
+
+    const GROUP_FILL: Record<string, string> = {
+      [PURCHASE]: '385724',
+      [LOGISTICS]: '70AD47',
+      [FAS]: 'ADB9CA',
+      [WH_MANAGER]: '92D050',
+      [WH_STOREKEEPER]: '92D050',
+    };
+
+    const thinBorder = { style: 'thin', color: { rgb: 'FF000000' } };
+    const borders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
+    const whiteBold = { bold: true, color: { rgb: 'FFFFFFFF' } };
+
+    const cellRef = (r: number, c: number) => XLSX.utils.encode_cell({ r, c });
+
+    columns.forEach((column, c) => {
+      const fillGroup = column.colorGroup || column.group;
+
+      // Row 0: department group band.
+      const groupCellRef = cellRef(0, c);
+      const groupCell = worksheet[groupCellRef] || (worksheet[groupCellRef] = { t: 's', v: '' });
+      groupCell.s = {
+        fill: fillGroup ? { patternType: 'solid', fgColor: { rgb: GROUP_FILL[fillGroup] || 'FFFFFF' } } : undefined,
+        font: whiteBold,
+        alignment: { horizontal: 'center', vertical: 'center' },
+        border: borders,
+      };
+
+      // Row 1: column header — black band, white bold text.
+      const headerCellRef = cellRef(1, c);
+      const headerCell = worksheet[headerCellRef] || (worksheet[headerCellRef] = { t: 's', v: '' });
+      headerCell.s = {
+        fill: { patternType: 'solid', fgColor: { rgb: '000000' } },
+        font: whiteBold,
+        alignment: { horizontal: 'left', vertical: 'center' },
+        border: borders,
+      };
+
+      // Data rows: thin borders only, matching the reference file.
+      for (let r = 0; r < dataRowCount; r++) {
+        const dataCellRef = cellRef(r + 2, c);
+        const dataCell = worksheet[dataCellRef];
+        if (dataCell) dataCell.s = { border: borders };
+      }
+    });
   }
 
   private fmtDate(value: string | null | undefined): string {
