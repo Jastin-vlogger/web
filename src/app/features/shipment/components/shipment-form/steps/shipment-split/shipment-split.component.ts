@@ -1592,14 +1592,19 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     const row = this.actualSplits.at(index) as FormGroup | null;
     const containerId = row?.get('containerId')?.value;
     const actualRows = this.shipmentData()?.actual || [];
-    return actualRows.find((actual: any) => String(actual?.containerId || '') === String(containerId || '')) || actualRows[index] || null;
+    // Match strictly by containerId. The `actual` array is sparse — it only has an entry
+    // for containers that genuinely have saved BL/actual data — so falling back to
+    // actualRows[index] would attribute a completely different container's real data to
+    // this row purely by coincidental array position (e.g. a still-"Planned" row with no
+    // actual data of its own borrowing another row's ETD/ETA and showing as "On Transit").
+    return actualRows.find((actual: any) => String(actual?.containerId || '') === String(containerId || '')) || null;
   }
 
   private getPlannedDataForRow(index: number): any {
     const row = this.actualSplits.at(index) as FormGroup | null;
     const containerId = row?.get('containerId')?.value;
     const plannedRows = this.shipmentData()?.planned || [];
-    return plannedRows.find((planned: any) => String(planned?.containerId || '') === String(containerId || '')) || plannedRows[index] || null;
+    return plannedRows.find((planned: any) => String(planned?.containerId || '') === String(containerId || '')) || null;
   }
 
   getSavedCommercialInvoiceDocumentUrl(index: number): string {

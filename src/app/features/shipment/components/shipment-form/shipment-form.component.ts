@@ -820,18 +820,13 @@ export class ShipmentFormComponent implements OnDestroy {
     this.grnSplits.clear();
     this.storageSplits.clear();
 
-    // Planned splits
+    // Planned splits — always render every container the backend actually returned.
+    // `noOfShipments` is a manually-confirmed planning figure that can go stale (e.g. a
+    // row gets added after the last "Confirm" click); it must never be used to cap how
+    // many real container rows are shown here, or newer containers silently disappear.
     if (data.planned && data.planned.length > 0) {
       this.plannedSplits.clear();
-      const expectedPlannedRows =
-        typeof (data.shipment as { noOfShipments?: number }).noOfShipments === 'number' &&
-        (data.shipment as { noOfShipments?: number }).noOfShipments! > 0
-          ? Math.min(
-              data.planned.length,
-              Number((data.shipment as { noOfShipments?: number }).noOfShipments)
-            )
-          : data.planned.length;
-      data.planned.slice(0, expectedPlannedRows).forEach((container) => {
+      data.planned.forEach((container) => {
         this.plannedSplits.push(
           this.fb.group({
             size: [container.size || data.shipment.containerSize, Validators.required],
