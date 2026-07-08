@@ -304,6 +304,20 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     this.stopExtractionExperience();
   }
 
+  /**
+   * Serializes a date-only value using its LOCAL calendar date, not `toISOString()`.
+   * `toISOString()` converts to UTC first — for any timezone ahead of UTC (e.g. IST,
+   * UTC+5:30), a date picked at local midnight rolls back to the previous day once
+   * converted (16th 00:00 IST → 15th 18:30 UTC), so slicing the date off the ISO string
+   * silently saves the wrong day.
+   */
+  private toLocalDateString(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   private startExtractionExperience(): void {
     this.stopExtractionExperience();
     this.extractionMessageIndex.set(0);
@@ -1047,14 +1061,25 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     return `${base}/ACT${String(index + 1).padStart(2, '0')}`;
   }
 
-  private patchPlannedRowsAfterSave(containers: any[]): void {
+  private patchPlannedRowsAfterSave(containers: any[], rowIndices?: number[]): void {
     if (!Array.isArray(containers) || !containers.length) return;
 
     containers.forEach((container, index) => {
-      const planned = this.plannedSplits.at(index) as FormGroup | null;
+      // `containers` here is only the subset of rows the backend actually (re)created in
+      // this save (already-actualized rows are correctly excluded from submission), so it
+      // no longer lines up 1:1 with plannedSplits by raw index — use the original position
+      // each row was submitted from. Falls back to `index` only if the caller didn't pass
+      // a mapping (e.g. called with a same-length, unfiltered list).
+      const targetIndex = rowIndices && rowIndices.length === containers.length ? rowIndices[index] : index;
+      const planned = this.plannedSplits.at(targetIndex) as FormGroup | null;
       if (planned) {
         planned.patchValue(
           {
+            // The backend deletes and recreates every "Planned" container on each save, so
+            // the id (and status) here are always fresh — the form must pick them up or the
+            // next save's "already-actualized" filter will be working off a stale id.
+            containerId: container?._id ?? planned.get('containerId')?.value,
+            status: container?.status ?? planned.get('status')?.value,
             size: container?.planned?.size ?? planned.get('size')?.value,
             qtyMT: container?.planned?.qtyMT ?? planned.get('qtyMT')?.value,
             FCL: container?.planned?.FCL ?? planned.get('FCL')?.value,
@@ -1071,7 +1096,7 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
         return String(rowContainerId || '') === String(container?._id || '');
       });
       const actual = (
-        actualRowIndex >= 0 ? this.actualSplits.at(actualRowIndex) : this.actualSplits.at(index)
+        actualRowIndex >= 0 ? this.actualSplits.at(actualRowIndex) : this.actualSplits.at(targetIndex)
       ) as FormGroup | null;
       const actualData = container?.actual || {};
       if (actual) {
@@ -1668,18 +1693,25 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     if (!confirmed) return;
 
     const targetNoOfShipments = Number(this.noOfShipmentsControl.value) || this.plannedSplits.length;
-    const containers = this.plannedSplits.getRawValue()
+    // Keep each submitted row's original position in the full plannedSplits array, since
+    // rows for already-actualized containers (status !== 'Planned') are excluded below —
+    // the response we get back is only for the rows we actually sent, in the same order,
+    // so this mapping is what lets patchPlannedRowsAfterSave patch the *correct* rows
+    // instead of blindly assuming response[i] belongs at plannedSplits position i.
+    const submissionEntries = this.plannedSplits.getRawValue()
       .slice(0, targetNoOfShipments)
+      .map((c: any, originalIndex: number) => ({ c, originalIndex }))
       // Rows for containers that already have real actual/BL data (status !== 'Planned')
       // must never be resubmitted here: the backend wipes and recreates every row it
       // receives, so resending an already-actualized row's values spins up a duplicate
       // "Planned" container alongside the real one instead of leaving it untouched.
-      .filter((c: any) => !c.status || c.status === 'Planned')
-      .map(c => ({
-        ...c,
-        etd: c.etd ? new Date(c.etd).toISOString().split('T')[0] : '',
-        eta: c.eta ? new Date(c.eta).toISOString().split('T')[0] : '',
-      }));
+      .filter(({ c }: any) => !c.status || c.status === 'Planned');
+    const submittedRowIndices = submissionEntries.map(({ originalIndex }) => originalIndex);
+    const containers = submissionEntries.map(({ c }: any) => ({
+      ...c,
+      etd: c.etd ? this.toLocalDateString(new Date(c.etd)) : '',
+      eta: c.eta ? this.toLocalDateString(new Date(c.eta)) : '',
+    }));
     const shipmentId = shipmentData.shipment._id || (shipmentData as any).shipment.id;
 
     if (!this.isPlannedLocked()) {
@@ -1704,8 +1736,13 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     }).subscribe({
       next: (response: any) => {
         this.localSubmittingPlanned.set(false);
-        this.patchPlannedRowsAfterSave(response?.containers || []);
+        this.patchPlannedRowsAfterSave(response?.containers || [], submittedRowIndices);
         this.editablePlannedRows.set([]);
+        // The status badge (getShipmentStatus) is computed from shipmentData() — the store's
+        // cached snapshot, not the form values just patched above. Without this, a row can
+        // show a real ETD in its input yet still display the stale "Shipment Split" /
+        // "Documentation" fallback label because the lookup it depends on never saw the save.
+        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
         this.messageService.add({
           severity: 'success',
           summary: 'Saved',
@@ -1859,15 +1896,15 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     payload.append('buyingUnit', 'MT');
     payload.append(
       'shipOnBoardDate',
-      formValue['shipOnBoardDate'] ? new Date(formValue['shipOnBoardDate']).toISOString().split('T')[0] : ''
+      formValue['shipOnBoardDate'] ? this.toLocalDateString(new Date(formValue['shipOnBoardDate'])) : ''
     );
     payload.append(
       'updatedETD',
-      formValue['updatedETD'] ? new Date(formValue['updatedETD']).toISOString().split('T')[0] : ''
+      formValue['updatedETD'] ? this.toLocalDateString(new Date(formValue['updatedETD'])) : ''
     );
     payload.append(
       'updatedETA',
-      formValue['updatedETA'] ? new Date(formValue['updatedETA']).toISOString().split('T')[0] : ''
+      formValue['updatedETA'] ? this.toLocalDateString(new Date(formValue['updatedETA'])) : ''
     );
     payload.append('BLNo', formValue['BLNo'] || '');
 
@@ -1913,11 +1950,11 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
         const mmYyyyMatch = String(rawProductionDate).match(/^(\d{1,2})\/(\d{4})$/);
         if (mmYyyyMatch) {
           const parsedDate = new Date(Number(mmYyyyMatch[2]), Number(mmYyyyMatch[1]) - 1, 1);
-          payload.append('packagingDate', parsedDate.toISOString().split('T')[0]);
+          payload.append('packagingDate', this.toLocalDateString(parsedDate));
         } else {
           const parsedDate = new Date(rawProductionDate);
           if (!isNaN(parsedDate.getTime())) {
-            payload.append('packagingDate', parsedDate.toISOString().split('T')[0]);
+            payload.append('packagingDate', this.toLocalDateString(parsedDate));
           }
         }
       }
