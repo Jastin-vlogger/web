@@ -1668,11 +1668,18 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     if (!confirmed) return;
 
     const targetNoOfShipments = Number(this.noOfShipmentsControl.value) || this.plannedSplits.length;
-    const containers = this.plannedSplits.getRawValue().slice(0, targetNoOfShipments).map(c => ({
-      ...c,
-      etd: c.etd ? new Date(c.etd).toISOString().split('T')[0] : '',
-      eta: c.eta ? new Date(c.eta).toISOString().split('T')[0] : '',
-    }));
+    const containers = this.plannedSplits.getRawValue()
+      .slice(0, targetNoOfShipments)
+      // Rows for containers that already have real actual/BL data (status !== 'Planned')
+      // must never be resubmitted here: the backend wipes and recreates every row it
+      // receives, so resending an already-actualized row's values spins up a duplicate
+      // "Planned" container alongside the real one instead of leaving it untouched.
+      .filter((c: any) => !c.status || c.status === 'Planned')
+      .map(c => ({
+        ...c,
+        etd: c.etd ? new Date(c.etd).toISOString().split('T')[0] : '',
+        eta: c.eta ? new Date(c.eta).toISOString().split('T')[0] : '',
+      }));
     const shipmentId = shipmentData.shipment._id || (shipmentData as any).shipment.id;
 
     if (!this.isPlannedLocked()) {

@@ -829,6 +829,11 @@ export class ShipmentFormComponent implements OnDestroy {
       data.planned.forEach((container) => {
         this.plannedSplits.push(
           this.fb.group({
+            // Carried through (not rendered as inputs) so Confirm/Lock ETA can tell which
+            // rows already have real actual/BL data attached and must not be resubmitted
+            // to the "recreate planned baseline" endpoint — see confirmPlannedSubmission().
+            containerId: [(container as { containerId?: string }).containerId || null],
+            status: [(container as { status?: string }).status || 'Planned'],
             size: [container.size || data.shipment.containerSize, Validators.required],
             qtyMT: [container.qtyMT, Validators.required],
             weekWiseShipment: [container.weekWiseShipment, Validators.required],
