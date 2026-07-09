@@ -1227,10 +1227,9 @@ export class ShipmentFormComponent implements OnDestroy {
             return this.fb.group({
               containerSerialNo: [containerLabel],
               bags: [storageMatch?.bags ?? allocationMatch?.bags ?? extractedContainer?.pkgCt ?? (extractedContainer as any)?.pkg_ct ?? null],
-              // Storage Allocation holds the authoritative per-container warehouse (each container split
-              // individually). Transportation's warehouse is a single value per booking transaction, so it
-              // only fills the gap when a container has no allocation recorded yet.
-              warehouse: [storageMatch?.warehouse || allocationMatch?.warehouse || transportationMatch?.warehouse || ''],
+              // Transportation Arrangement (Milestone 4) is the source of truth for which warehouse
+              // a container was actually shipped to — it must win over the earlier storage allocation plan.
+              warehouse: [transportationMatch?.warehouse || storageMatch?.warehouse || allocationMatch?.warehouse || ''],
               block: [(storageMatch as any)?.block || ''],
               storageAvailability: [storageMatch?.storageAvailability ?? allocationMatch?.storageAvailability ?? null],
               receivedOnDate: [storageMatch?.receivedOnDate ? new Date(storageMatch.receivedOnDate) : null],

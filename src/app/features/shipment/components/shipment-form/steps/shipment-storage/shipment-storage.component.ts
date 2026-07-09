@@ -79,11 +79,9 @@ export class ShipmentStorageComponent {
         const actualRow = data.actual?.[i];
         if (!actualRow) return;
 
-        // Storage Allocation holds the authoritative per-container warehouse. Transportation Arrangement
-        // records one warehouse per booking transaction, so it only fills a container's warehouse when
-        // Storage Allocation hasn't assigned one yet — it must never override an existing allocation.
+        // Transportation Arrangement (Milestone 4) is the source of truth for which warehouse
+        // a container was actually shipped to. Keep Storage Arrival's warehouse in sync with it.
         const transportationBooked = Array.isArray(actualRow.transportationBooked) ? actualRow.transportationBooked : [];
-        const normalizeSerial = (value: unknown) => String(value || '').trim().toUpperCase().replace(/\s+/g, ' ');
 
         containers.forEach((rowGroup: AbstractControl) => {
           const row = rowGroup as FormGroup;
@@ -107,13 +105,13 @@ export class ShipmentStorageComponent {
             row.get('expiryDate')?.patchValue(new Date(expirySource), { emitEvent: false });
           }
 
-          // 3. Fall back to Transportation Arrangement's warehouse only if this container has none yet
-          if (transportationBooked.length > 0 && !row.get('warehouse')?.value) {
-            const serial = normalizeSerial(row.get('containerSerialNo')?.value);
+          // 3. Sync warehouse from Transportation Arrangement (per-container, matched by serial no)
+          if (transportationBooked.length > 0) {
+            const serial = this.normalizeSerial(row.get('containerSerialNo')?.value);
             const transportMatch = transportationBooked.find(
-              (tb: any) => normalizeSerial(tb?.containerSerialNo) === serial
+              (tb: any) => this.normalizeSerial(tb?.containerSerialNo) === serial
             );
-            if (transportMatch?.warehouse) {
+            if (transportMatch?.warehouse && row.get('warehouse')?.value !== transportMatch.warehouse) {
               row.get('warehouse')?.patchValue(transportMatch.warehouse, { emitEvent: false });
             }
           }
@@ -232,6 +230,97 @@ export class ShipmentStorageComponent {
 
   getAllocationSplits(index: number): any[] {
     return this.getActualRow(index)?.storageAllocationSplits || [];
+  }
+
+  private normalizeSerial(value: unknown): string {
+    return String(value || '').trim().toUpperCase().replace(/\s+/g, ' ');
+  }
+
+  // ===== Warehouse History: Storage Allocation (plan) → Transportation Arrangement (actual) =====
+  getWarehouseHistory(index: number): Array<{
+    type: 'allocation' | 'transportation';
+    label: string;
+    date: Date | null;
+    warehouses: string[];
+    containerCount: number;
+    transportCompanyName?: string;
+    transactionId?: string;
+    warehouseChanged: boolean;
+  }> {
+    const actual = this.getActualRow(index);
+    if (!actual) return [];
+
+    const allocations: any[] = Array.isArray(actual.storageAllocations) ? actual.storageAllocations : [];
+    const allocationBySerial = new Map<string, string>();
+    allocations.forEach((a) => {
+      if (a?.containerSerialNo) allocationBySerial.set(this.normalizeSerial(a.containerSerialNo), a.warehouse || '');
+    });
+
+    const events: Array<{
+      type: 'allocation' | 'transportation';
+      label: string;
+      date: Date | null;
+      warehouses: string[];
+      containerCount: number;
+      transportCompanyName?: string;
+      transactionId?: string;
+      warehouseChanged: boolean;
+    }> = [];
+
+    if (allocations.length > 0) {
+      const approval = actual.storageAllocationApproval;
+      const warehouses = Array.from(new Set(allocations.map((a) => a.warehouse).filter(Boolean)));
+      events.push({
+        type: 'allocation',
+        label: 'Storage Allocation',
+        date: approval?.warehouseManagerApprovedAt
+          ? new Date(approval.warehouseManagerApprovedAt)
+          : approval?.submittedAt
+            ? new Date(approval.submittedAt)
+            : null,
+        warehouses,
+        containerCount: allocations.length,
+        warehouseChanged: false,
+      });
+    }
+
+    const transportationBooked: any[] = Array.isArray(actual.transportationBooked) ? actual.transportationBooked : [];
+    const grouped: Record<string, any[]> = {};
+    const order: string[] = [];
+    transportationBooked.forEach((row) => {
+      const txnId = (row?.transactionId || '').trim() || 'untagged';
+      if (!grouped[txnId]) {
+        grouped[txnId] = [];
+        order.push(txnId);
+      }
+      grouped[txnId].push(row);
+    });
+
+    order.forEach((transactionId) => {
+      const rows = grouped[transactionId];
+      const first = rows[0] || {};
+      const warehouses = Array.from(new Set(rows.map((r) => r.warehouse).filter(Boolean)));
+      const warehouseChanged = rows.some((r) => {
+        const allocated = allocationBySerial.get(this.normalizeSerial(r.containerSerialNo));
+        return !!allocated && !!r.warehouse && allocated !== r.warehouse;
+      });
+      events.push({
+        type: 'transportation',
+        label: 'Transportation Arrangement',
+        date: first.bookedDate ? new Date(first.bookedDate) : first.transportDate ? new Date(first.transportDate) : null,
+        warehouses,
+        containerCount: rows.length,
+        transportCompanyName: first.transportCompanyName || '',
+        transactionId: transactionId === 'untagged' ? '' : transactionId,
+        warehouseChanged,
+      });
+    });
+
+    return events.sort((a, b) => {
+      const ad = a.date ? a.date.getTime() : 0;
+      const bd = b.date ? b.date.getTime() : 0;
+      return ad - bd;
+    });
   }
 
   // ===== Per-item / per-warehouse container-count breakdown (Storage Allocation summary) =====

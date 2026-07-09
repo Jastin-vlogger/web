@@ -220,6 +220,61 @@
                   </div>
                 }
               </div>
+
+              <!-- ===== WAREHOUSE HISTORY: Storage Allocation → Transportation Arrangement ===== -->
+              @let history = getWarehouseHistory(i);
+              @if (history.length > 0) {
+                <div class="storage-history-shell rounded-xl border border-slate-200 overflow-hidden mt-4">
+                  <div class="px-5 py-4 bg-slate-50 border-b border-slate-200">
+                    <span class="text-sm font-black text-slate-500 uppercase tracking-wider">Warehouse History</span>
+                  </div>
+                  <div class="px-5 py-4 flex flex-col gap-3">
+                    @for (event of history; track $index) {
+                      <div class="flex gap-3">
+                        <div class="flex flex-col items-center shrink-0">
+                          <div class="w-2.5 h-2.5 rounded-full mt-1.5"
+                            [class.bg-blue-500]="event.type === 'allocation'"
+                            [class.bg-violet-500]="event.type === 'transportation'"></div>
+                          @if (!$last) {
+                            <div class="w-px flex-1 bg-slate-200 mt-1"></div>
+                          }
+                        </div>
+                        <div class="flex-1 pb-3 min-w-0">
+                          <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-xs font-black uppercase tracking-wider"
+                              [class.text-blue-600]="event.type === 'allocation'"
+                              [class.text-violet-600]="event.type === 'transportation'">
+                              {{ event.label }}
+                            </span>
+                            @if (event.transactionId) {
+                              <span class="text-[10px] font-semibold text-slate-400">Txn: {{ event.transactionId }}</span>
+                            }
+                            @if (event.date) {
+                              <span class="text-[10px] text-slate-400">{{ event.date | date:'dd/MM/yy HH:mm' }}</span>
+                            }
+                            @if (event.warehouseChanged) {
+                              <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-600">
+                                <i class="pi pi-exclamation-triangle text-[9px]"></i> Warehouse changed
+                              </span>
+                            }
+                          </div>
+                          <div class="mt-1.5 flex flex-wrap items-center gap-2">
+                            @for (wh of event.warehouses; track wh) {
+                              <span class="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 border border-slate-200/60 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                                <i class="pi pi-warehouse text-[10px] text-slate-400"></i> {{ wh }}
+                              </span>
+                            }
+                            <span class="text-[11px] text-slate-400">{{ event.containerCount }} container(s)</span>
+                            @if (event.transportCompanyName) {
+                              <span class="text-[11px] text-slate-400">· {{ event.transportCompanyName }}</span>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
             }
 
             <!-- ===== STORAGE ARRIVAL TABLE ===== -->
