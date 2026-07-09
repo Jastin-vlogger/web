@@ -1216,6 +1216,9 @@ export class ShipmentFormComponent implements OnDestroy {
             const allocationMatch =
               existingStorageAllocations.find((row: any) => normalizeSerial(row?.containerSerialNo) === normalizedKey) ||
               existingStorageAllocations[c];
+            const transportationMatch = existingTransportationBooked.find(
+              (row: any) => normalizeSerial(row?.containerSerialNo) === normalizedKey
+            );
             const containerLabel =
               storageMatch?.containerSerialNo ||
               allocationMatch?.containerSerialNo ||
@@ -1224,7 +1227,10 @@ export class ShipmentFormComponent implements OnDestroy {
             return this.fb.group({
               containerSerialNo: [containerLabel],
               bags: [storageMatch?.bags ?? allocationMatch?.bags ?? extractedContainer?.pkgCt ?? (extractedContainer as any)?.pkg_ct ?? null],
-              warehouse: [storageMatch?.warehouse || allocationMatch?.warehouse || ''],
+              // Storage Allocation holds the authoritative per-container warehouse (each container split
+              // individually). Transportation's warehouse is a single value per booking transaction, so it
+              // only fills the gap when a container has no allocation recorded yet.
+              warehouse: [storageMatch?.warehouse || allocationMatch?.warehouse || transportationMatch?.warehouse || ''],
               block: [(storageMatch as any)?.block || ''],
               storageAvailability: [storageMatch?.storageAvailability ?? allocationMatch?.storageAvailability ?? null],
               receivedOnDate: [storageMatch?.receivedOnDate ? new Date(storageMatch.receivedOnDate) : null],

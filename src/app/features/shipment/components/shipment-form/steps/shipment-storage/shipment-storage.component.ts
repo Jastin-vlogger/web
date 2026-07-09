@@ -79,9 +79,15 @@ export class ShipmentStorageComponent {
         const actualRow = data.actual?.[i];
         if (!actualRow) return;
 
+        // Storage Allocation holds the authoritative per-container warehouse. Transportation Arrangement
+        // records one warehouse per booking transaction, so it only fills a container's warehouse when
+        // Storage Allocation hasn't assigned one yet — it must never override an existing allocation.
+        const transportationBooked = Array.isArray(actualRow.transportationBooked) ? actualRow.transportationBooked : [];
+        const normalizeSerial = (value: unknown) => String(value || '').trim().toUpperCase().replace(/\s+/g, ' ');
+
         containers.forEach((rowGroup: AbstractControl) => {
           const row = rowGroup as FormGroup;
-          
+
           // 1. Default Received On Date/Time
           if (!row.get('receivedOnDate')?.value) {
             row.get('receivedOnDate')?.patchValue(now, { emitEvent: false });
@@ -94,11 +100,22 @@ export class ShipmentStorageComponent {
           if (!row.get('productionDate')?.value && actualRow.packagingDate) {
             row.get('productionDate')?.patchValue(new Date(actualRow.packagingDate), { emitEvent: false });
           }
-          
+
           // Check expiry in ActualContainer level or inside packagingList object
           const expirySource = actualRow.expiryDate || actualRow.packagingList?.expiryDate;
           if (!row.get('expiryDate')?.value && expirySource) {
             row.get('expiryDate')?.patchValue(new Date(expirySource), { emitEvent: false });
+          }
+
+          // 3. Fall back to Transportation Arrangement's warehouse only if this container has none yet
+          if (transportationBooked.length > 0 && !row.get('warehouse')?.value) {
+            const serial = normalizeSerial(row.get('containerSerialNo')?.value);
+            const transportMatch = transportationBooked.find(
+              (tb: any) => normalizeSerial(tb?.containerSerialNo) === serial
+            );
+            if (transportMatch?.warehouse) {
+              row.get('warehouse')?.patchValue(transportMatch.warehouse, { emitEvent: false });
+            }
           }
         });
       });

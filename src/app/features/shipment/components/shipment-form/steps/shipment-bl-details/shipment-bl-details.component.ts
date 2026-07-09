@@ -2363,15 +2363,16 @@ export class ShipmentBlDetailsComponent {
 
   saveCostSheet(index: number): void {
     if (!this.canEditClearingAdvance(index)) return;
+    // Saving cost sheet rows never collects cheque/voucher details or touches approval
+    // status — that only happens on Approve now. Just save whatever's already on file
+    // (possibly nothing yet) alongside the edited rows.
     const details = this.getClearingAdvancePaymentDetails(index);
-    this.clearingSubmitIndex.set(index);
-    this.clearingSubmitDraft.set({
+    void this.submitCostSheet(index, {
       chequeNo: details.chequeNo || '',
-      chequeDate: this.toDateInputValue(details.chequeDate || new Date()),
+      chequeDate: this.toDateInputValue(details.chequeDate),
       paymentVoucherNo: details.paymentVoucherNo || '',
       transactionId: details.transactionId || '',
     });
-    this.clearingSubmitModalVisible.set(true);
   }
 
   closeClearingSubmitModal(): void {
@@ -2396,7 +2397,10 @@ export class ShipmentBlDetailsComponent {
       return;
     }
     this.clearingSubmitModalVisible.set(false);
-    void this.submitCostSheet(index, draft);
+    // This modal is now only reached from the Approve button (see approveClearingAdvance)
+    // when cheque/voucher details haven't been recorded yet — save them as a real
+    // submit-for-approval, then immediately approve so the user doesn't need a second click.
+    void this.submitCostSheet(index, draft, true, () => this.runApproveClearingAdvance(index));
   }
 
   private async submitCostSheet(index: number, paymentDetails: {
@@ -2404,7 +2408,7 @@ export class ShipmentBlDetailsComponent {
     chequeDate: string;
     paymentVoucherNo: string;
     transactionId?: string;
-  }): Promise<void> {
+  }, submitForApproval = false, onSaved?: () => void): Promise<void> {
     if (!this.canEditClearingAdvance(index)) return;
     const row = this.formArray.at(index);
     const shipmentId = this.shipmentData()?.shipment?._id;
@@ -2434,12 +2438,20 @@ export class ShipmentBlDetailsComponent {
     this.savingKey.set(`cost-${index}`);
     const formData = new FormData();
     formData.append('costSheetBookings', JSON.stringify(costSheetBookings));
-    formData.append('clearingAdvancePaymentDetails', JSON.stringify({
-      chequeNo: String(paymentDetails.chequeNo || '').trim(),
-      chequeDate: paymentDetails.chequeDate,
-      paymentVoucherNo: String(paymentDetails.paymentVoucherNo || '').trim(),
-      transactionId: String(paymentDetails.transactionId || '').trim(),
-    }));
+    // Only send payment details (and ask the backend to require/validate them) when this is
+    // an explicit submit-for-approval — a plain row edit shouldn't touch cheque/voucher data
+    // or re-trigger the pending-FAS transition.
+    if (submitForApproval || paymentDetails.chequeNo || paymentDetails.chequeDate || paymentDetails.paymentVoucherNo) {
+      formData.append('clearingAdvancePaymentDetails', JSON.stringify({
+        chequeNo: String(paymentDetails.chequeNo || '').trim(),
+        chequeDate: paymentDetails.chequeDate,
+        paymentVoucherNo: String(paymentDetails.paymentVoucherNo || '').trim(),
+        transactionId: String(paymentDetails.transactionId || '').trim(),
+      }));
+    }
+    if (submitForApproval) {
+      formData.append('submitClearingAdvanceForApproval', 'true');
+    }
 
     const bookingFile = this.getBookingFile(index);
     if (bookingFile) {
@@ -2463,7 +2475,11 @@ export class ShipmentBlDetailsComponent {
         this.notificationService.success('Saved', 'Cost sheet booking saved successfully.');
         this.ensureAccordionOpen(index); // POINT 8: keep accordion open
         this.closeClearingSubmitModal();
-        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+        if (onSaved) {
+          onSaved();
+        } else {
+          this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+        }
       },
       error: (error) => {
         this.savingKey.set(null);
@@ -2666,13 +2682,21 @@ export class ShipmentBlDetailsComponent {
 
   async approveClearingAdvance(index: number): Promise<void> {
     if (!this.canApproveClearingAdvance(index)) return;
-    const row = this.formArray.at(index);
-    const shipmentId = this.shipmentData()?.shipment?._id;
-    if (!row || !shipmentId) return;
 
-    const containerId = row.get('containerId')?.value;
-    if (!containerId) {
-      this.notificationService.warn('Missing container', 'This shipment row is not linked to a container yet.');
+    // Cheque/voucher details are collected here, at Approve time, not on every row Save.
+    // If they haven't been recorded yet, open the same modal Save used to use — confirming
+    // it saves the details as a real submit-for-approval and then approves in one go.
+    const details = this.getClearingAdvancePaymentDetails(index);
+    const hasExistingPaymentDetails = !!(details.chequeNo && details.chequeDate && details.paymentVoucherNo);
+    if (!hasExistingPaymentDetails) {
+      this.clearingSubmitIndex.set(index);
+      this.clearingSubmitDraft.set({
+        chequeNo: '',
+        chequeDate: this.toDateInputValue(new Date()),
+        paymentVoucherNo: '',
+        transactionId: '',
+      });
+      this.clearingSubmitModalVisible.set(true);
       return;
     }
 
@@ -2682,6 +2706,20 @@ export class ShipmentBlDetailsComponent {
       acceptLabel: 'Yes, Approve',
     });
     if (!confirmed) return;
+
+    this.runApproveClearingAdvance(index);
+  }
+
+  private runApproveClearingAdvance(index: number): void {
+    const row = this.formArray.at(index);
+    const shipmentId = this.shipmentData()?.shipment?._id;
+    if (!row || !shipmentId) return;
+
+    const containerId = row.get('containerId')?.value;
+    if (!containerId) {
+      this.notificationService.warn('Missing container', 'This shipment row is not linked to a container yet.');
+      return;
+    }
 
     this.savingKey.set(`cost-${index}`);
     this.shipmentService.approveClearingAdvance(containerId).subscribe({

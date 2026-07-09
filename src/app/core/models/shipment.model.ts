@@ -1156,6 +1156,7 @@ export interface ActualContainer {
     sn?: number;
     containerSerialNo?: string;
     transportCompanyName?: string;
+    warehouse?: string;
     bookedDate?: string;
     bookingTime?: string;
     transportDate?: string;
