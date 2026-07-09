@@ -380,6 +380,27 @@ export class ShipmentService {
   }
 
   /**
+   * Delete a single scheduled ("Planned") container — only allowed while it's still
+   * "ETD yet to due" and has no real BL/actual data attached.
+   * DELETE /shipment/container/planned/:id
+   */
+  deletePlannedContainer(containerId: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/container/planned/${containerId}`);
+  }
+
+  /**
+   * Edit the Cheque No / Cheque Date / Payment Voucher No / Transaction ID shown in the
+   * Clearing Advance info modal — FAS-tier only, enforced server-side too.
+   * PATCH /shipment/container/:id/clearing-advance-payment-details
+   */
+  updateClearingAdvancePaymentDetails(
+    containerId: string,
+    payload: { chequeNo?: string; chequeDate?: string | Date | null; paymentVoucherNo?: string; transactionId?: string }
+  ): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/container/${containerId}/clearing-advance-payment-details`, payload);
+  }
+
+  /**
    * Create/Update actual container for a shipment (Step 2 - Actual)
    * PATCH /shipment/container/actual/:id
    * @param containerId - The container ID

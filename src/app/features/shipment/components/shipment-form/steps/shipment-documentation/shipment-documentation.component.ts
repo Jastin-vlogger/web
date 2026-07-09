@@ -24,6 +24,7 @@ import {
 import * as ShipmentActions from '../../../../../../store/shipment/shipment.actions';
 import { getComputedShipmentStatus, getShipmentStatusSeverity, type ShipmentStatusSeverity } from '../../shared/shipment-status';
 import { getMurabahaMissingFields } from '../../shared/murabaha-validation.util';
+import { toLocalDateString } from '../../shared/date.util';
 import {
   DOCUMENT_MILESTONE_LABELS,
   type DocumentMilestoneKey,
@@ -969,7 +970,7 @@ export class ShipmentDocumentationComponent {
     const row = this.formArray.at(index);
     const formValue = row.getRawValue();
     const payload = new FormData();
-    const toDate = (v: any) => v ? (v instanceof Date ? v.toISOString().split('T')[0] : new Date(v).toISOString().split('T')[0]) : '';
+    const toDate = (v: any) => v ? toLocalDateString(v instanceof Date ? v : new Date(v)) : '';
 
     payload.append('BLNo', formValue['BLNo'] || '');
     payload.append('courierTrackNo', formValue['courierTrackNo'] || '');
@@ -1018,7 +1019,7 @@ export class ShipmentDocumentationComponent {
     if (!containerId) return null;
 
     const toDate = (val: any) =>
-      val ? (val instanceof Date ? val.toISOString().split('T')[0] : new Date(val).toISOString().split('T')[0]) : '';
+      val ? toLocalDateString(val instanceof Date ? val : new Date(val)) : '';
 
     const payload = new FormData();
     payload.append('BLNo', formValue['BLNo'] || '');

@@ -21,6 +21,7 @@ import { ShipmentService } from '../../../../core/services/shipment.service';
 import { CreateShipmentPayload, ExtractedShipmentData, ExtractedShipmentItem } from '../../../../core/models/shipment.model';
 import { ItemService } from '../../../../core/services/item.service';
 import { ExchangeRateService, ExchangeRate } from '../../../../core/services/exchange-rate.service';
+import { toLocalDateString } from '../shipment-form/shared/date.util';
 
 @Component({
   selector: 'app-create-shipment',
@@ -845,13 +846,13 @@ export class CreateShipmentComponent implements OnInit, OnDestroy {
     const poNumberValue =
       (formValue.fpoNo && String(formValue.fpoNo).trim()) ||
       (formValue.piNo && String(formValue.piNo).trim()) ||
-      'PO-' + (formValue.purchaseDate ? new Date(formValue.purchaseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+      'PO-' + (formValue.purchaseDate ? toLocalDateString(new Date(formValue.purchaseDate)) : toLocalDateString(new Date()));
 
     // Map form values to API payload structure
     const payload: CreateShipmentPayload = {
       poNumber: poNumberValue,
       year: new Date().getFullYear().toString(),
-      orderDate: formValue.purchaseDate ? new Date(formValue.purchaseDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0], // YYYY-MM-DD
+      orderDate: formValue.purchaseDate ? toLocalDateString(new Date(formValue.purchaseDate)) : toLocalDateString(new Date()), // YYYY-MM-DD
       supplierName: formValue.supplier || '',
       supplierEmail: formValue.supplierEmail || '',
       itemCode: formValue.itemCode || '',
@@ -869,10 +870,10 @@ export class CreateShipmentComponent implements OnInit, OnDestroy {
       plannedQtyMT: formValue.plannedContainers?.toString() || '0',
       estimatedContainerCount: formValue.noOfShipments?.toString() || '0',
       estimatedContainerSize: formValue.containerSize || '',
-      plannedETD: formValue.expectedETD ? new Date(formValue.expectedETD).toISOString().split('T')[0] : '',
-      plannedETA: formValue.expectedETA ? new Date(formValue.expectedETA).toISOString().split('T')[0] : '',
+      plannedETD: formValue.expectedETD ? toLocalDateString(new Date(formValue.expectedETD)) : '',
+      plannedETA: formValue.expectedETA ? toLocalDateString(new Date(formValue.expectedETA)) : '',
       piNo: formValue.piNo || '',
-      piDate: formValue.piDate ? new Date(formValue.piDate).toISOString().split('T')[0] : '',
+      piDate: formValue.piDate ? toLocalDateString(new Date(formValue.piDate)) : '',
       fpoNo: formValue.fpoNo || '',
       fcl: formValue.fcl?.toString() || '0',
       pallet: formValue.pallet?.toString() || '0',

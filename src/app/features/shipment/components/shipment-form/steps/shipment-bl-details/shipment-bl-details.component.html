@@ -248,6 +248,9 @@
                     Packing List Confirmation
                   </button>
                 }
+                <!-- Clearing Advance / Storage Allocation / Clearing Advance Process / Payment Costing only
+                     make sense once the shipment has actually arrived — gate all 4 on that toggle. -->
+                @if (group.get('shipmentArrived')?.value === 'Yes') {
                 @if (canViewClearingAdvance()) {
                   <button
                     type="button"
@@ -302,6 +305,7 @@
                     Payment Costing
                   </button>
                   }
+                }
                 }
               </div>
 
@@ -1135,11 +1139,70 @@
   appendTo="body">
   @if (clearingInfoIndex() !== null) {
     @let idx = clearingInfoIndex()!;
+    @if (canEditClearingAdvancePaymentDetails()) {
+      <div class="mb-3 flex justify-end">
+        @if (!editingClearingPaymentDetails()) {
+          <button
+            type="button"
+            (click)="startEditClearingPaymentDetails(idx)"
+            class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 text-[10px] font-black uppercase tracking-wider text-amber-600 hover:bg-amber-100"
+          >
+            <i class="pi pi-pencil text-[10px]"></i>
+            Edit Payment Details
+          </button>
+        } @else {
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              (click)="cancelEditClearingPaymentDetails()"
+              [disabled]="savingClearingPaymentDetails()"
+              class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:bg-slate-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              (click)="saveClearingPaymentDetails(idx)"
+              [disabled]="savingClearingPaymentDetails()"
+              class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-[10px] font-black uppercase tracking-wider text-emerald-600 hover:bg-emerald-100 disabled:opacity-50"
+            >
+              @if (savingClearingPaymentDetails()) {
+                <i class="pi pi-spin pi-spinner text-[10px]"></i>
+              } @else {
+                <i class="pi pi-check text-[10px]"></i>
+              }
+              Save
+            </button>
+          </div>
+        }
+      </div>
+    }
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
       @for (row of getClearingAdvanceInfoRows(idx); track row.label) {
         <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
           <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">{{ row.label }}</p>
-          <p class="mt-1 text-sm font-bold text-slate-800 break-words">{{ row.value }}</p>
+          @if (editingClearingPaymentDetails() && row.key && clearingPaymentDraft(); as draft) {
+            @if (row.key === 'chequeDate') {
+              <p-datepicker
+                [ngModel]="draft.chequeDate"
+                [ngModelOptions]="{ standalone: true }"
+                (ngModelChange)="updateClearingPaymentDraft('chequeDate', $event)"
+                dateFormat="dd/mm/yy"
+                styleClass="w-full mt-1"
+                inputStyleClass="table-input-text w-full"
+                appendTo="body"
+              ></p-datepicker>
+            } @else {
+              <input
+                pInputText
+                class="table-input-text w-full mt-1"
+                [value]="$any(draft)[row.key]"
+                (input)="updateClearingPaymentDraft($any(row.key), $any($event.target).value)"
+              />
+            }
+          } @else {
+            <p class="mt-1 text-sm font-bold text-slate-800 break-words">{{ row.value }}</p>
+          }
         </div>
       }
     </div>

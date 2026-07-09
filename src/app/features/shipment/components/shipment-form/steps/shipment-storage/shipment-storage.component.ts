@@ -19,6 +19,7 @@ import { ConfirmDialogService } from '../../../../../../core/services/confirm-di
 import { RbacService } from '../../../../../../core/services/rbac.service';
 import { AuthService } from '../../../../../../core/services/auth.service';
 import { StorageAllocationApprovalState, StorageArrivalApprovalState } from '../../../../../../core/models/shipment.model';
+import { toLocalDateString } from '../../shared/date.util';
 
 @Component({
   selector: 'app-shipment-storage',
@@ -622,7 +623,7 @@ export class ShipmentStorageComponent {
   }
 
   private toDate(value: unknown): string {
-    return value ? new Date(value as string | Date).toISOString().split('T')[0] : '';
+    return value ? toLocalDateString(new Date(value as string | Date)) : '';
   }
 
   private toTime(value: unknown): string {

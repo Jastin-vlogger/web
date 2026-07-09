@@ -34,6 +34,7 @@ import { normalizeBlRole, normalizeBlVisibleTo, type BlVisibleRole } from '../..
 import { downloadAdvanceRequestReportPdf } from '../../shared/advance-request-report';
 import { getComputedShipmentStatus, getShipmentStatusSeverity, type ShipmentStatusSeverity } from '../../shared/shipment-status';
 import { canApprovePendingStep } from '../../shared/approval-gate.util';
+import { toLocalDateString } from '../../shared/date.util';
 
 @Component({
   selector: 'app-shipment-payment-costing',
@@ -1622,7 +1623,7 @@ export class ShipmentPaymentCostingComponent {
     }
 
     const toDate = (value: unknown) =>
-      value ? new Date(value as string | Date).toISOString().split('T')[0] : '';
+      value ? toLocalDateString(new Date(value as string | Date)) : '';
 
     const paymentCostings = this.getPaymentCostings(group).controls.map((row, rowIndex) => ({
       sn: Number(row.get('sn')?.value) || rowIndex + 1,

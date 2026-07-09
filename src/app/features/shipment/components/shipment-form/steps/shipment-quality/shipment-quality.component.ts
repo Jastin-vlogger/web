@@ -16,6 +16,7 @@ import * as ShipmentActions from '../../../../../../store/shipment/shipment.acti
 import { ShipmentService } from '../../../../../../core/services/shipment.service';
 import { NotificationService } from '../../../../../../core/services/notification.service';
 import { ConfirmDialogService } from '../../../../../../core/services/confirm-dialog.service';
+import { toLocalDateString } from '../../shared/date.util';
 
 type QualityDocKind = 'inhouse' | 'strategic' | 'thirdParty' | 'attachment' | 'report';
 
@@ -440,7 +441,7 @@ export class ShipmentQualityComponent {
     }
 
     const toDate = (value: unknown) =>
-      value ? new Date(value as string | Date).toISOString().split('T')[0] : '';
+      value ? toLocalDateString(new Date(value as string | Date)) : '';
 
     const qualityRows = this.getQualityRows(group).controls.map((row, rowIndex) => ({
       sn: Number(row.get('sn')?.value) || rowIndex + 1,

@@ -680,6 +680,12 @@
                                   class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 hover:bg-slate-50 hover:text-blue-600">
                                   <i class="pi pi-upload text-[10px]"></i> Upload
                                 </button>
+                                } @else if (group.get('municipalityClearanceCertificateUrl')?.value) {
+                                <span
+                                  class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-400"
+                                  title="Certificate uploaded"
+                                  aria-hidden="true"
+                                ><i class="pi pi-upload text-[10px]"></i></span>
                                 }
                                 @if (getMunicipalityCertificateFile(i)) {
                                   <button type="button" (click)="openDocumentPreview(getMunicipalityCertificateFile(i)!, 'Municipality Certificate')"

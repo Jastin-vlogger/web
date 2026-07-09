@@ -281,6 +281,19 @@
                       class="w-8 h-8 rounded-lg border border-amber-200 text-amber-600 hover:bg-amber-50 flex items-center justify-center"
                       [attr.aria-label]="'Edit scheduled row ' + (i + 1)"
                     ><i class="pi pi-pencil text-xs"></i></button>
+                    <button
+                      type="button"
+                      (click)="deleteScheduledRow(i)"
+                      [disabled]="deletingPlannedRowIndex() === i"
+                      class="w-8 h-8 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                      [attr.aria-label]="'Delete scheduled row ' + (i + 1)"
+                    >
+                      @if (deletingPlannedRowIndex() === i) {
+                        <i class="pi pi-spin pi-spinner text-xs"></i>
+                      } @else {
+                        <i class="pi pi-trash text-xs"></i>
+                      }
+                    </button>
                   }
                 } @else {
                   <button

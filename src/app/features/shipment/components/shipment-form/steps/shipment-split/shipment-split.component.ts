@@ -18,6 +18,7 @@ import { ToastModule } from 'primeng/toast';
 import { ConfirmDialogService } from '../../../../../../core/services/confirm-dialog.service';
 import { RbacService } from '../../../../../../core/services/rbac.service';
 import { getComputedShipmentStatus, getShipmentStatusSeverity, type ShipmentStatusSeverity } from '../../shared/shipment-status';
+import { toLocalDateString } from '../../shared/date.util';
 
 import {
   selectActiveSplitTab,
@@ -143,6 +144,7 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
   readonly etaCalendarDates = signal<Date[]>([]);
   readonly etaCalendarViewDate = signal<Date>(new Date());
   readonly editablePlannedRows = signal<number[]>([]);
+  readonly deletingPlannedRowIndex = signal<number | null>(null);
   readonly actualBagCapacityError = signal<string | null>(null);
   readonly manualActualBagRows = signal<Record<number, boolean>>({});
   readonly actualExtractionErrors = signal<Record<number, string | null>>({});
@@ -302,20 +304,6 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     this.actualRecalcSub?.unsubscribe();
     this.plannedLockSub?.unsubscribe();
     this.stopExtractionExperience();
-  }
-
-  /**
-   * Serializes a date-only value using its LOCAL calendar date, not `toISOString()`.
-   * `toISOString()` converts to UTC first — for any timezone ahead of UTC (e.g. IST,
-   * UTC+5:30), a date picked at local midnight rolls back to the previous day once
-   * converted (16th 00:00 IST → 15th 18:30 UTC), so slicing the date off the ISO string
-   * silently saves the wrong day.
-   */
-  private toLocalDateString(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
   }
 
   private startExtractionExperience(): void {
@@ -562,6 +550,46 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
 
   cancelPlannedRowEdit(index: number): void {
     this.editablePlannedRows.set(this.editablePlannedRows().filter((rowIndex) => rowIndex !== index));
+  }
+
+  /** Deletes a single scheduled ("ETD yet to due") row via the backend — never a raw
+   * local removal once the schedule is locked, so the container really disappears from
+   * the database (not just the screen) and noOfShipments stays in sync server-side. */
+  async deleteScheduledRow(index: number): Promise<void> {
+    if (this.isPlannedRowLocked(index)) return;
+    const row = this.plannedSplits.at(index) as FormGroup | null;
+    const containerId = row?.get('containerId')?.value;
+    if (!containerId) return;
+
+    const confirmed = await this.confirmDialog.ask({
+      message: `Delete scheduled shipment ${this.getScheduledShipmentId(index)}? This cannot be undone.`,
+      header: 'Delete Scheduled Shipment',
+      acceptLabel: 'Yes, Delete',
+      rejectLabel: 'Cancel',
+      icon: 'pi pi-trash',
+      severity: 'danger',
+    });
+    if (!confirmed) return;
+
+    this.deletingPlannedRowIndex.set(index);
+    this.shipmentService.deletePlannedContainer(containerId).subscribe({
+      next: () => {
+        this.deletingPlannedRowIndex.set(null);
+        this.messageService.add({ severity: 'success', summary: 'Deleted', detail: 'Scheduled shipment deleted.' });
+        const shipmentId = this.shipmentData()?.shipment?._id;
+        if (shipmentId) {
+          this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+        }
+      },
+      error: (error) => {
+        this.deletingPlannedRowIndex.set(null);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Delete failed',
+          detail: error.error?.message || 'Could not delete scheduled shipment.',
+        });
+      },
+    });
   }
 
   hasPendingPlannedEdits(): boolean {
@@ -1709,8 +1737,8 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     const submittedRowIndices = submissionEntries.map(({ originalIndex }) => originalIndex);
     const containers = submissionEntries.map(({ c }: any) => ({
       ...c,
-      etd: c.etd ? this.toLocalDateString(new Date(c.etd)) : '',
-      eta: c.eta ? this.toLocalDateString(new Date(c.eta)) : '',
+      etd: c.etd ? toLocalDateString(new Date(c.etd)) : '',
+      eta: c.eta ? toLocalDateString(new Date(c.eta)) : '',
     }));
     const shipmentId = shipmentData.shipment._id || (shipmentData as any).shipment.id;
 
@@ -1896,15 +1924,15 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     payload.append('buyingUnit', 'MT');
     payload.append(
       'shipOnBoardDate',
-      formValue['shipOnBoardDate'] ? this.toLocalDateString(new Date(formValue['shipOnBoardDate'])) : ''
+      formValue['shipOnBoardDate'] ? toLocalDateString(new Date(formValue['shipOnBoardDate'])) : ''
     );
     payload.append(
       'updatedETD',
-      formValue['updatedETD'] ? this.toLocalDateString(new Date(formValue['updatedETD'])) : ''
+      formValue['updatedETD'] ? toLocalDateString(new Date(formValue['updatedETD'])) : ''
     );
     payload.append(
       'updatedETA',
-      formValue['updatedETA'] ? this.toLocalDateString(new Date(formValue['updatedETA'])) : ''
+      formValue['updatedETA'] ? toLocalDateString(new Date(formValue['updatedETA'])) : ''
     );
     payload.append('BLNo', formValue['BLNo'] || '');
 
@@ -1950,11 +1978,11 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
         const mmYyyyMatch = String(rawProductionDate).match(/^(\d{1,2})\/(\d{4})$/);
         if (mmYyyyMatch) {
           const parsedDate = new Date(Number(mmYyyyMatch[2]), Number(mmYyyyMatch[1]) - 1, 1);
-          payload.append('packagingDate', this.toLocalDateString(parsedDate));
+          payload.append('packagingDate', toLocalDateString(parsedDate));
         } else {
           const parsedDate = new Date(rawProductionDate);
           if (!isNaN(parsedDate.getTime())) {
-            payload.append('packagingDate', this.toLocalDateString(parsedDate));
+            payload.append('packagingDate', toLocalDateString(parsedDate));
           }
         }
       }

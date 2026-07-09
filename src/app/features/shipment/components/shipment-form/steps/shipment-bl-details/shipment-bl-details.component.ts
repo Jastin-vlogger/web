@@ -27,6 +27,7 @@ import autoTable from 'jspdf-autotable';
 import { normalizeBlRole, normalizeBlVisibleTo, type BlVisibleRole } from '../../shared/bl-row-definitions';
 import { downloadAdvanceRequestReportPdf } from '../../shared/advance-request-report';
 import { getComputedShipmentStatus, getShipmentStatusSeverity, type ShipmentStatusSeverity } from '../../shared/shipment-status';
+import { toLocalDateString } from '../../shared/date.util';
 import {
   selectIsPlannedLocked,
   selectShipmentData,
@@ -118,6 +119,14 @@ export class ShipmentBlDetailsComponent {
   });
   readonly clearingInfoModalVisible = signal(false);
   readonly clearingInfoIndex = signal<number | null>(null);
+  readonly editingClearingPaymentDetails = signal(false);
+  readonly savingClearingPaymentDetails = signal(false);
+  readonly clearingPaymentDraft = signal<{
+    chequeNo: string;
+    chequeDate: Date | null;
+    paymentVoucherNo: string;
+    transactionId: string;
+  } | null>(null);
   readonly additionalRequestModalVisible = signal(false);
   readonly additionalRequestIndex = signal<number | null>(null);
   readonly additionalRequestDraft = signal({
@@ -440,9 +449,20 @@ export class ShipmentBlDetailsComponent {
     this.activeTabs.update((current) => ({ ...current, [index]: tab }));
   }
 
+  /** Clearing Advance / Storage Allocation / Clearing Advance Process / Payment Costing
+   * only make sense once the shipment has actually arrived — same gate as the tab buttons. */
+  private hasShipmentArrived(index: number): boolean {
+    const row = this.formArray?.at(index) as FormGroup | null;
+    return row?.get('shipmentArrived')?.value === 'Yes';
+  }
+
+  private isArrivalGatedTab(tab: string): boolean {
+    return tab === 'cost' || tab === 'storage' || tab === 'payment_allocation' || tab === 'payment_costing';
+  }
+
   getActiveTab(index: number): 'cost' | 'storage' | 'packaging' | 'payment_allocation' | 'payment_costing' {
     const tab = this.activeTabs()[index];
-    if (tab && this.canViewBlTab(tab)) return tab;
+    if (tab && this.canViewBlTab(tab) && (!this.isArrivalGatedTab(tab) || this.hasShipmentArrived(index))) return tab;
     return this.getDefaultVisibleTab();
   }
 
@@ -1608,7 +1628,7 @@ export class ShipmentBlDetailsComponent {
     if (!value) return '';
     const date = value instanceof Date ? value : new Date(value as string);
     if (Number.isNaN(date.getTime())) return '';
-    return date.toISOString().split('T')[0];
+    return toLocalDateString(date);
   }
 
   private getUserDisplay(user: any): string {
@@ -1634,9 +1654,11 @@ export class ShipmentBlDetailsComponent {
   closeClearingAdvanceInfo(): void {
     this.clearingInfoModalVisible.set(false);
     this.clearingInfoIndex.set(null);
+    this.editingClearingPaymentDetails.set(false);
+    this.clearingPaymentDraft.set(null);
   }
 
-  getClearingAdvanceInfoRows(index: number): Array<{ label: string; value: string }> {
+  getClearingAdvanceInfoRows(index: number): Array<{ label: string; value: string; key?: string }> {
     const actual = this.getActualShipment(index) || {};
     const approval = actual.clearingAdvanceApproval || {};
     const payment = actual.clearingAdvancePaymentDetails || {};
@@ -1645,11 +1667,69 @@ export class ShipmentBlDetailsComponent {
       { label: 'Requested By', value: this.getUserDisplay(approval.submittedBy || approval.requestedBy) },
       { label: 'Approved At', value: this.formatDateTimeForDisplay(approval.fasApprovedAt || approval.approvedAt) },
       { label: 'Approved By', value: this.getUserDisplay(approval.fasApprovedBy || approval.approvedBy) },
-      { label: 'Cheque No', value: payment.chequeNo || '—' },
-      { label: 'Cheque Date', value: this.formatDateForReport(payment.chequeDate) },
-      { label: 'Payment Voucher No', value: payment.paymentVoucherNo || '—' },
-      { label: 'Transaction ID', value: payment.transactionId || '—' },
+      { label: 'Cheque No', value: payment.chequeNo || '—', key: 'chequeNo' },
+      { label: 'Cheque Date', value: this.formatDateForReport(payment.chequeDate), key: 'chequeDate' },
+      { label: 'Payment Voucher No', value: payment.paymentVoucherNo || '—', key: 'paymentVoucherNo' },
+      { label: 'Transaction ID', value: payment.transactionId || '—', key: 'transactionId' },
     ];
+  }
+
+  /** Editing the cheque/voucher/transaction fields in the info modal is FAS-tier only. */
+  canEditClearingAdvancePaymentDetails(): boolean {
+    if (this.authService.isAdminLevelRole()) return true;
+    return this.isFasRole() || this.isFasManagerRole();
+  }
+
+  startEditClearingPaymentDetails(index: number): void {
+    if (!this.canEditClearingAdvancePaymentDetails()) return;
+    const payment = this.getActualShipment(index)?.clearingAdvancePaymentDetails || {};
+    this.clearingPaymentDraft.set({
+      chequeNo: payment.chequeNo || '',
+      chequeDate: payment.chequeDate ? new Date(payment.chequeDate) : null,
+      paymentVoucherNo: payment.paymentVoucherNo || '',
+      transactionId: payment.transactionId || '',
+    });
+    this.editingClearingPaymentDetails.set(true);
+  }
+
+  cancelEditClearingPaymentDetails(): void {
+    this.editingClearingPaymentDetails.set(false);
+    this.clearingPaymentDraft.set(null);
+  }
+
+  updateClearingPaymentDraft(field: 'chequeNo' | 'chequeDate' | 'paymentVoucherNo' | 'transactionId', value: any): void {
+    const draft = this.clearingPaymentDraft();
+    if (!draft) return;
+    this.clearingPaymentDraft.set({ ...draft, [field]: value });
+  }
+
+  saveClearingPaymentDetails(index: number): void {
+    const draft = this.clearingPaymentDraft();
+    const containerId = this.getActualShipment(index)?.containerId;
+    if (!draft || !containerId) return;
+
+    this.savingClearingPaymentDetails.set(true);
+    this.shipmentService.updateClearingAdvancePaymentDetails(containerId, {
+      chequeNo: draft.chequeNo,
+      chequeDate: draft.chequeDate ? toLocalDateString(new Date(draft.chequeDate)) : null,
+      paymentVoucherNo: draft.paymentVoucherNo,
+      transactionId: draft.transactionId,
+    }).subscribe({
+      next: () => {
+        this.savingClearingPaymentDetails.set(false);
+        this.editingClearingPaymentDetails.set(false);
+        this.clearingPaymentDraft.set(null);
+        this.notificationService.success('Saved', 'Clearing advance payment details updated.');
+        const shipmentId = this.shipmentData()?.shipment?._id;
+        if (shipmentId) {
+          this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+        }
+      },
+      error: (error) => {
+        this.savingClearingPaymentDetails.set(false);
+        this.notificationService.error('Save failed', error.error?.message || 'Could not update payment details.');
+      },
+    });
   }
 
   canCreateAdditionalClearingRequest(index: number): boolean {
@@ -2236,7 +2316,7 @@ export class ShipmentBlDetailsComponent {
     }
 
     const toDate = (value: unknown) =>
-      value ? new Date(value as string | Date).toISOString().split('T')[0] : '';
+      value ? toLocalDateString(new Date(value as string | Date)) : '';
 
     this.savingKey.set(`bl-${index}`);
     const formData = new FormData();

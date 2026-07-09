@@ -32,6 +32,7 @@ import {
 import * as ShipmentActions from '../../../../../../store/shipment/shipment.actions';
 import { isDocumentationCompleteForCurrentFlow } from '../../shared/document-tracker-milestones';
 import { getMunicipalitySectionMissingFields } from '../../shared/logistics-section.util';
+import { toLocalDateString } from '../../shared/date.util';
 
 type Step5DocKind =
   | 'arrivalNotice'
@@ -447,7 +448,7 @@ export class ShipmentArrivalComponent {
   private buildBulkLogisticsPayload(index: number, sections: LogisticsSectionKey[]): FormData {
     const group = this.formArray.at(index);
     const payload = new FormData();
-    const toDate = (val: unknown) => (val ? new Date(val as Date).toISOString().split('T')[0] : '');
+    const toDate = (val: unknown) => (val ? toLocalDateString(new Date(val as Date)) : '');
 
     payload.append('sectionKey', 'bulk');
     payload.append('bulkSectionKeys', JSON.stringify(sections));
@@ -512,7 +513,7 @@ export class ShipmentArrivalComponent {
   }
 
   private buildTransportationBookedPayload(group: AbstractControl): Array<Record<string, unknown>> {
-    const toDate = (val: unknown) => (val ? new Date(val as Date).toISOString().split('T')[0] : '');
+    const toDate = (val: unknown) => (val ? toLocalDateString(new Date(val as Date)) : '');
     return this.getTransportationRows(group).getRawValue().map((tb: any) => ({
       sn: Number(tb.sn) || 0,
       transactionId: tb.transactionId || '',
@@ -1122,7 +1123,7 @@ export class ShipmentArrivalComponent {
         const containerId = formValue['containerId'];
         if (!containerId) return;
 
-        const toDate = (val: unknown) => (val ? new Date(val as Date).toISOString().split('T')[0] : '');
+        const toDate = (val: unknown) => (val ? toLocalDateString(new Date(val as Date)) : '');
 
         this.updateDerivedDates(index);
         this.updateDelayHours(index);
@@ -1349,7 +1350,7 @@ export class ShipmentArrivalComponent {
     });
     if (!confirmed) return;
 
-    const toDate = (val: unknown) => (val ? new Date(val as Date).toISOString().split('T')[0] : '');
+    const toDate = (val: unknown) => (val ? toLocalDateString(new Date(val as Date)) : '');
     const payload = new FormData();
     payload.append('sectionKey', section);
     payload.append('customClearanceRequired', String(this.isCustomClearanceRequired(index)));
