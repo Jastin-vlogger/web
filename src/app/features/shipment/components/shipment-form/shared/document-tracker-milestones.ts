@@ -89,7 +89,9 @@ export const isDocumentationMilestoneComplete = (
       const hasReceiver = hasValue(values.receiver);
       if (!hasReceiver || !hasValue(values.expectedDocDate)) return false;
       if (isBankReceiverValue(values.receiver)) {
-        return hasValue(values.bankName) && hasValue(values.inwardCollectionAdviceDocumentUrl);
+        // DA document upload is no longer required just to reveal Milestone 2 — it can be
+        // attached from within Milestone 2 itself once it's visible.
+        return hasValue(values.bankName);
       }
       return true;
     }

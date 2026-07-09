@@ -740,18 +740,30 @@ export class ShipmentFormComponent implements OnDestroy {
     this.shipmentForm.get('noOfShipments')?.setValue(no, { emitEvent: false });
   }
 
+  /**
+   * Adds a new row carrying exactly the still-unallocated FCL/MT — it never touches any
+   * existing row's values. Rows that already progressed to actuals (or were manually set)
+   * must be left exactly as they are; only redistributing into a single new row lets this
+   * run safely even after the schedule has been locked and partially actualized.
+   */
   addPlannedRow(): void {
-    const totalQtyMT = this.shipmentData()?.shipment?.plannedQtyMT ?? 0;
+    const totalQtyMT = Number(this.shipmentData()?.shipment?.plannedQtyMT) || 0;
     const totalFcl = Number(this.shipmentData()?.shipment?.fcl) || 0;
-    this.plannedSplits.push(this.createPlannedGroup(undefined, true));
-    const n = this.plannedSplits.length;
-    const qtyPerRow = this.distributeQtyMT(totalQtyMT, n);
-    const fclPerRow = this.distributeFcl(totalFcl, n);
-    this.plannedSplits.controls.forEach((c, i) => {
-      c.get('qtyMT')?.setValue(qtyPerRow[i], { emitEvent: false });
-      c.get('FCL')?.setValue(fclPerRow[i], { emitEvent: false });
-    });
-    this.shipmentForm.get('noOfShipments')?.setValue(n, { emitEvent: false });
+
+    const allocatedFcl = this.plannedSplits.controls.reduce(
+      (sum, c) => sum + (Number(c.get('FCL')?.value) || 0),
+      0
+    );
+    const allocatedQtyMT = this.plannedSplits.controls.reduce(
+      (sum, c) => sum + (Number(c.get('qtyMT')?.value) || 0),
+      0
+    );
+
+    const remainingFcl = Math.max(0, totalFcl - allocatedFcl);
+    const remainingQtyMT = Math.max(0, Math.round((totalQtyMT - allocatedQtyMT) * 100) / 100);
+
+    this.plannedSplits.push(this.createPlannedGroup(remainingQtyMT, true, remainingFcl));
+    this.shipmentForm.get('noOfShipments')?.setValue(this.plannedSplits.length, { emitEvent: false });
   }
 
   /** Adds a remainder row (auto-generated when allocated MT < total MT). */

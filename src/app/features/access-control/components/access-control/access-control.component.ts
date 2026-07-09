@@ -408,8 +408,8 @@ export class AccessControlComponent {
       children: [
         {
           key: 'document_tracker_milestone_1',
-          label: 'Milestone 1',
-          description: 'Courier Logistics with B/L, courier tracking number, courier provider, and document arrival notes.',
+          label: 'Milestone 1 — Courier Logistics & Receiver Setup',
+          description: 'Courier Logistics with B/L, courier tracking number, courier provider, and document arrival notes. Shown in the "Milestone 1" card.',
           tabKey: 'document_tracker',
           viewPermissionKey: 'shipment.tab.document_tracker.milestone_1.view',
           editPermissionKey: 'shipment.tab.document_tracker.milestone_1.edit',
@@ -418,8 +418,8 @@ export class AccessControlComponent {
         },
         {
           key: 'document_tracker_milestone_2',
-          label: 'Milestone 2',
-          description: 'Receiver and bank setup with receiver type, bank name, and expected document date.',
+          label: 'Milestone 1 (cont\'d) — Receiver & Bank Details',
+          description: 'Receiver and bank setup with receiver type, bank name, and expected document date. These fields render inside the same "Milestone 1" card, not a separate one — grant together with Milestone 1 above.',
           tabKey: 'document_tracker',
           viewPermissionKey: 'shipment.tab.document_tracker.milestone_2.view',
           editPermissionKey: 'shipment.tab.document_tracker.milestone_2.edit',
@@ -428,8 +428,8 @@ export class AccessControlComponent {
         },
         {
           key: 'document_tracker_milestone_3',
-          label: 'Milestone 3',
-          description: 'Inward Collection Advice with notice date, upload, and preview actions.',
+          label: 'Milestone 2 — DA Upload & Bank Submission Status',
+          description: 'Inward Collection Advice with notice date, upload, and preview actions. This is the card actually shown as "Milestone 2" on the Document Tracker screen (only visible for Bank receivers).',
           tabKey: 'document_tracker',
           viewPermissionKey: 'shipment.tab.document_tracker.milestone_3.view',
           editPermissionKey: 'shipment.tab.document_tracker.milestone_3.edit',
@@ -438,8 +438,8 @@ export class AccessControlComponent {
         },
         {
           key: 'document_tracker_milestone_4',
-          label: 'Milestone 4',
-          description: 'Murabaha contract processing details and date controls for finance handling.',
+          label: 'Milestone 3 — Murabaha Contract Processing',
+          description: 'Murabaha contract processing details and date controls for finance handling. Shown as "Milestone 3" on the Document Tracker screen.',
           tabKey: 'document_tracker',
           viewPermissionKey: 'shipment.tab.document_tracker.milestone_4.view',
           editPermissionKey: 'shipment.tab.document_tracker.milestone_4.edit',
@@ -448,8 +448,8 @@ export class AccessControlComponent {
         },
         {
           key: 'document_tracker_milestone_5',
-          label: 'Milestone 5',
-          description: 'Murabaha submission milestone with submission date and supporting document actions.',
+          label: 'Milestone 4 — Murabaha Submission',
+          description: 'Murabaha submission milestone with submission date and supporting document actions. Shown as "Milestone 4" on the Document Tracker screen.',
           tabKey: 'document_tracker',
           viewPermissionKey: 'shipment.tab.document_tracker.milestone_5.view',
           editPermissionKey: 'shipment.tab.document_tracker.milestone_5.edit',
@@ -458,8 +458,8 @@ export class AccessControlComponent {
         },
         {
           key: 'document_tracker_milestone_6',
-          label: 'Milestone 6',
-          description: 'Documents release milestone with release date and final document preview/upload actions.',
+          label: 'Milestone 5 — Documents Release',
+          description: 'Documents release milestone with release date and final document preview/upload actions. Shown as "Milestone 5" on the Document Tracker screen.',
           tabKey: 'document_tracker',
           viewPermissionKey: 'shipment.tab.document_tracker.milestone_6.view',
           editPermissionKey: 'shipment.tab.document_tracker.milestone_6.edit',

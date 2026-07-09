@@ -542,13 +542,47 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     return this.editablePlannedRows().includes(index);
   }
 
+  /** Unallocated FCL capacity left to schedule (remainder rows don't count as manual allocation). */
+  getRemainingPlannedFcl(): number {
+    const totalFcl = Number(this.shipmentData()?.shipment?.fcl) || 0;
+    const allocated = this.plannedSplits.controls.reduce((sum, c) => {
+      if (c.get('isRemainderRow')?.value) return sum;
+      return sum + (Number(c.get('FCL')?.value) || 0);
+    }, 0);
+    return Math.max(0, totalFcl - allocated);
+  }
+
+  /** Adds a row for the remaining FCL and, if the schedule is already locked, marks it
+   * editable immediately so "Save Changes" appears and the new row can be persisted —
+   * otherwise it would sit there enabled but with no way to submit it to the backend. */
+  onAddPlannedRow(): void {
+    this.addPlannedRow.emit();
+    const newIndex = this.plannedSplits.length - 1;
+    if (newIndex >= 0 && !this.editablePlannedRows().includes(newIndex)) {
+      this.editablePlannedRows.set([...this.editablePlannedRows(), newIndex].sort((a, b) => a - b));
+    }
+  }
+
   startPlannedRowEdit(index: number): void {
     if (this.isPlannedRowLocked(index)) return;
     if (!this.isPlannedLocked() || this.isPlannedRowEditable(index)) return;
     this.editablePlannedRows.set([...this.editablePlannedRows(), index].sort((a, b) => a - b));
   }
 
+  /** Cancelling a row that was never saved (no containerId — only possible for a row just
+   * added via "Add row") removes it outright, so it stops holding onto FCL/MT that would
+   * otherwise be stuck with no way to release it back to "remaining" once locked. */
   cancelPlannedRowEdit(index: number): void {
+    const row = this.plannedSplits.at(index) as FormGroup | null;
+    if (row && !row.get('containerId')?.value) {
+      this.plannedSplits.removeAt(index);
+      this.editablePlannedRows.set(
+        this.editablePlannedRows()
+          .filter((rowIndex) => rowIndex !== index)
+          .map((rowIndex) => (rowIndex > index ? rowIndex - 1 : rowIndex))
+      );
+      return;
+    }
     this.editablePlannedRows.set(this.editablePlannedRows().filter((rowIndex) => rowIndex !== index));
   }
 
