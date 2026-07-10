@@ -38,33 +38,33 @@
             <!-- Status Snapshot -->
             @if (canViewDashboardSection('dashboard.section.status_snapshot.view')) {
                 <article class="status-panel border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm"
-                    [ngClass]="canViewDashboardSection('dashboard.section.fas_chart.view') ? 'xl:col-span-3' : 'xl:col-span-4'">
+                    [ngClass]="canViewDashboardSection('dashboard.section.fas_chart.view') ? 'xl:col-span-2' : 'xl:col-span-4'">
                     <div class="status-panel-title bg-slate-50/50 py-3 px-6 border-b border-slate-100 font-bold text-slate-700">Status Snapshot</div>
                     <div class="p-3 flex-1 overflow-x-auto">
-                        <table class="w-full border-collapse">
+                        <table class="w-full h-full border-collapse">
                             <thead>
                                 <tr class="border-b border-slate-100">
-                                    <th class="py-2 px-2 w-40 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Status</th>
-                                    <th class="py-2 px-2 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">Quantity</th>
-                                    <th class="py-2 px-2 text-center text-[10px] font-black uppercase tracking-widest text-blue-600">FCL</th>
-                                    <th class="py-2 px-2 text-center text-[10px] font-black uppercase tracking-widest text-emerald-600">MT</th>
+                                    <th class="py-3 px-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Status</th>
+                                    <th class="py-3 px-3 text-center text-[10px] font-black uppercase tracking-widest text-slate-500">Quantity</th>
+                                    <th class="py-3 px-3 text-center text-[10px] font-black uppercase tracking-widest text-blue-600">FCL</th>
+                                    <th class="py-3 px-3 text-center text-[10px] font-black uppercase tracking-widest text-emerald-600">MT</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @for (row of statusSnapshotRows(); track row.label) {
                                     <tr class="border-b border-slate-50 last:border-0">
-                                        <td class="py-3 px-2 w-40">
-                                            <span class="flex items-center gap-2 min-w-0">
-                                                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600"><i [class]="row.icon"></i></span>
+                                        <td class="py-4 px-3">
+                                            <span class="flex items-center gap-2.5 min-w-0">
+                                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600"><i [class]="row.icon"></i></span>
                                                 <span class="text-[11px] font-bold uppercase tracking-wide leading-tight text-slate-700 truncate" [title]="row.label">{{ row.label }}</span>
                                             </span>
                                         </td>
-                                        <td class="py-3 px-2 text-center text-lg font-black tabular-nums text-slate-900">{{ row.quantity }}</td>
-                                        <td class="py-3 px-2 text-center text-sm font-black tabular-nums text-blue-600">{{ formatPivotNumber(row.fcl) }}</td>
-                                        <td class="py-3 px-2 text-center text-sm font-black tabular-nums text-emerald-600">{{ formatPivotNumber(row.mt) }}</td>
+                                        <td class="py-4 px-3 text-center text-lg font-black tabular-nums text-slate-900">{{ row.quantity }}</td>
+                                        <td class="py-4 px-3 text-center text-base font-black tabular-nums text-blue-600">{{ formatPivotNumber(row.fcl) }}</td>
+                                        <td class="py-4 px-3 text-center text-base font-black tabular-nums text-emerald-600">{{ formatPivotNumber(row.mt) }}</td>
                                     </tr>
                                 } @empty {
-                                    <tr><td colspan="4" class="py-6 text-center text-sm text-slate-400">No snapshot data available.</td></tr>
+                                    <tr><td colspan="4" class="py-4 text-center text-xs text-slate-400">No snapshot data available.</td></tr>
                                 }
                             </tbody>
                         </table>
@@ -75,7 +75,7 @@
             <!-- FAS right rail: Documents by Receiver Type, Provider Wise, Pending cards -->
             @if (canViewDashboardSection('dashboard.section.fas_chart.view')) {
             <div class="flex flex-col gap-6"
-                [ngClass]="canViewDashboardSection('dashboard.section.status_snapshot.view') ? 'xl:col-span-1' : 'xl:col-span-4'">
+                [ngClass]="canViewDashboardSection('dashboard.section.status_snapshot.view') ? 'xl:col-span-2' : 'xl:col-span-4'">
                 <!-- Documents by Receiver Type -->
                 <article class="sl-panel flex flex-col gap-4 p-5 bg-white border border-slate-200 rounded-xl shadow-sm">
                     <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Documents Received By</h4>

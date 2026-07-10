@@ -691,18 +691,17 @@ export class ShipmentFormComponent implements OnDestroy {
     }
   }
 
-  /** Distribute totalQtyMT across n rows (equal split, sum never exceeds total). */
+  /** Distribute totalQtyMT across n rows as whole numbers — remainder goes entirely to the last row. */
   private distributeQtyMT(totalQtyMT: number, n: number): number[] {
     if (n <= 0) return [];
-    const perRow = totalQtyMT / n;
+    const base = Math.floor(totalQtyMT / n);
     const rows: number[] = [];
     let sum = 0;
     for (let i = 0; i < n - 1; i++) {
-      const v = Math.floor(perRow * 100) / 100;
-      rows.push(v);
-      sum += v;
+      rows.push(base);
+      sum += base;
     }
-    rows.push(Math.round((totalQtyMT - sum) * 100) / 100);
+    rows.push(Math.round(totalQtyMT - sum));
     return rows;
   }
 
@@ -760,7 +759,7 @@ export class ShipmentFormComponent implements OnDestroy {
     );
 
     const remainingFcl = Math.max(0, totalFcl - allocatedFcl);
-    const remainingQtyMT = Math.max(0, Math.round((totalQtyMT - allocatedQtyMT) * 100) / 100);
+    const remainingQtyMT = Math.max(0, Math.round(totalQtyMT - allocatedQtyMT));
 
     this.plannedSplits.push(this.createPlannedGroup(remainingQtyMT, true, remainingFcl));
     this.shipmentForm.get('noOfShipments')?.setValue(this.plannedSplits.length, { emitEvent: false });

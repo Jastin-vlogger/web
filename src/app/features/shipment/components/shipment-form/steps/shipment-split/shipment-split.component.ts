@@ -796,7 +796,7 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
       }
     });
 
-    const remainderMT = Math.round((totalQtyMT - allocatedMT) * 100) / 100;
+    const remainderMT = Math.round(totalQtyMT - allocatedMT);
     // Derive remainder FCL from the same ratio used everywhere (Total MT ÷ Total FCL).
     const qtyPerContainer = this.getQtyPerContainer();
     const remainderFcl = qtyPerContainer > 0 ? Math.round(remainderMT / qtyPerContainer) : 0;
@@ -865,15 +865,33 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
       });
     }
 
-    // Recompute qtyMT for EVERY non-remainder row from its FCL using a single
-    // derived ratio (Total MT / Total FCL). This keeps the rows consistent so
-    // the scheduled total can never drift above Total MT when Σ FCL ≤ Total FCL.
-    const qtyPerContainer = this.getQtyPerContainer();
-    this.isRebalancingPlannedRows = true;
-    this.plannedSplits.controls.forEach((ctrl) => {
+    // Recompute qtyMT for every non-remainder, non-actualized row from its FCL using a whole-number
+    // rate (Total MT ÷ Total FCL, floored) — the last editable row absorbs whatever's left over so
+    // the scheduled total always reconciles to Total MT exactly, with zero decimals on any row.
+    // Rows that already have real actual/BL data are left untouched, never recomputed here.
+    const submittedActual = new Set(this.submittedActualIndices());
+    const editableRows: Array<{ index: number; fcl: number }> = [];
+    let lockedMT = 0;
+    this.plannedSplits.controls.forEach((ctrl, i) => {
       if (ctrl.get('isRemainderRow')?.value) return;
-      const f = Number(ctrl.get('FCL')?.value) || 0;
-      ctrl.get('qtyMT')?.setValue(qtyPerContainer > 0 ? this.roundQty(f * qtyPerContainer) : 0, { emitEvent: false });
+      if (submittedActual.has(i)) {
+        lockedMT += Number(ctrl.get('qtyMT')?.value) || 0;
+        return;
+      }
+      editableRows.push({ index: i, fcl: Number(ctrl.get('FCL')?.value) || 0 });
+    });
+
+    const remainingQtyMT = Math.max(0, Math.round(totalQtyMT - lockedMT));
+    const totalEditableFcl = editableRows.reduce((sum, r) => sum + r.fcl, 0);
+    const ratePerFcl = totalEditableFcl > 0 ? Math.floor(remainingQtyMT / totalEditableFcl) : 0;
+
+    this.isRebalancingPlannedRows = true;
+    let allocated = 0;
+    editableRows.forEach(({ index, fcl }, i) => {
+      const isLast = i === editableRows.length - 1;
+      const value = isLast ? remainingQtyMT - allocated : fcl * ratePerFcl;
+      this.plannedSplits.at(index).get('qtyMT')?.setValue(value, { emitEvent: false });
+      allocated += value;
     });
     this.isRebalancingPlannedRows = false;
 
@@ -935,8 +953,9 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     return distributed;
   }
 
+  /** Qty MT is always shown as a whole number — never a decimal. */
   private roundQty(value: number): number {
-    return Math.round((Number.isFinite(value) ? value : 0) * 100) / 100;
+    return Math.round(Number.isFinite(value) ? value : 0);
   }
 
   private getDateKey(date: Date): string {
