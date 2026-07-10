@@ -232,6 +232,14 @@ export class ShipmentStorageComponent {
     return this.getActualRow(index)?.storageAllocationSplits || [];
   }
 
+  /** Plain warehouse list for the compact "Storage Location" view (shown once Transportation is arranged). */
+  getAllocationWarehouseList(index: number): string[] {
+    const decision = this.getAllocationDecision(index);
+    if (decision?.warehousesSelected?.length) return decision.warehousesSelected;
+    const allocations: any[] = this.getActualRow(index)?.storageAllocations || [];
+    return Array.from(new Set(allocations.map((a) => a?.warehouse).filter(Boolean)));
+  }
+
   private normalizeSerial(value: unknown): string {
     return String(value || '').trim().toUpperCase().replace(/\s+/g, ' ');
   }
@@ -750,7 +758,7 @@ export class ShipmentStorageComponent {
     return this.savingRowKey() === `approve:${shipmentIndex}`;
   }
 
-  private isTransportationArranged(index: number): boolean {
+  isTransportationArranged(index: number): boolean {
     const actual = this.getActualRow(index);
     return Array.isArray(actual?.lockedLogisticsSections) &&
       actual.lockedLogisticsSections.includes('transportation');
