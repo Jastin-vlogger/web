@@ -647,17 +647,13 @@ export class ShipmentBlDetailsComponent {
   }
 
   private getEffectiveClearingAdvanceStatus(index: number): 'draft' | 'pending_fas' | 'pending_fas_manager' | 'approved' {
+    // Read the real backend status directly — the backend now records a genuine submission
+    // (status/submittedAt/submittedBy) the moment cost sheet data is saved, so there's no
+    // longer any need to infer "pending" from row contents on the frontend.
     const actual = this.getActualShipment(index);
     const rawStatus = actual?.clearingAdvanceApproval?.status || 'draft';
     if (rawStatus === 'pending_fas_manager') return 'approved';
-    if (rawStatus !== 'draft') return rawStatus;
-    const rows = actual?.costSheetBookings || [];
-    const hasSavedData = Array.isArray(rows) && rows.some((entry: any) =>
-      Number(entry?.requestAmount || 0) > 0 ||
-      String(entry?.remarks || '').trim().length > 0 ||
-      String(entry?.attachmentDocumentUrl || '').trim().length > 0
-    );
-    return hasSavedData ? 'pending_fas' : 'draft';
+    return rawStatus;
   }
 
   private getEffectivePaymentCostingStatus(index: number): 'draft' | 'pending_fas_manager' | 'approved' {
