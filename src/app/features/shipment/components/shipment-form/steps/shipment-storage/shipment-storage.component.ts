@@ -760,8 +760,14 @@ export class ShipmentStorageComponent {
 
   isTransportationArranged(index: number): boolean {
     const actual = this.getActualRow(index);
-    return Array.isArray(actual?.lockedLogisticsSections) &&
+    const sectionLocked = Array.isArray(actual?.lockedLogisticsSections) &&
       actual.lockedLogisticsSections.includes('transportation');
+    // Also treat real booking data as "arranged" — bulk "Manage Shipments" saves populate
+    // transportationBooked without ever setting the section lock flag, so relying on the
+    // lock alone misses shipments that already have a real transportation record (the
+    // same data the Warehouse History panel already surfaces as a Transportation event).
+    const hasBookedData = Array.isArray(actual?.transportationBooked) && actual.transportationBooked.length > 0;
+    return sectionLocked || hasBookedData;
   }
 
   // ===== Task 3: per-container edit modal helpers =====
