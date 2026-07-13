@@ -161,11 +161,11 @@
                         </div>
                       </div>
                       <div class="flex flex-col gap-1.5">
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Courier Track No<span class="text-red-500 ml-0.5">*</span></label>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Courier Track No</label>
                         <input pInputText formControlName="courierTrackNo" class="table-input-text w-full" placeholder="Enter tracking no" />
                       </div>
                       <div class="flex flex-col gap-1.5">
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Courier Provider<span class="text-red-500 ml-0.5">*</span></label>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Courier Provider</label>
                         <input pInputText formControlName="courierServiceProvider" class="table-input-text w-full" placeholder="Provider name" />
                       </div>
                       
@@ -383,6 +383,20 @@
                         </div>
                       </div>
                     }
+                  </div>
+                </div>
+              } @else if (isBankReceiver($any(group)) && getMissingReceivingFields($any(group)).length) {
+                <div class="relative group">
+                  <div class="absolute left-[-29px] top-4 w-2.5 h-2.5 rounded-full border-2 border-amber-300 bg-amber-50 z-10"></div>
+                  <div class="rounded-2xl border border-amber-200 bg-amber-50/50 p-5">
+                    <div class="flex items-center gap-1.5 mb-1.5">
+                      <i class="pi pi-exclamation-triangle text-amber-500 text-[10px]"></i>
+                      <span class="text-[9px] font-black uppercase tracking-widest text-amber-600">Required Documents</span>
+                    </div>
+                    <p class="text-[11px] text-slate-600">
+                      Complete the following in Milestone 1 to unlock the next step:
+                      <span class="font-bold text-slate-800">{{ getMissingReceivingFields($any(group)).join(', ') }}</span>
+                    </p>
                   </div>
                 </div>
               }

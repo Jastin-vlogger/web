@@ -364,10 +364,7 @@ export class ShipmentDocumentationComponent {
   isMilestoneVisible(index: number, milestone: string, group: FormGroup): boolean {
     if (isPausedDocumentMilestone(milestone)) return false;
     if (!this.canViewMilestone(milestone)) return false;
-    const hasMilestone1 =
-      String(group.get('BLNo')?.value || '').trim().length > 0 &&
-      String(group.get('courierTrackNo')?.value || '').trim().length > 0 &&
-      String(group.get('courierServiceProvider')?.value || '').trim().length > 0;
+    const hasMilestone1 = String(group.get('BLNo')?.value || '').trim().length > 0;
     const hasMilestone2 = this.isMilestoneFilled(group, 'receiving');
     const isBank = this.isBankReceiver(group);
 
@@ -754,6 +751,15 @@ export class ShipmentDocumentationComponent {
     return getActiveDocumentMilestones(this.isBankReceiver(group));
   }
 
+  getMissingReceivingFields(group: FormGroup): string[] {
+    if (!this.isBankReceiver(group)) return [];
+    const missing: string[] = [];
+    if (!group.get('receiver')?.value) missing.push('Receiver');
+    if (!group.get('expectedDocDate')?.value) missing.push('Expected Date of Doc Arrival');
+    if (!group.get('bankName')?.value) missing.push('Bank Name');
+    return missing;
+  }
+
   getBlDocumentUrl(index: number): string {
     return this.shipmentData()?.actual?.[index]?.blDocumentUrl || '';
   }
@@ -811,10 +817,6 @@ export class ShipmentDocumentationComponent {
     switch (milestone) {
       case 'courier': {
         const missing: string[] = [];
-        if (!String(group.get('courierTrackNo')?.value || '').trim())
-          missing.push('Courier Track No');
-        if (!String(group.get('courierServiceProvider')?.value || '').trim())
-          missing.push('Courier Provider');
         if (!String(group.get('docArrivalNotes')?.value || '').trim())
           missing.push('Document Arrival Notes');
         if (!group.get('receiver')?.value)
@@ -844,15 +846,16 @@ export class ShipmentDocumentationComponent {
         return true;
       }
       case 'inward': {
-        const inwardDate = group.get('inwardCollectionAdviceDate')?.value;
-        const inwardFile = this.getFile(index, 'inwardAdvice');
-        const inwardSavedUrl = this.getSavedFileUrl(group, 'inwardAdvice');
-        if (!inwardDate) {
-          this.notificationService.error('Validation Error', 'Inward Collection Advice Date is required.');
-          return false;
-        }
-        if (!inwardFile && !inwardSavedUrl) {
-          this.notificationService.error('Validation Error', 'Inward Collection Advice document is required.');
+        const submittedToBank = group.get('bankSubmittedToBank')?.value === true;
+        if (!submittedToBank) return true;
+        const missing: string[] = [];
+        if (!group.get('inwardCollectionAdviceSubmittedAt')?.value)
+          missing.push('Submission Date');
+        const hasDaSigned = !!this.getFile(index, 'daSigned') || !!this.getSavedFileUrl(group, 'daSigned');
+        if (!hasDaSigned)
+          missing.push('DA Signed & Stamped Attached');
+        if (missing.length > 0) {
+          this.notificationService.error('Required Fields Missing', `Please fill: ${missing.join(', ')}.`);
           return false;
         }
         return true;
