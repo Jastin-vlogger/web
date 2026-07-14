@@ -44,7 +44,7 @@ export class AllShipmentsComponent implements OnInit {
     { label: 'At the Port', value: 'At the Port' },
     { label: 'On Transit', value: 'On Transit' },
     { label: 'Delivered WH', value: 'Delivered WH' },
-    { label: 'ETD Yet To Due', value: 'ETD yet to Due' },
+    { label: 'ETA Yet To Due', value: 'ETA yet to Due' },
     { label: 'ETD Yet To Be Confirmed', value: 'ETD yet to be confirmed' },
   ];
 

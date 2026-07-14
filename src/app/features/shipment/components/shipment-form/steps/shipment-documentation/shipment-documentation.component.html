@@ -322,31 +322,35 @@
                             <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Submitted to Bank</label>
                             <p-toggleswitch formControlName="bankSubmittedToBank"></p-toggleswitch>
                           </div>
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Submission Date<span class="text-red-500 ml-0.5">*</span></label>
-                            <p-datepicker formControlName="inwardCollectionAdviceSubmittedAt" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [showIcon]="true" />
-                          </div>
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">DA Signed & Stamped Attached</label>
-                          <div class="flex items-center gap-2">
-                            <button type="button" (click)="clickFileInput(i, 'daSigned')" class="inline-flex h-10 px-4 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50">
-                              <i class="pi pi-upload"></i>
-                              <span class="text-[10px] font-bold uppercase">Upload</span>
-                            </button>
-                            @if (getFile(i, 'daSigned')) {
-                              <button type="button" (click)="openDocumentPreview(getFile(i, 'daSigned')!, 'DA Signed & Stamped')" class="icon-btn-secondary"><i class="pi pi-eye"></i></button>
-                              <button type="button" (click)="clearFile(i, 'daSigned')" class="icon-btn-danger"><i class="pi pi-trash"></i></button>
-                            } @else if (getSavedFileUrl(group, 'daSigned')) {
-                              <button type="button" (click)="openRemoteDocumentPreview(getSavedFileUrl(group, 'daSigned'), getSavedFileName(group, 'daSigned'))" class="icon-btn-secondary"><i class="pi pi-eye"></i></button>
-                            }
-                          </div>
-                          @if (getFile(i, 'daSigned')) {
-                            <p class="text-[11px] text-blue-600 font-medium">{{ getFile(i, 'daSigned')?.name }}</p>
-                          } @else if (getSavedFileName(group, 'daSigned')) {
-                            <p class="text-[11px] text-slate-400">{{ getSavedFileName(group, 'daSigned') }}</p>
+                          @if (group.get('bankSubmittedToBank')?.value) {
+                            <div class="flex flex-col gap-1.5">
+                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Submission Date<span class="text-red-500 ml-0.5">*</span></label>
+                              <p-datepicker formControlName="inwardCollectionAdviceSubmittedAt" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [showIcon]="true" />
+                            </div>
                           }
                         </div>
+                        @if (group.get('bankSubmittedToBank')?.value) {
+                          <div class="flex flex-col gap-1.5">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">DA Signed & Stamped Attached<span class="text-red-500 ml-0.5">*</span></label>
+                            <div class="flex items-center gap-2">
+                              <button type="button" (click)="clickFileInput(i, 'daSigned')" class="inline-flex h-10 px-4 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50">
+                                <i class="pi pi-upload"></i>
+                                <span class="text-[10px] font-bold uppercase">Upload</span>
+                              </button>
+                              @if (getFile(i, 'daSigned')) {
+                                <button type="button" (click)="openDocumentPreview(getFile(i, 'daSigned')!, 'DA Signed & Stamped')" class="icon-btn-secondary"><i class="pi pi-eye"></i></button>
+                                <button type="button" (click)="clearFile(i, 'daSigned')" class="icon-btn-danger"><i class="pi pi-trash"></i></button>
+                              } @else if (getSavedFileUrl(group, 'daSigned')) {
+                                <button type="button" (click)="openRemoteDocumentPreview(getSavedFileUrl(group, 'daSigned'), getSavedFileName(group, 'daSigned'))" class="icon-btn-secondary"><i class="pi pi-eye"></i></button>
+                              }
+                            </div>
+                            @if (getFile(i, 'daSigned')) {
+                              <p class="text-[11px] text-blue-600 font-medium">{{ getFile(i, 'daSigned')?.name }}</p>
+                            } @else if (getSavedFileName(group, 'daSigned')) {
+                              <p class="text-[11px] text-slate-400">{{ getSavedFileName(group, 'daSigned') }}</p>
+                            }
+                          </div>
+                        }
                         <div class="flex justify-end gap-2">
                           <button type="button" (click)="cancelEditMilestone(i, 'inward')" class="secondary-cancel-btn" [disabled]="isMilestoneSaving(i, 'inward')">
                             <i class="pi pi-times"></i> Cancel
@@ -366,21 +370,23 @@
                           <span class="text-slate-400 font-medium">Submitted to Bank</span>
                           <span class="text-slate-700 font-bold">{{ group.get('bankSubmittedToBank')?.value ? 'Yes' : 'No' }}</span>
                         </div>
-                        <div class="flex flex-col">
-                          <span class="text-slate-400 font-medium">Submission Date</span>
-                          <span class="text-slate-700 font-bold">{{ (group.get('inwardCollectionAdviceSubmittedAt')?.value | date:'dd/MM/yyyy') || 'N/A' }}</span>
-                        </div>
-                        <div class="flex flex-col gap-1">
-                          <span class="text-slate-400 font-medium">DA Signed & Stamped Attached</span>
-                          @if (getSavedFileUrl(group, 'daSigned')) {
-                            <div class="flex items-center gap-2">
-                              <span class="text-blue-600 bg-blue-50 px-2 py-1 rounded font-bold truncate max-w-[150px]" [title]="getSavedFileName(group, 'daSigned')">DA Signed Attached</span>
-                              <button type="button" (click)="openRemoteDocumentPreview(getSavedFileUrl(group, 'daSigned'), getSavedFileName(group, 'daSigned'))" class="icon-btn-secondary !h-7 !w-7"><i class="pi pi-eye text-[10px]"></i></button>
-                            </div>
-                          } @else {
-                            <span class="text-slate-500 font-bold">N/A</span>
-                          }
-                        </div>
+                        @if (group.get('bankSubmittedToBank')?.value) {
+                          <div class="flex flex-col">
+                            <span class="text-slate-400 font-medium">Submission Date</span>
+                            <span class="text-slate-700 font-bold">{{ (group.get('inwardCollectionAdviceSubmittedAt')?.value | date:'dd/MM/yyyy') || 'N/A' }}</span>
+                          </div>
+                          <div class="flex flex-col gap-1">
+                            <span class="text-slate-400 font-medium">DA Signed & Stamped Attached</span>
+                            @if (getSavedFileUrl(group, 'daSigned')) {
+                              <div class="flex items-center gap-2">
+                                <span class="text-blue-600 bg-blue-50 px-2 py-1 rounded font-bold truncate max-w-[150px]" [title]="getSavedFileName(group, 'daSigned')">DA Signed Attached</span>
+                                <button type="button" (click)="openRemoteDocumentPreview(getSavedFileUrl(group, 'daSigned'), getSavedFileName(group, 'daSigned'))" class="icon-btn-secondary !h-7 !w-7"><i class="pi pi-eye text-[10px]"></i></button>
+                              </div>
+                            } @else {
+                              <span class="text-slate-500 font-bold">N/A</span>
+                            }
+                          </div>
+                        }
                       </div>
                     }
                   </div>
@@ -543,75 +549,32 @@
                           [class.text-blue-500]="!card4Saved">Milestone 4</span>
                         <h3 class="text-xs font-bold text-slate-700">Bank Submission</h3>
                       </div>
-                      @if (!isMilestoneEditing(i, 'murabaha_submit')) {
-                        <button (click)="toggleEditMilestone(i, 'murabaha_submit')" [disabled]="!canEditMilestone('murabaha_submit')" class="text-[10px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
-                          <i class="pi pi-pencil text-[10px]"></i> Edit
-                        </button>
-                      }
                     </div>
 
-                    @if (isMilestoneEditing(i, 'murabaha_submit')) {
-                      <div class="flex flex-col gap-4">
-                        @if (isMilestoneSaving(i, 'murabaha_submit')) {
-                          <div class="absolute inset-0 z-20 flex items-center justify-center bg-white/60 backdrop-blur-[1px] rounded-2xl">
-                            <i class="pi pi-spin pi-spinner text-blue-500 text-2xl"></i>
-                          </div>
-                        }
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div class="flex flex-col gap-1.5 justify-center">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">DA Submitted to Bank</label>
-                            <p-toggleswitch formControlName="daSubmittedToBank"></p-toggleswitch>
-                          </div>
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">DA Submission Date</label>
-                            <p-datepicker formControlName="daSubmittedToBankDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [showIcon]="true" [disabled]="!group.get('daSubmittedToBank')?.value" />
-                          </div>
-                          <div class="flex flex-col gap-1.5 justify-center">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Murabaha Submitted to Bank</label>
-                            <p-toggleswitch formControlName="murabahaSubmittedToBank"></p-toggleswitch>
-                          </div>
-                          <div class="flex flex-col gap-1.5">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Murabaha Submission Date</label>
-                            <p-datepicker formControlName="murabahaContractSubmittedDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [showIcon]="true" [disabled]="!group.get('murabahaSubmittedToBank')?.value" />
-                          </div>
-                        </div>
-                        <div class="flex justify-end gap-2">
-                          <button type="button" (click)="cancelEditMilestone(i, 'murabaha_submit')" class="secondary-cancel-btn" [disabled]="isMilestoneSaving(i, 'murabaha_submit')">
-                            <i class="pi pi-times"></i> Cancel
-                          </button>
-                          <button (click)="saveMilestone(i, 'murabaha_submit')" class="primary-milestone-btn" [disabled]="isMilestoneSaving(i, 'murabaha_submit')">
-                            @if (isMilestoneSaving(i, 'murabaha_submit')) {
-                              <i class="pi pi-spin pi-spinner mr-2"></i> Saving...
-                            } @else {
-                              <i class="pi pi-check mr-2"></i> Save Stage
-                            }
-                          </button>
-                        </div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-[11px]">
+                      <div class="flex flex-col">
+                        <span class="text-slate-400 font-medium">DA Submitted to Bank</span>
+                        <span class="text-slate-700 font-bold">{{ group.get('bankSubmittedToBank')?.value ? 'Yes' : 'No' }}</span>
                       </div>
-                    } @else {
-                      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-[11px]">
-                        <div class="flex flex-col">
-                          <span class="text-slate-400 font-medium">DA Submitted to Bank</span>
-                          <span class="text-slate-700 font-bold">{{ group.get('daSubmittedToBank')?.value ? 'Yes' : 'No' }}</span>
-                        </div>
-                        <div class="flex flex-col">
-                          <span class="text-slate-400 font-medium">Murabaha Submitted to Bank</span>
-                          <span class="text-slate-700 font-bold">{{ group.get('murabahaSubmittedToBank')?.value ? 'Yes' : 'No' }}</span>
-                        </div>
-                        <div class="flex flex-col">
-                          <span class="text-slate-400 font-medium">DA Submission Date</span>
-                          <span class="text-slate-700 font-bold">
-                            {{ group.get('daSubmittedToBank')?.value ? ((group.get('daSubmittedToBankDate')?.value | date:'dd/MM/yyyy') || 'N/A') : 'N/A' }}
-                          </span>
-                        </div>
-                        <div class="flex flex-col">
-                          <span class="text-slate-400 font-medium">Murabaha Submission Date</span>
-                          <span class="text-slate-700 font-bold">
-                            {{ group.get('murabahaSubmittedToBank')?.value ? ((group.get('murabahaContractSubmittedDate')?.value | date:'dd/MM/yyyy') || 'N/A') : 'N/A' }}
-                          </span>
-                        </div>
+                      <div class="flex flex-col">
+                        <span class="text-slate-400 font-medium">Murabaha Submitted to Bank</span>
+                        <span class="text-slate-700 font-bold">
+                          {{ group.get('skipMurabaha')?.value ? 'Skipped' : (getSavedFileUrl(group, 'murabahaContract') ? 'Yes' : 'No') }}
+                        </span>
                       </div>
-                    }
+                      <div class="flex flex-col">
+                        <span class="text-slate-400 font-medium">DA Submission Date</span>
+                        <span class="text-slate-700 font-bold">
+                          {{ group.get('bankSubmittedToBank')?.value ? ((group.get('inwardCollectionAdviceSubmittedAt')?.value | date:'dd/MM/yyyy') || 'N/A') : 'N/A' }}
+                        </span>
+                      </div>
+                      <div class="flex flex-col">
+                        <span class="text-slate-400 font-medium">Murabaha Submission Date</span>
+                        <span class="text-slate-700 font-bold">
+                          {{ group.get('skipMurabaha')?.value ? 'N/A' : ((group.get('murabahaContractReleasedDate')?.value | date:'dd/MM/yyyy') || 'N/A') }}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               }

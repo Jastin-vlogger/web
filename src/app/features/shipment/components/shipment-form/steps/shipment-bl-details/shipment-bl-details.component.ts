@@ -687,6 +687,100 @@ export class ShipmentBlDetailsComponent {
     return hasLegacyData || hasSplitData ? 'pending_warehouse_manager' : 'draft';
   }
 
+  private normalizeWarehouseHistorySerial(value: unknown): string {
+    return String(value || '').trim().toUpperCase().replace(/\s+/g, ' ');
+  }
+
+  // ===== Warehouse History: Storage Allocation (plan) → Transportation Arrangement (actual) =====
+  // Mirrors ShipmentStorageComponent.getWarehouseHistory so the same allocation/transportation
+  // timeline (and warehouse-changed flag) is visible here even when transportation has already
+  // moved containers to a different warehouse than what was originally allocated.
+  getWarehouseHistory(index: number): Array<{
+    type: 'allocation' | 'transportation';
+    label: string;
+    date: Date | null;
+    warehouses: string[];
+    containerCount: number;
+    transportCompanyName?: string;
+    transactionId?: string;
+    warehouseChanged: boolean;
+  }> {
+    const actual = this.getActualShipment(index);
+    if (!actual) return [];
+
+    const allocations: any[] = Array.isArray(actual.storageAllocations) ? actual.storageAllocations : [];
+    const allocationBySerial = new Map<string, string>();
+    allocations.forEach((a) => {
+      if (a?.containerSerialNo) allocationBySerial.set(this.normalizeWarehouseHistorySerial(a.containerSerialNo), a.warehouse || '');
+    });
+
+    const events: Array<{
+      type: 'allocation' | 'transportation';
+      label: string;
+      date: Date | null;
+      warehouses: string[];
+      containerCount: number;
+      transportCompanyName?: string;
+      transactionId?: string;
+      warehouseChanged: boolean;
+    }> = [];
+
+    if (allocations.length > 0) {
+      const approval = actual.storageAllocationApproval;
+      const warehouses = Array.from(new Set(allocations.map((a) => a.warehouse).filter(Boolean)));
+      events.push({
+        type: 'allocation',
+        label: 'Storage Allocation',
+        date: approval?.warehouseManagerApprovedAt
+          ? new Date(approval.warehouseManagerApprovedAt)
+          : approval?.submittedAt
+            ? new Date(approval.submittedAt)
+            : null,
+        warehouses,
+        containerCount: allocations.length,
+        warehouseChanged: false,
+      });
+    }
+
+    const transportationBooked: any[] = Array.isArray(actual.transportationBooked) ? actual.transportationBooked : [];
+    const grouped: Record<string, any[]> = {};
+    const order: string[] = [];
+    transportationBooked.forEach((row) => {
+      const txnId = (row?.transactionId || '').trim() || 'untagged';
+      if (!grouped[txnId]) {
+        grouped[txnId] = [];
+        order.push(txnId);
+      }
+      grouped[txnId].push(row);
+    });
+
+    order.forEach((transactionId) => {
+      const rows = grouped[transactionId];
+      const first = rows[0] || {};
+      const warehouses = Array.from(new Set(rows.map((r) => r.warehouse).filter(Boolean)));
+      const warehouseChanged = rows.some((r) => {
+        const allocated = allocationBySerial.get(this.normalizeWarehouseHistorySerial(r.containerSerialNo));
+        return !!allocated && !!r.warehouse && allocated !== r.warehouse;
+      });
+      events.push({
+        type: 'transportation',
+        label: 'Transportation Arrangement',
+        date: first.bookedDate ? new Date(first.bookedDate) : first.transportDate ? new Date(first.transportDate) : null,
+        warehouses,
+        containerCount: rows.length,
+        transportCompanyName: first.transportCompanyName || '',
+        transactionId: transactionId === 'untagged' ? '' : transactionId,
+        warehouseChanged,
+      });
+    });
+
+    return events.sort((a, b) => {
+      const ad = a.date ? a.date.getTime() : 0;
+      const bd = b.date ? b.date.getTime() : 0;
+      return ad - bd;
+    });
+  }
+
   isClearingAdvanceApproved(index: number): boolean {
     return this.getEffectiveClearingAdvanceStatus(index) === 'approved';
   }

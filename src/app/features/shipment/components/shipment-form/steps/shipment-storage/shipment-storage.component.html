@@ -105,23 +105,26 @@
             <!-- ===== STORAGE ALLOCATION TABLE ===== -->
             @if (getShipmentTab(i) === 'allocation') {
               @if (isTransportationArranged(i)) {
-                <!-- Transportation is arranged — the allocation decision UI is no longer actionable;
-                     show just the resulting storage location, full history is below. -->
-                <div class="storage-allocation-shell rounded-xl border border-slate-200 overflow-hidden">
-                  <div class="flex items-center justify-between px-5 py-4 bg-slate-50 border-b border-slate-200">
-                    <span class="text-sm font-black text-slate-500 uppercase tracking-wider">Storage Location</span>
+                <!-- Transportation is arranged — the allocation decision UI is no longer actionable.
+                     The "Storage Location" card is hidden for now (showStorageLocationCard = false):
+                     Warehouse History below already surfaces the current location. -->
+                @if (showStorageLocationCard) {
+                  <div class="storage-allocation-shell rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="flex items-center justify-between px-5 py-4 bg-slate-50 border-b border-slate-200">
+                      <span class="text-sm font-black text-slate-500 uppercase tracking-wider">Storage Location</span>
+                    </div>
+                    <div class="px-5 py-4 bg-white flex flex-wrap gap-2.5">
+                      @for (wh of getAllocationWarehouseList(i); track wh) {
+                        <span class="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 border border-slate-200/60 px-3.5 py-1.5 text-xs font-semibold text-slate-700">
+                          <i class="pi pi-warehouse text-[10px] text-slate-400"></i> {{ wh }}
+                        </span>
+                      }
+                      @if (!getAllocationWarehouseList(i).length) {
+                        <span class="text-sm text-slate-400 italic">No warehouse recorded.</span>
+                      }
+                    </div>
                   </div>
-                  <div class="px-5 py-4 bg-white flex flex-wrap gap-2.5">
-                    @for (wh of getAllocationWarehouseList(i); track wh) {
-                      <span class="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 border border-slate-200/60 px-3.5 py-1.5 text-xs font-semibold text-slate-700">
-                        <i class="pi pi-warehouse text-[10px] text-slate-400"></i> {{ wh }}
-                      </span>
-                    }
-                    @if (!getAllocationWarehouseList(i).length) {
-                      <span class="text-sm text-slate-400 italic">No warehouse recorded.</span>
-                    }
-                  </div>
-                </div>
+                }
               } @else {
               <div class="storage-allocation-shell rounded-xl border border-slate-200 overflow-hidden">
                 <div class="flex items-center justify-between px-5 py-4 bg-slate-50 border-b border-slate-200">

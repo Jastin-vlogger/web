@@ -40,6 +40,10 @@ export class ShipmentStorageComponent {
   @Input({ required: true }) formArray!: FormArray;
   @Input() visibleShipmentIndices: number[] = [];
 
+  /** Hides the redundant "Storage Location" summary card once transportation is arranged —
+   * Warehouse History already shows the current location. Flip to re-enable. */
+  readonly showStorageLocationCard = false;
+
   @ViewChild('storageRowFileInput') storageRowFileInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('storageGlobalFileInput') storageGlobalFileInputRef?: ElementRef<HTMLInputElement>;
   private restoredUiStateKey: string | null = null;

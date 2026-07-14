@@ -410,14 +410,21 @@ export class ShipmentDocumentationComponent {
 
     switch (milestone) {
       case 'inward':
-        return !!group.get('inwardCollectionAdviceDate')?.value ||
-          !!group.get('inwardCollectionAdviceReceivedAt')?.value ||
-          !!group.get('inwardCollectionAdviceSubmittedAt')?.value ||
-          !!this.getSavedFileUrl(group, 'inwardAdvice');
+        return isDocumentationMilestoneComplete({
+          inwardCollectionAdviceSubmittedAt: group.get('inwardCollectionAdviceSubmittedAt')?.value,
+          daSignedDocumentUrl: this.getSavedFileUrl(group, 'daSigned'),
+          bankSubmittedToBank: group.get('bankSubmittedToBank')?.value,
+        }, 'inward');
       case 'murabaha_process':
-        return !!group.get('murabahaContractReleasedDate')?.value || !!group.get('murabahaContractApprovedDate')?.value;
+        return isDocumentationMilestoneComplete({
+          skipMurabaha: group.get('skipMurabaha')?.value,
+          murabahaContractReleasedDate: group.get('murabahaContractReleasedDate')?.value,
+          murabahaContractDocumentUrl: this.getSavedFileUrl(group, 'murabahaContract'),
+        }, 'murabaha_process');
       case 'murabaha_submit':
-        return !!group.get('murabahaContractSubmittedDate')?.value || !!this.getSavedFileUrl(group, 'murabahaSubmitted');
+        // Milestone 4 has no edit form of its own — it's complete as soon as the DA (Milestone 2)
+        // and Murabaha (Milestone 3) phases are both done, so Milestone 5 can unlock.
+        return this.isMilestoneFilled(group, 'inward') && this.isMilestoneFilled(group, 'murabaha_process');
       case 'release':
         return !!group.get('documentsReleasedDate')?.value || !!this.getSavedFileUrl(group, 'documentsReleased');
       default:

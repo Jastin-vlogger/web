@@ -44,7 +44,7 @@ export class ShipmentListComponent implements OnInit {
         { label: 'On Transit', value: 'On Transit' },
         { label: 'At Port of Discharge', value: 'At Port of Discharge' },
         { label: 'Delivered WH', value: 'Delivered WH' },
-        { label: 'ETD Yet To Due', value: 'ETD yet to Due' },
+        { label: 'ETA Yet To Due', value: 'ETA yet to Due' },
         { label: 'ETD Yet To Be Confirmed', value: 'ETD yet to be confirmed' },
     ];
     readonly canCreateShipment = computed(() =>
