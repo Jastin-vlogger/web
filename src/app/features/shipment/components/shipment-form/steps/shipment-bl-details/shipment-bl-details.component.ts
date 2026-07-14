@@ -2775,11 +2775,14 @@ export class ShipmentBlDetailsComponent {
     const hasExistingPaymentDetails = !!(details.chequeNo && details.chequeDate && details.paymentVoucherNo);
     if (!hasExistingPaymentDetails) {
       this.clearingSubmitIndex.set(index);
+      // Prefill from any already-saved details so existing cheque/voucher values don't
+      // vanish when only one field (e.g. cheque date) is still missing. User can then fill
+      // the gap, edit, or approve as-is.
       this.clearingSubmitDraft.set({
-        chequeNo: '',
-        chequeDate: this.toDateInputValue(new Date()),
-        paymentVoucherNo: '',
-        transactionId: '',
+        chequeNo: details.chequeNo || '',
+        chequeDate: details.chequeDate ? this.toDateInputValue(details.chequeDate) : this.toDateInputValue(new Date()),
+        paymentVoucherNo: details.paymentVoucherNo || '',
+        transactionId: details.transactionId || '',
       });
       this.clearingSubmitModalVisible.set(true);
       return;

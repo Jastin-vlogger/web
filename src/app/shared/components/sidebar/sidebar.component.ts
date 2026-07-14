@@ -19,7 +19,7 @@ interface SidebarMenuItem {
 const ALL_MENU_ITEMS: SidebarMenuItem[] = [
   { label: 'Dashboard',      icon: 'pi pi-chart-bar',  route: '/dashboard' },
   { label: 'Order',          icon: 'pi pi-truck',       route: '/shipments',           permissionKey: 'menu.shipments.view' },
-  { label: 'Shipments',      icon: 'pi pi-box',         route: '/all-shipments',       permissionKey: 'menu.shipments.view' },
+  { label: 'Shipments',      icon: 'pi pi-box',         route: '/all-shipments',       permissionKey: 'menu.all_shipments.view' },
   { label: 'Suppliers',      icon: 'pi pi-users',       route: '/suppliers',           permissionKey: 'menu.suppliers.view' },
   { label: 'Reports',        icon: 'pi pi-chart-line',  route: '/reports',             permissionKey: 'menu.reports.view' },
   { label: 'Access Control', icon: 'pi pi-shield',      route: '/access-control',      permissionKey: 'menu.access_control.view', adminOnly: true },
