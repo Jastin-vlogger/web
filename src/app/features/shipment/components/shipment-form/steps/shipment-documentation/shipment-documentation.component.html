@@ -178,7 +178,11 @@
                         <p-select formControlName="bankName" [options]="bankOptions" optionLabel="label" optionValue="value" placeholder="Select bank" styleClass="w-full" appendTo="body" [disabled]="!isBankReceiver($any(group))" />
                       </div>
                       <div class="flex flex-col gap-1.5">
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Expected Date of Doc Arrival<span class="text-red-500 ml-0.5">*</span></label>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Expected Date of Doc Arrival
+                          @if (isBankReceiver($any(group))) {
+                            <span class="text-red-500 ml-0.5">*</span>
+                          }
+                        </label>
                         <p-datepicker formControlName="expectedDocDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [showIcon]="true" />
                       </div>
                       

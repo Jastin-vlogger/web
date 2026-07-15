@@ -830,7 +830,7 @@ export class ShipmentDocumentationComponent {
           missing.push('Receiver');
         if (this.isBankReceiver(group) && !group.get('bankName')?.value)
           missing.push('Bank Name');
-        if (!group.get('expectedDocDate')?.value)
+        if (this.isBankReceiver(group) && !group.get('expectedDocDate')?.value)
           missing.push('Expected Date of Doc Arrival');
         if (missing.length > 0) {
           this.notificationService.error('Required Fields Missing', `Please fill: ${missing.join(', ')}.`);
@@ -844,7 +844,7 @@ export class ShipmentDocumentationComponent {
           missing.push('Receiver');
         if (this.isBankReceiver(group) && !group.get('bankName')?.value)
           missing.push('Bank Name');
-        if (!group.get('expectedDocDate')?.value)
+        if (this.isBankReceiver(group) && !group.get('expectedDocDate')?.value)
           missing.push('Expected Date of Doc Arrival');
         if (missing.length > 0) {
           this.notificationService.error('Required Fields Missing', `Please fill: ${missing.join(', ')}.`);

@@ -87,11 +87,13 @@ export const isDocumentationMilestoneComplete = (
       return hasValue(values.courierTrackNo) || hasValue(values.courierServiceProvider) || hasValue(values.docArrivalNotes);
     case 'receiving': {
       const hasReceiver = hasValue(values.receiver);
-      if (!hasReceiver || !hasValue(values.expectedDocDate)) return false;
+      if (!hasReceiver) return false;
       if (isBankReceiverValue(values.receiver)) {
-        // DA document upload is no longer required just to reveal Milestone 2 — it can be
-        // attached from within Milestone 2 itself once it's visible.
-        return hasValue(values.bankName);
+        // Expected Doc Date and Bank Name are only required for Bank receivers — for Direct
+        // receivers these fields can stay N/A and never block Milestone 2 from appearing.
+        // DA document upload is no longer required either — it can be attached from within
+        // Milestone 2 itself once it's visible.
+        return hasValue(values.expectedDocDate) && hasValue(values.bankName);
       }
       return true;
     }
