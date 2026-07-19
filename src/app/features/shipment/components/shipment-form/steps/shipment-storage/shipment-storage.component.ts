@@ -485,8 +485,10 @@ export class ShipmentStorageComponent {
   }
 
   isStorageArrivalLocked(index: number): boolean {
-    const status = this.getStorageArrivalApprovalStatus(index);
-    return status === 'pending_warehouse_manager' || status === 'approved';
+    // Only a warehouse-manager approval truly locks editing. While "Pending Warehouse Manager
+    // Approval" the remaining containers may still need their arrival data recorded, so Edit
+    // must stay available — otherwise a single early save blocks everyone from finishing the rest.
+    return this.getStorageArrivalApprovalStatus(index) === 'approved';
   }
 
   canApproveStorageArrival(index: number): boolean {
