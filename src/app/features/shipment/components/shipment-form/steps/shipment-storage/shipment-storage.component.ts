@@ -166,6 +166,44 @@ export class ShipmentStorageComponent {
   readonly arrivalEditVisible = signal(false);
   readonly arrivalEditCtx = signal<{ shipmentIndex: number; containerIndex: number } | null>(null);
 
+  // ===== Storage Arrival approval info modal (Requested/Approved by & date) =====
+  readonly storageArrivalInfoVisible = signal(false);
+  readonly storageArrivalInfoIndex = signal<number | null>(null);
+
+  openStorageArrivalInfo(index: number): void {
+    this.storageArrivalInfoIndex.set(index);
+    this.storageArrivalInfoVisible.set(true);
+  }
+
+  private getUserDisplay(user: any): string {
+    if (!user) return '—';
+    if (typeof user === 'string') return user || '—';
+    return String(user.name || user.email || user._id || '—');
+  }
+
+  private formatDateTimeForDisplay(value: unknown): string {
+    if (!value) return '—';
+    const date = new Date(value as string | Date);
+    if (Number.isNaN(date.getTime())) return '—';
+    return new Intl.DateTimeFormat('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
+  }
+
+  getStorageArrivalInfoRows(index: number): Array<{ label: string; value: string }> {
+    const approval = this.getStorageArrivalApproval(index) || {};
+    return [
+      { label: 'Requested At', value: this.formatDateTimeForDisplay(approval.submittedAt) },
+      { label: 'Requested By', value: this.getUserDisplay(approval.submittedBy) },
+      { label: 'Approved At', value: this.formatDateTimeForDisplay(approval.warehouseManagerApprovedAt) },
+      { label: 'Approved By', value: this.getUserDisplay(approval.warehouseManagerApprovedBy) },
+    ];
+  }
+
   getBlockOptions(warehouseName: string): Array<{ label: string; value: string }> {
     const label = warehouseName?.trim();
     if (!label) return [];

@@ -318,6 +318,16 @@
                     >
                       {{ getStorageArrivalApprovalLabel(i) }}
                     </span>
+                    @if (getStorageArrivalApprovalStatus(i) !== 'draft') {
+                      <button
+                        type="button"
+                        (click)="openStorageArrivalInfo(i)"
+                        class="icon-btn-secondary !h-8 !w-8"
+                        title="View who requested / approved this"
+                      >
+                        <i class="pi pi-eye text-[11px]"></i>
+                      </button>
+                    }
                     @if (canApproveStorageArrival(i)) {
                       <button
                         type="button"
@@ -628,3 +638,27 @@
     </p-dialog>
   }
 }
+
+<!-- ===== Storage Arrival approval info modal (Requested/Approved by & date) ===== -->
+<p-dialog
+  header="Storage Arrival Information"
+  [visible]="storageArrivalInfoVisible()"
+  (visibleChange)="storageArrivalInfoVisible.set($event)"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '92vw', maxWidth: '480px' }"
+  [draggable]="false"
+  [resizable]="false"
+  appendTo="body">
+  @if (storageArrivalInfoIndex() !== null) {
+    @let idx = storageArrivalInfoIndex()!;
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      @for (row of getStorageArrivalInfoRows(idx); track row.label) {
+        <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">{{ row.label }}</p>
+          <p class="text-sm font-bold text-slate-700 mt-1">{{ row.value }}</p>
+        </div>
+      }
+    </div>
+  }
+</p-dialog>
