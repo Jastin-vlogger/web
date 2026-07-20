@@ -210,11 +210,12 @@ export class ShipmentStorageComponent {
     const group = this.formArray.at(index) as FormGroup | null;
     if (!group) return { reached: 0, pending: 0, total: 0 };
     const rows = this.getContainersArray(group);
+    // Matches the same "Recorded" definition used by the Status column for each row (grn &
+    // batch both present) — NOT receivedOnDate/receivedOnTime, which get auto-prefilled with
+    // "now" as a UI convenience the moment the edit modal opens, before anything is saved.
     const reached = rows.filter((row) => {
       const g = row as FormGroup;
-      return !!g.get('receivedOnDate')?.value ||
-        !!String(g.get('receivedOnTime')?.value || '').trim() ||
-        !!String(g.get('grn')?.value || '').trim();
+      return !!String(g.get('grn')?.value || '').trim() && !!String(g.get('batch')?.value || '').trim();
     }).length;
     return { reached, pending: rows.length - reached, total: rows.length };
   }
