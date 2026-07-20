@@ -204,6 +204,21 @@ export class ShipmentStorageComponent {
     ];
   }
 
+  /** Reached-WH vs Pending counts for the stat card, using the same "recorded" definition as
+   * the backend's isStorageArrivalRowRecorded (received date/time or GRN present). */
+  getStorageArrivalCounts(index: number): { reached: number; pending: number; total: number } {
+    const group = this.formArray.at(index) as FormGroup | null;
+    if (!group) return { reached: 0, pending: 0, total: 0 };
+    const rows = this.getContainersArray(group);
+    const reached = rows.filter((row) => {
+      const g = row as FormGroup;
+      return !!g.get('receivedOnDate')?.value ||
+        !!String(g.get('receivedOnTime')?.value || '').trim() ||
+        !!String(g.get('grn')?.value || '').trim();
+    }).length;
+    return { reached, pending: rows.length - reached, total: rows.length };
+  }
+
   getBlockOptions(warehouseName: string): Array<{ label: string; value: string }> {
     const label = warehouseName?.trim();
     if (!label) return [];

@@ -28,6 +28,16 @@
             </button>
           </div>
           <div class="flex flex-wrap items-center gap-2">
+            @if (getPaymentAllocationUploads(group).length > 0) {
+              <button
+                type="button"
+                (click)="openPaymentAllocationUploads(singleShipmentIndex!)"
+                class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50"
+              >
+                <i class="pi pi-paperclip"></i>
+                Uploads
+              </button>
+            }
             <!-- Point 13: hide Generate Report while the clearing advance is still in draft. -->
             @if (isAllocationSaved(singleShipmentIndex!)) {
             <button
@@ -347,6 +357,16 @@
                     </button>
                   </div>
                   <div class="flex flex-wrap items-center gap-2">
+                    @if (getPaymentAllocationUploads(group).length > 0) {
+                      <button
+                        type="button"
+                        (click)="openPaymentAllocationUploads(i)"
+                        class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50"
+                      >
+                        <i class="pi pi-paperclip"></i>
+                        Uploads
+                      </button>
+                    }
                     <!-- Point 13: hide Generate Report while the clearing advance is still in draft. -->
                     @if (isAllocationSaved(i)) {
                     <button
@@ -749,7 +769,7 @@
 </p-dialog>
 
 <p-dialog
-  header="Clearing Advance Information"
+  header="Clearing Advance Process Information"
   [visible]="paymentAllocationInfoModalVisible()"
   (visibleChange)="paymentAllocationInfoModalVisible.set($event)"
   [modal]="true"
@@ -766,6 +786,41 @@
           <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">{{ row.label }}</p>
           <p class="mt-1 text-sm font-bold text-slate-800 break-words">{{ row.value }}</p>
         </div>
+      }
+    </div>
+  }
+</p-dialog>
+
+<p-dialog
+  header="Clearing Advance Process Uploads"
+  [visible]="paymentAllocationUploadsModalVisible()"
+  (visibleChange)="paymentAllocationUploadsModalVisible.set($event)"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '92vw', maxWidth: '520px' }"
+  [draggable]="false"
+  [resizable]="false"
+  appendTo="body">
+  @if (paymentAllocationUploadsIndex() !== null) {
+    @let idx = paymentAllocationUploadsIndex()!;
+    <div class="flex flex-col gap-2">
+      @for (upload of getPaymentAllocationUploadsForIndex(idx); track upload.url) {
+        <button
+          type="button"
+          (click)="openRemoteDocumentPreview(upload.url, upload.description)"
+          class="rbac-allow-interaction flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left hover:bg-blue-50 hover:border-blue-200"
+        >
+          <span class="flex items-center gap-2 min-w-0">
+            <i class="pi pi-file text-slate-400 text-xs shrink-0"></i>
+            <span class="text-xs font-semibold text-slate-700 truncate">{{ upload.description }}</span>
+          </span>
+          <span class="flex items-center gap-1.5 shrink-0 text-[10px] font-bold uppercase tracking-wider text-blue-600">
+            <i class="pi pi-eye text-[10px]"></i>
+            View
+          </span>
+        </button>
+      } @empty {
+        <p class="text-xs text-slate-400 italic px-1 py-2">No documents uploaded yet.</p>
       }
     </div>
   }

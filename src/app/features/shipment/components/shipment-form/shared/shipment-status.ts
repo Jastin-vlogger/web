@@ -12,14 +12,14 @@ export function hasAssignedWarehouse(actualRow: any): boolean {
   return storageRows.some((row) => hasMeaningfulValue(row?.warehouse));
 }
 
+// "Delivered WH" only once EVERY container in the split is recorded — a single recorded row
+// must never flip the whole shipment to Delivered WH while the rest are still Pending.
 export function hasWarehouseReceipt(actualRow: any): boolean {
   const storageRows = Array.isArray(actualRow?.storageSplits) ? actualRow.storageSplits : [];
-  return storageRows.some((row: any) =>
+  return storageRows.length > 0 && storageRows.every((row: any) =>
     hasMeaningfulValue(row?.receivedOnDate) ||
     hasMeaningfulValue(row?.receivedOnTime) ||
-    hasMeaningfulValue(row?.grn) ||
-    hasMeaningfulValue(row?.batch) ||
-    hasMeaningfulValue(row?.documentUrl)
+    hasMeaningfulValue(row?.grn)
   );
 }
 

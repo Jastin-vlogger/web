@@ -100,6 +100,8 @@ export class ShipmentPaymentCostingComponent {
   readonly statusModalShipmentIndex = signal<number | null>(null);
   readonly paymentAllocationInfoModalVisible = signal(false);
   readonly paymentAllocationInfoIndex = signal<number | null>(null);
+  readonly paymentAllocationUploadsModalVisible = signal(false);
+  readonly paymentAllocationUploadsIndex = signal<number | null>(null);
   readonly paymentToOptions = [
     { label: 'MOFA', value: 'MOFA' },
     { label: 'Shipping line', value: 'Shipping line' },
@@ -1115,18 +1117,16 @@ export class ShipmentPaymentCostingComponent {
   }
 
   getPaymentAllocationInfoRows(index: number): Array<{ label: string; value: string }> {
+    // Point: this modal belongs to the "Clearing Advance Process" (payment allocation
+    // reconciliation) tab — it must read paymentAllocationApproval, not the unrelated
+    // clearingAdvanceApproval from the separate "Clearing Advance" tab.
     const actual = this.shipmentData()?.actual?.[index] as any;
-    const approval = actual?.clearingAdvanceApproval || {};
-    const payment = actual?.clearingAdvancePaymentDetails || {};
+    const approval = actual?.paymentAllocationApproval || {};
     return [
-      { label: 'Requested At', value: this.formatDateTimeForDisplay(approval.submittedAt || approval.requestedAt || actual?.clearingAdvanceRequestedAt) },
-      { label: 'Requested By', value: this.getUserDisplay(approval.submittedBy || approval.requestedBy) },
-      { label: 'Approved At', value: this.formatDateTimeForDisplay(approval.fasApprovedAt || approval.approvedAt) },
-      { label: 'Approved By', value: this.getUserDisplay(approval.fasApprovedBy || approval.approvedBy) },
-      { label: 'Cheque No', value: payment.chequeNo || '—' },
-      { label: 'Cheque Date', value: this.formatDateForReport(payment.chequeDate) },
-      { label: 'Payment Voucher No', value: payment.paymentVoucherNo || '—' },
-      { label: 'Transaction ID', value: payment.transactionId || '—' },
+      { label: 'Requested At', value: this.formatDateTimeForDisplay(approval.submittedAt) },
+      { label: 'Requested By', value: this.getUserDisplay(approval.submittedBy) },
+      { label: 'Approved At', value: this.formatDateTimeForDisplay(approval.fasManagerApprovedAt) },
+      { label: 'Approved By', value: this.getUserDisplay(approval.fasManagerApprovedBy) },
     ];
   }
 
@@ -1429,6 +1429,28 @@ export class ShipmentPaymentCostingComponent {
 
   getSavedPaymentCostingName(group: AbstractControl): string {
     return (group as FormGroup).get('paymentCostingDocumentName')?.value || '';
+  }
+
+  /** All documents uploaded on the Clearing Advance Process (payment allocation) rows,
+   * for the "Uploads" button/modal. */
+  getPaymentAllocationUploads(group: AbstractControl): Array<{ description: string; url: string; name: string }> {
+    return this.getPaymentAllocations(group).controls
+      .map((row) => ({
+        description: row.get('description')?.value || 'Attachment',
+        url: row.get('attachmentDocumentUrl')?.value || '',
+        name: row.get('attachmentDocumentName')?.value || '',
+      }))
+      .filter((upload) => !!upload.url);
+  }
+
+  openPaymentAllocationUploads(index: number): void {
+    this.paymentAllocationUploadsIndex.set(index);
+    this.paymentAllocationUploadsModalVisible.set(true);
+  }
+
+  getPaymentAllocationUploadsForIndex(index: number): Array<{ description: string; url: string; name: string }> {
+    const group = this.formArray.at(index) as FormGroup | null;
+    return group ? this.getPaymentAllocationUploads(group) : [];
   }
 
   openRemoteDocumentPreview(url: string, title: string): void {
