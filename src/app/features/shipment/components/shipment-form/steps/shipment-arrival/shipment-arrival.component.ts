@@ -182,6 +182,9 @@ export class ShipmentArrivalComponent {
   readonly activeDpwExtraction = signal<ExtractDpwCargoResponse | null>(null);
   readonly bulkDateModalVisible = signal(false);
   readonly bulkDateRowIndex = signal<number | null>(null);
+  /** Non-null while the "Manage Shipments" modal is editing an EXISTING transaction rather
+   * than assigning unassigned containers to a brand-new one. */
+  readonly editingTransactionId = signal<string | null>(null);
   readonly bulkTransportationSaving = signal(false);
   readonly bulkContainerSearchFilter = signal<string>('');
   readonly bulkTransportationAttachments = signal<File[]>([]);
@@ -1327,20 +1330,6 @@ export class ShipmentArrivalComponent {
       }
     }
 
-    if (section === 'portClearance') {
-      // Point 16: Arrival Document is mandatory before Port & Clearance can be saved.
-      const hasArrivalDocument =
-        !!this.getArrivalDocumentFile(index) ||
-        String(group.get('arrivalDocumentUrl')?.value || '').trim().length > 0;
-      if (!hasArrivalDocument) {
-        this.messageService.add({
-          severity: 'warn',
-          summary: 'Arrival Document Required',
-          detail: 'Please attach the Arrival Document before saving Port & Clearance.',
-        });
-        return;
-      }
-    }
 
     const sectionLabel = section === 'transportation'
       ? 'Transportation Arranged'
@@ -2121,6 +2110,7 @@ export class ShipmentArrivalComponent {
     currentDate.setHours(0, 0, 0, 0);
     const currentTime = new Date();
     currentTime.setSeconds(0, 0);
+    this.editingTransactionId.set(null);
     this.bulkDateRowIndex.set(index);
     this.bulkDateForm.reset({
       transportCompanyName: null,
@@ -2136,11 +2126,35 @@ export class ShipmentArrivalComponent {
     this.bulkDateModalVisible.set(true);
   }
 
+  /** Re-opens the same "Manage Shipments" modal pre-filled with an existing transaction's
+   * shared values, so it can be edited in place instead of assigning new containers. */
+  openEditTransactionModal(index: number, transaction: { transactionId: string; rows: any[] }): void {
+    if (this.isLogisticsSectionLocked(index, 'transportation')) return;
+    const first = transaction.rows[0] || {};
+    this.editingTransactionId.set(transaction.transactionId);
+    this.bulkDateRowIndex.set(index);
+    this.bulkDateForm.reset({
+      transportCompanyName: first.transportCompanyName || null,
+      warehouse: first.warehouse || null,
+      bookedDate: first.bookedDate ? new Date(first.bookedDate) : null,
+      bookingTime: first.bookingTime ? new Date(`1970-01-01T${first.bookingTime}`) : null,
+      transportDate: first.transportDate ? new Date(first.transportDate) : null,
+      transportTime: first.transportTime ? new Date(`1970-01-01T${first.transportTime}`) : null,
+    });
+    this.getRowsByTransactionId(this.formArray.at(index), transaction.transactionId).forEach((row) => {
+      row.get('checked')?.patchValue(true, { emitEvent: false });
+    });
+    this.bulkTransportationAttachments.set([]);
+    this.bulkContainerSearchFilter.set('');
+    this.bulkDateModalVisible.set(true);
+  }
+
   closeBulkDateModal(): void {
     const index = this.bulkDateRowIndex();
     if (index !== null) this.clearBulkTransportationSelection(index);
     this.bulkDateModalVisible.set(false);
     this.bulkDateRowIndex.set(null);
+    this.editingTransactionId.set(null);
   }
 
   clearBulkTransportationSelection(index: number): void {
@@ -2165,8 +2179,27 @@ export class ShipmentArrivalComponent {
     return this.getUnassignedTransportationRows(group).length;
   }
 
+  /** Rows the "Manage Shipments" modal's checkbox list should show: the transaction's own
+   * rows while editing it, otherwise the usual unassigned-only list. */
+  getBulkModalRows(group: AbstractControl): AbstractControl[] {
+    const editingId = this.editingTransactionId();
+    return editingId ? this.getRowsByTransactionId(group, editingId) : this.getUnassignedTransportationRows(group);
+  }
+
+  getBulkModalRowCount(group: AbstractControl): number {
+    return this.getBulkModalRows(group).length;
+  }
+
+  /** Rows already belonging to a given transaction — used to bypass the "unassigned only"
+   * filter when editing an existing Transportation Arrangement transaction. */
+  getRowsByTransactionId(group: AbstractControl, transactionId: string): AbstractControl[] {
+    return this.getTransportationRows(group).controls.filter(
+      (row) => String(row.get('transactionId')?.value || '').trim() === transactionId,
+    );
+  }
+
   getSelectedTransportationRows(index: number): AbstractControl[] {
-    return this.getUnassignedTransportationRows(this.formArray.at(index)).filter((row) => row.get('checked')?.value === true);
+    return this.getBulkModalRows(this.formArray.at(index)).filter((row) => row.get('checked')?.value === true);
   }
 
   selectedTransportationCount(index: number): number {
@@ -2174,13 +2207,13 @@ export class ShipmentArrivalComponent {
   }
 
   areAllBulkTransportationRowsSelected(index: number): boolean {
-    const rows = this.getUnassignedTransportationRows(this.formArray.at(index));
+    const rows = this.getBulkModalRows(this.formArray.at(index));
     return rows.length > 0 && rows.every((row) => row.get('checked')?.value === true);
   }
 
   toggleAllBulkTransportationRows(index: number, event: Event): void {
     const checked = (event.target as HTMLInputElement | null)?.checked === true;
-    this.getUnassignedTransportationRows(this.formArray.at(index)).forEach((row) => {
+    this.getBulkModalRows(this.formArray.at(index)).forEach((row) => {
       row.get('checked')?.patchValue(checked, { emitEvent: false });
     });
   }
@@ -2254,8 +2287,9 @@ export class ShipmentArrivalComponent {
     }
 
     // One bulk submit = one transaction. Assign a single shared transactionId to all selected rows
-    // so they group into a single row in the transaction table.
-    patch['transactionId'] = `TXN-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+    // so they group into a single row in the transaction table — unless we're editing an
+    // existing transaction, in which case reuse its id so this stays an update, not a new row.
+    patch['transactionId'] = this.editingTransactionId() || `TXN-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
     selectedRows.forEach((row) => {
       row.patchValue(patch, { emitEvent: false });

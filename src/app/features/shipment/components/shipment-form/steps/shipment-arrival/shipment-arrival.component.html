@@ -333,7 +333,7 @@
                     <!-- Row 3: Arrival Document (mandatory) + Final Contract Document -->
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       <div class="flex flex-col gap-1.5">
-                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Arrival Document <span class="text-red-500">*</span></label>
+                        <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Arrival Document</label>
                         <div class="flex items-center gap-2">
                           @if (!isLogisticsSectionLocked(i, 'portClearance')) {
                           <button type="button" (click)="arrivalDocInput.click()"
@@ -359,7 +359,7 @@
                             </button>
                             <span class="text-[10px] text-slate-500 truncate">{{ group.get('arrivalDocumentName')?.value || 'Arrival Document' }}</span>
                           } @else {
-                            <span class="text-[10px] text-amber-600 italic">Required</span>
+                            <span class="text-[10px] text-slate-400 italic">Not attached</span>
                           }
                         </div>
                       </div>
@@ -851,9 +851,14 @@
                               <td class="px-2 py-2 text-slate-700">{{ displayRow.transportDate | date:'dd/MM/yy' }}</td>
                               <td class="px-2 py-2 text-slate-700 font-bold">{{ transaction.rows.length }}</td>
                               <td class="px-2 py-2">
-                                <button type="button" (click)="openTransactionDetailModal(transaction)" class="text-blue-600 hover:text-blue-800 font-bold">
+                                <button type="button" (click)="openTransactionDetailModal(transaction)" class="text-blue-600 hover:text-blue-800 font-bold" title="View">
                                   <i class="pi pi-eye text-[12px]"></i>
                                 </button>
+                                @if (canEditLogisticsSection('transportation') && !isRowEditLocked(i)) {
+                                  <button type="button" (click)="openEditTransactionModal(i, transaction); $event.stopPropagation()" class="text-slate-500 hover:text-blue-600 font-bold ml-3" title="Edit">
+                                    <i class="pi pi-pencil text-[12px]"></i>
+                                  </button>
+                                }
                                 <!-- TEMP: manual delete of a transportation transaction. Comment out after cleanup. -->
                                 <!-- <button type="button" (click)="deleteTransactionGroup(i, transaction); $event.stopPropagation()" class="text-red-600 hover:text-red-800 font-bold ml-3">
                                   <i class="pi pi-trash text-[12px]"></i>
@@ -1042,7 +1047,7 @@
     (visibleChange)="bulkDateModalVisible.set($event)"
     (onHide)="closeBulkDateModal()"
     [modal]="true"
-    header="Bulk Update Transportation"
+    [header]="editingTransactionId() ? 'Edit Transportation Transaction' : 'Bulk Update Transportation'"
     [style]="{ width: '600px' }"
   >
     <div [formGroup]="bulkDateForm" class="flex flex-col gap-4">
@@ -1058,11 +1063,11 @@
             (change)="toggleAllBulkTransportationRows(bulkDateRowIndex()!, $event)"
             class="rounded"
           />
-          <span class="text-sm font-bold text-slate-600">Select All ({{ getUnassignedTransportationCount(formArray.at(bulkDateRowIndex()!)!) }} containers)</span>
+          <span class="text-sm font-bold text-slate-600">Select All ({{ getBulkModalRowCount(formArray.at(bulkDateRowIndex()!)!) }} containers)</span>
         </div>
 
         <div class="max-h-60 overflow-y-auto">
-          @for (row of getUnassignedTransportationRows(formArray.at(bulkDateRowIndex()!)); track $index) {
+          @for (row of getBulkModalRows(formArray.at(bulkDateRowIndex()!)); track $index) {
             <div [formGroup]="$any(row)" class="flex items-center gap-2 px-3 py-2 rounded border border-slate-100 hover:bg-slate-50">
               <input
                 type="checkbox"
