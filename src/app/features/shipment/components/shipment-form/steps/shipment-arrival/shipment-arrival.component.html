@@ -614,6 +614,19 @@
                       </p-accordion-header>
                       <p-accordion-content styleClass="bg-white">
                         <div class="flex flex-col gap-3 p-1">
+                          <!-- Municipality Applicable toggle -->
+                          <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex items-center justify-between gap-3">
+                            <div class="flex flex-col gap-0.5">
+                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Municipality Applicable</label>
+                              <span class="text-[11px]" [class.text-green-600]="group.get('municipalityApplicable')?.value !== false" [class.text-slate-400]="group.get('municipalityApplicable')?.value === false">
+                                {{ group.get('municipalityApplicable')?.value === false ? 'No — Not Applicable' : 'Yes — Applicable' }}
+                              </span>
+                            </div>
+                            <p-toggleswitch formControlName="municipalityApplicable" [disabled]="isLogisticsSectionLocked(i, 'municipality')"></p-toggleswitch>
+                          </div>
+                          @if (group.get('municipalityApplicable')?.value === false) {
+                            <p class="text-[11px] text-slate-400 italic px-1">Municipality not applicable — all municipality fields marked N/A.</p>
+                          } @else {
                           <!-- Row 1: Ref No + Inspection Date -->
                           <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
                             <div class="flex flex-col gap-1.5">
@@ -698,6 +711,7 @@
                                 }
                               </div>
                             </div>
+                          }
                           }
                         </div>
                       </p-accordion-content>

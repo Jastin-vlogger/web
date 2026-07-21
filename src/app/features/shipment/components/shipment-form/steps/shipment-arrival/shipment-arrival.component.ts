@@ -492,6 +492,8 @@ export class ShipmentArrivalComponent {
         }
       }
       if (section === 'municipality') {
+        const municipalityApplicableValue = group.get('municipalityApplicable')?.value;
+        payload.append('municipalityApplicable', municipalityApplicableValue === null ? '' : String(!!municipalityApplicableValue));
         payload.append('municipalityStatus', group.get('municipalityStatus')?.value || 'open');
         payload.append('municipalityStatusComment', group.get('municipalityStatusComment')?.value || '');
         const certificate = this.getMunicipalityCertificateFile(index);
@@ -1146,6 +1148,7 @@ export class ShipmentArrivalComponent {
         payload.append('dpwCargoExtraction', JSON.stringify(formValue['dpwCargoExtraction'] || null));
         payload.append('customsClearanceDate', toDate(formValue['customsClearanceDate']));
         payload.append('customsClearanceRemarks', formValue['customsClearanceRemarks'] || '');
+        payload.append('municipalityApplicable', formValue['municipalityApplicable'] === null ? '' : String(!!formValue['municipalityApplicable']));
         payload.append('municipalityDate', toDate(formValue['municipalityDate']));
         payload.append('municipalityRemarks', formValue['municipalityRemarks'] || '');
         payload.append('municipalityStatus', formValue['municipalityStatus'] || 'open');
@@ -1439,6 +1442,8 @@ export class ShipmentArrivalComponent {
         }
       }
       if (section === 'municipality') {
+        const municipalityApplicableValue = group.get('municipalityApplicable')?.value;
+        payload.append('municipalityApplicable', municipalityApplicableValue === null ? '' : String(!!municipalityApplicableValue));
         payload.append('municipalityStatus', group.get('municipalityStatus')?.value || 'open');
         payload.append('municipalityStatusComment', group.get('municipalityStatusComment')?.value || '');
         payload.append('municipalityReleasedDate', toDate(group.get('municipalityReleasedDate')?.value));

@@ -241,7 +241,7 @@
             </span>
           </div>
 
-          @if (hasAnyStep3CompletedRow()) {
+          @if (hasAnyClearingAdvanceApproved()) {
             <div class="sl-card overflow-hidden" [class.rbac-readonly-shell]="isStepReadOnly(4)">
               <app-shipment-arrival
                 [formArray]="arrivalTimeSplits"
@@ -254,8 +254,8 @@
                 <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
                   <i class="pi pi-clock text-amber-600 text-lg"></i>
                 </div>
-                <p class="text-sm font-semibold text-amber-700">Awaiting Document Tracker completion.</p>
-                <p class="text-xs text-amber-600 max-w-sm">All 6 milestones in the Document Tracker must be completed before Port and Clearance can begin.</p>
+                <p class="text-sm font-semibold text-amber-700">Awaiting Clearing Advance approval.</p>
+                <p class="text-xs text-amber-600 max-w-sm">The Clearing Advance must be approved by FAS before Port and Clearance can begin.</p>
               </div>
             </div>
           }

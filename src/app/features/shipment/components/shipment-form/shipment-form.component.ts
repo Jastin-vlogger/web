@@ -170,7 +170,7 @@ export class ShipmentFormComponent implements OnDestroy {
         editPermissionKey: 'shipment.tab.port_customs.edit',
         label: 'Port and Clearance',
         subLabel: 'Logistics',
-        completed: this.isStep3AllMilestonesCompleted() && this.submittedActualIndices().length > 0 && this.allSubmitted(this.submittedActualIndices().length, this.submittedStep4Indices()),
+        completed: this.hasAnyClearingAdvanceApproved() && this.submittedActualIndices().length > 0 && this.allSubmitted(this.submittedActualIndices().length, this.submittedStep4Indices()),
       },
       {
         index: 5,
@@ -432,6 +432,21 @@ export class ShipmentFormComponent implements OnDestroy {
   }
 
   /**
+   * Port & Clearance is decoupled from Document Tracker: it unlocks once the Clearing Advance
+   * has been FAS-approved (clearingAdvanceApproval.status === 'approved'), not when Document
+   * Tracker completes. Document tracking continues in parallel elsewhere.
+   */
+  isClearingAdvanceApproved(index: number): boolean {
+    return this.shipmentData()?.actual?.[index]?.clearingAdvanceApproval?.status === 'approved';
+  }
+
+  hasAnyClearingAdvanceApproved(): boolean {
+    const actualRows = this.shipmentData()?.actual;
+    if (!Array.isArray(actualRows) || actualRows.length === 0) return false;
+    return actualRows.some((shipment: any) => shipment?.clearingAdvanceApproval?.status === 'approved');
+  }
+
+  /**
    * For now, Document Tracker completes at milestone 4 for Bank receivers
    * and milestone 2 for Direct receivers. Milestones 5/6 remain in the data
    * model for compatibility but are paused in the active workflow.
@@ -511,8 +526,9 @@ export class ShipmentFormComponent implements OnDestroy {
   }
 
   getStep4VisibleShipmentIndices(): number[] {
+    // Port & Clearance rows show once their Clearing Advance is FAS-approved (not Doc Tracker).
     const totalRows = this.documentationSplits.length || this.shipmentData()?.actual?.length || 0;
-    return Array.from({ length: totalRows }, (_, index) => index).filter((index) => this.isDocumentationRowComplete(this.documentationSplits.at(index) || this.shipmentData()?.actual?.[index]));
+    return Array.from({ length: totalRows }, (_, index) => index).filter((index) => this.isClearingAdvanceApproved(index));
   }
 
   getStep5VisibleShipmentIndices(): number[] {
@@ -538,9 +554,10 @@ export class ShipmentFormComponent implements OnDestroy {
   }
 
   private getBlockedByStep(targetStepIndex: number): number | null {
-    // Step 5+ (Port and Clearance and beyond) requires Document Tracker milestone completion
-    if (targetStepIndex >= 4 && !this.hasAnyStep3CompletedRow()) {
-      return 3;
+    // Step 5+ (Port and Clearance and beyond) requires Clearing Advance FAS approval.
+    // Decoupled from Document Tracker — FAS approval alone unlocks it.
+    if (targetStepIndex >= 4 && !this.hasAnyClearingAdvanceApproved()) {
+      return 2;
     }
     // Step 6+ (Storage and beyond) requires Port and Clearance (index 4) completion
     if (targetStepIndex >= 5 && !this.hasAnyStep4CompletedRow()) {
@@ -1064,6 +1081,11 @@ export class ShipmentFormComponent implements OnDestroy {
                   ? new Date(actualData.tokenDate)
                   : null,
             ],
+            municipalityApplicable: [
+              typeof (actualData as any)?.municipalityApplicable === 'boolean'
+                ? (actualData as any).municipalityApplicable
+                : true,
+            ],
             municipalityDate: [
               (actualData as any)?.municipalityDate
                 ? new Date((actualData as any).municipalityDate)
@@ -1449,6 +1471,7 @@ export class ShipmentFormComponent implements OnDestroy {
           customsClearanceDocumentName: [''],
           customsClearanceRemarks: [''],
           tokenReceivedDate: [null],
+          municipalityApplicable: [true],
           municipalityDate: [null],
           municipalityDocumentUrl: [''],
           municipalityDocumentName: [''],

@@ -157,7 +157,7 @@ export class AllShipmentsComponent implements OnInit {
       { group: FAS, header: 'Cheque Date', value: (r) => fmt(r.chequeDate) },
       // Warehouse Department (Warehouse Manager)
       { group: WH_MANAGER, header: 'Storage Allocation Date', value: (r) => fmt(r.storageAllocationDate) },
-      { group: WH_MANAGER, header: 'Allocate Same Warehouse', value: (r) => r.allocateSameWarehouse || '' },
+      { group: WH_MANAGER, header: 'Warehouse Allocation', value: (r) => r.allocateSameWarehouse === 'Yes' ? 'Single' : r.allocateSameWarehouse === 'No' ? 'Multiple' : '' },
       { group: WH_MANAGER, header: 'Destination Warehouse(s)', value: (r) => r.destinationWarehouses || '' },
       // FAS Department (Bank / Murabaha submission)
       { group: FAS, header: 'DA Submitted To Bank', value: (r) => r.daSubmittedToBank || '' },
@@ -176,6 +176,7 @@ export class AllShipmentsComponent implements OnInit {
       { group: LOGISTICS, header: 'BOE Number', value: (r) => r.boeNumber || '' },
       { group: LOGISTICS, header: 'BOE Date', value: (r) => fmt(r.boeDate) },
       { group: LOGISTICS, header: 'Customer Inspection Required', value: (r) => r.customerInspectionRequired || '' },
+      { group: LOGISTICS, header: 'Municipality Applicable', value: (r) => r.municipalityApplicable || '' },
       { group: LOGISTICS, header: 'Municipality Ref No', value: (r) => r.municipalityRefNo || '' },
       { group: LOGISTICS, header: 'Municipality Inspection Date', value: (r) => fmt(r.municipalityInspectionDate) },
       { group: LOGISTICS, header: 'Municipality Status', value: (r) => r.municipalityStatus || '' },
@@ -314,7 +315,10 @@ export class AllShipmentsComponent implements OnInit {
   }
 
   private fmtDate(value: string | null | undefined): string {
-    return value ? new Date(value).toLocaleDateString('en-GB') : '';
+    if (value === 'N/A') return 'N/A';
+    if (!value) return '';
+    const d = new Date(value);
+    return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-GB');
   }
 
   onPageChange(page: number): void {

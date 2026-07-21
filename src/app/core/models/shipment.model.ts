@@ -102,6 +102,7 @@ export interface FlatShipmentRow {
   boeNumber?: string;
   boeDate?: string | null;
   customerInspectionRequired?: string;
+  municipalityApplicable?: string;
   municipalityRefNo?: string;
   municipalityInspectionDate?: string | null;
   municipalityStatus?: string;
