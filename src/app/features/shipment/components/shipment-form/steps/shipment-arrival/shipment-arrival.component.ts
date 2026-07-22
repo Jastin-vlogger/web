@@ -190,6 +190,57 @@ export class ShipmentArrivalComponent {
   readonly bulkTransportationAttachments = signal<File[]>([]);
   readonly transactionDetailModalVisible = signal(false);
   readonly selectedTransactionData = signal<any>(null);
+
+  // Containers sharing the same B/L No are combined automatically by the backend (no manual
+  // merge action) — this just reads the combined total/siblings off the shipment data.
+  getMergedInfo(index: number): { total: number; siblings: Array<{ containerId: string; shipmentNo: string; blNo: string; noOfContainers: number; containerSerials: string[] }> } {
+    const actual = this.shipmentData()?.actual?.[index] as any;
+    return {
+      total: actual?.mergedTotalContainers || 0,
+      siblings: actual?.mergedWithShipments || [],
+    };
+  }
+
+  /** formArray indices of sibling containers sharing this container's B/L No — usually other
+   * items of the SAME parent shipment, so their own rows are already loaded in this formArray
+   * and can be selected/saved through the normal per-container save path, no separate fetch. */
+  getMergedSiblingIndices(index: number): number[] {
+    const siblingContainerIds = new Set(this.getMergedInfo(index).siblings.map((s) => String(s.containerId)));
+    if (!siblingContainerIds.size) return [];
+    const indices: number[] = [];
+    this.formArray.controls.forEach((group, i) => {
+      if (siblingContainerIds.has(String(group.get('containerId')?.value))) indices.push(i);
+    });
+    return indices;
+  }
+
+  /** Every formArray index the "Manage Shipments" modal should operate on: this container plus,
+   * for a brand-new bulk assignment (not editing an existing transaction), its merged siblings. */
+  getBulkTargetIndices(index: number): number[] {
+    return this.editingTransactionId() ? [index] : [index, ...this.getMergedSiblingIndices(index)];
+  }
+
+  getMergedBulkRowCount(index: number): number {
+    return this.getBulkTargetIndices(index).reduce(
+      (sum, i) => sum + this.getBulkModalRows(this.formArray.at(i)!).length,
+      0
+    );
+  }
+
+  areAllMergedBulkRowsSelected(index: number): boolean {
+    const targets = this.getBulkTargetIndices(index);
+    const allRows = targets.flatMap((i) => this.getBulkModalRows(this.formArray.at(i)!));
+    return allRows.length > 0 && allRows.every((row) => row.get('checked')?.value === true);
+  }
+
+  toggleAllMergedBulkTransportationRows(index: number, event: Event): void {
+    const checked = (event.target as HTMLInputElement | null)?.checked === true;
+    this.getBulkTargetIndices(index).forEach((i) => {
+      this.getBulkModalRows(this.formArray.at(i)!).forEach((row) => {
+        row.get('checked')?.patchValue(checked, { emitEvent: false });
+      });
+    });
+  }
   readonly bulkDateForm = new FormGroup({
     transportCompanyName: new FormControl<string | null>(null),
     warehouse: new FormControl<string | null>(null),
@@ -2251,22 +2302,14 @@ export class ShipmentArrivalComponent {
     if (index === null) return;
     if (this.bulkTransportationSaving()) return;
 
-    const group = this.formArray.at(index);
-    const containerId = group?.get('containerId')?.value;
     const shipmentId = this.shipmentData()?.shipment?._id;
-    if (!group || !containerId || !shipmentId) return;
+    if (!shipmentId) return;
 
+    // Merged siblings (same B/L No) contribute their own formArray rows to this same modal —
+    // each target index saves to its OWN container, so a 40-container selection across 2
+    // merged shipments still writes each container's data to its own document, not one blob.
+    const targetIndices = this.getBulkTargetIndices(index);
     const values = this.bulkDateForm.getRawValue();
-    const selectedRows = this.getSelectedTransportationRows(index);
-
-    if (!selectedRows.length) {
-      this.messageService.add({
-        severity: 'info',
-        summary: 'No rows selected',
-        detail: 'Select one or more containers in the modal before saving.',
-      });
-      return;
-    }
 
     const patch: Record<string, string | Date> = {};
     const company = String(values.transportCompanyName || '').trim();
@@ -2287,71 +2330,96 @@ export class ShipmentArrivalComponent {
     }
 
     // One bulk submit = one transaction. Assign a single shared transactionId to all selected rows
-    // so they group into a single row in the transaction table — unless we're editing an
-    // existing transaction, in which case reuse its id so this stays an update, not a new row.
+    // (across every target container) so they group into a single row in the transaction table —
+    // unless we're editing an existing transaction, in which case reuse its id so this stays an
+    // update, not a new row.
     patch['transactionId'] = this.editingTransactionId() || `TXN-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
-    selectedRows.forEach((row) => {
-      row.patchValue(patch, { emitEvent: false });
-      row.markAllAsTouched();
-      row.updateValueAndValidity({ emitEvent: false });
-    });
+    const perIndexSelectedRows = new Map<number, AbstractControl[]>();
+    let totalSelected = 0;
+    for (const i of targetIndices) {
+      const selectedRows = this.getSelectedTransportationRows(i);
+      if (!selectedRows.length) continue;
+      perIndexSelectedRows.set(i, selectedRows);
+      totalSelected += selectedRows.length;
+    }
 
-    const missingCompany = selectedRows.some((row) => !String(row.get('transportCompanyName')?.value || '').trim());
-    if (missingCompany) {
+    if (!totalSelected) {
       this.messageService.add({
-        severity: 'warn',
-        summary: 'Transport Company Required',
-        detail: 'Selected containers need a transport company before saving.',
+        severity: 'info',
+        summary: 'No rows selected',
+        detail: 'Select one or more containers in the modal before saving.',
       });
       return;
     }
 
-    this.onTransportationTimeChange(index);
-    selectedRows.forEach((row) => row.updateValueAndValidity({ emitEvent: false }));
-    if (selectedRows.some((row) => row.invalid)) {
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Invalid transportation timing',
-        detail: 'Transportation date and time must be the same as or later than the arranged date and booking time.',
+    for (const [i, selectedRows] of perIndexSelectedRows) {
+      selectedRows.forEach((row) => {
+        row.patchValue(patch, { emitEvent: false });
+        row.markAllAsTouched();
+        row.updateValueAndValidity({ emitEvent: false });
       });
-      return;
+      const missingCompany = selectedRows.some((row) => !String(row.get('transportCompanyName')?.value || '').trim());
+      if (missingCompany) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Transport Company Required',
+          detail: 'Selected containers need a transport company before saving.',
+        });
+        return;
+      }
+      this.onTransportationTimeChange(i);
+      selectedRows.forEach((row) => row.updateValueAndValidity({ emitEvent: false }));
+      if (selectedRows.some((row) => row.invalid)) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Invalid transportation timing',
+          detail: 'Transportation date and time must be the same as or later than the arranged date and booking time.',
+        });
+        return;
+      }
     }
 
-    const payload = new FormData();
-    payload.append('sectionKey', 'transportation');
-    payload.append('transportationPartialSave', 'true');
-    payload.append('transportationBooked', JSON.stringify(this.buildTransportationBookedPayload(group)));
-
-    // Append attachments if any
     const attachments = this.bulkTransportationAttachments();
-    attachments.forEach((file, index) => {
-      payload.append(`transportationAttachment_${index}`, file, file.name);
-    });
-
     this.bulkTransportationSaving.set(true);
-    this.shipmentService.submitLogistics(containerId, payload).subscribe({
-      next: () => {
+
+    const targets = [...perIndexSelectedRows.keys()];
+    const saveNext = (pos: number): void => {
+      if (pos >= targets.length) {
         this.bulkTransportationSaving.set(false);
-        const count = selectedRows.length;
-        this.clearBulkTransportationSelection(index);
+        targetIndices.forEach((i) => this.clearBulkTransportationSelection(i));
         this.closeBulkDateModal();
         this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
         this.messageService.add({
           severity: 'success',
           summary: 'Transportation Updated',
-          detail: `${count} selected container(s) updated and saved.`,
+          detail: `${totalSelected} selected container(s) updated and saved.`,
         });
-      },
-      error: (error) => {
-        this.bulkTransportationSaving.set(false);
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Bulk Save Failed',
-          detail: error?.error?.message || 'Unable to save selected transportation rows.',
-        });
+        return;
       }
-    });
+      const i = targets[pos];
+      const group = this.formArray.at(i)!;
+      const containerId = group.get('containerId')?.value;
+      const payload = new FormData();
+      payload.append('sectionKey', 'transportation');
+      payload.append('transportationPartialSave', 'true');
+      payload.append('transportationBooked', JSON.stringify(this.buildTransportationBookedPayload(group)));
+      if (pos === 0) {
+        attachments.forEach((file, fi) => payload.append(`transportationAttachment_${fi}`, file, file.name));
+      }
+      this.shipmentService.submitLogistics(containerId, payload).subscribe({
+        next: () => saveNext(pos + 1),
+        error: (error) => {
+          this.bulkTransportationSaving.set(false);
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Bulk Save Failed',
+            detail: error?.error?.message || 'Unable to save selected transportation rows.',
+          });
+        },
+      });
+    };
+    saveNext(0);
   }
 
   // ========== Customs Documents Methods ==========

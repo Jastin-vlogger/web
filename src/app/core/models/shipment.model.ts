@@ -66,6 +66,8 @@ export interface FlatShipmentRow {
   shipOnBoardDate?: string | null;
   shippingLine?: string;
   noOfContainers?: number | string;
+  mergedTotalContainers?: number;
+  mergedWithShipments?: Array<{ containerId: string; shipmentNo: string; blNo: string; noOfContainers: number; containerSerials: string[] }>;
   freeDetentionDays?: number | string;
   maximumDetentionDays?: number | string;
   shipmentArrived?: string;

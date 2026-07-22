@@ -804,6 +804,14 @@
                       <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Milestone 4</span>
                       <h3 class="text-xs font-bold text-slate-700">Transportation Arrangement</h3>
                       <p class="text-[10px] text-slate-500">{{ getTransportationContainerCount(group) }} container(s)</p>
+                      @if (getMergedInfo(i).total) {
+                        <p class="text-[10px] font-bold text-violet-600 mt-0.5">
+                          <i class="pi pi-link text-[9px]"></i>
+                          Same B/L: {{ getMergedInfo(i).total }} containers total across
+                          {{ getMergedInfo(i).siblings.length + 1 }} shipment(s)
+                          ({{ getMergedInfo(i).siblings[0]?.shipmentNo }})
+                        </p>
+                      }
                     </div>
                     <div class="flex items-center gap-2 shrink-0">
                       @if (canEditLogisticsSection('transportation') && !isRowEditLocked(i)) {
@@ -1040,7 +1048,6 @@
   </p-dialog>
 }
 
-<!-- Bulk Date Modal for Transportation -->
 @if (bulkDateModalVisible()) {
   <p-dialog
     [visible]="bulkDateModalVisible()"
@@ -1059,11 +1066,13 @@
         <div class="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white">
           <input
             type="checkbox"
-            [checked]="areAllBulkTransportationRowsSelected(bulkDateRowIndex()!)"
-            (change)="toggleAllBulkTransportationRows(bulkDateRowIndex()!, $event)"
+            [checked]="areAllMergedBulkRowsSelected(bulkDateRowIndex()!)"
+            (change)="toggleAllMergedBulkTransportationRows(bulkDateRowIndex()!, $event)"
             class="rounded"
           />
-          <span class="text-sm font-bold text-slate-600">Select All ({{ getBulkModalRowCount(formArray.at(bulkDateRowIndex()!)!) }} containers)</span>
+          <span class="text-sm font-bold text-slate-600">
+            Select All ({{ getMergedBulkRowCount(bulkDateRowIndex()!) }} containers)
+          </span>
         </div>
 
         <div class="max-h-60 overflow-y-auto">
@@ -1080,6 +1089,24 @@
             <div class="px-3 py-6 text-center text-sm text-slate-400">All containers have been assigned to a transaction.</div>
           }
         </div>
+
+        @for (siblingIndex of getMergedSiblingIndices(bulkDateRowIndex()!); track siblingIndex) {
+          <div class="mt-1 rounded-lg border border-violet-100 bg-violet-50/50 overflow-hidden">
+            <div class="px-3 py-1.5 text-[10px] font-bold text-violet-600 uppercase tracking-wider">
+              <i class="pi pi-link text-[9px]"></i> Same B/L — {{ getShipmentNoLabel(siblingIndex) }}
+            </div>
+            <div class="max-h-40 overflow-y-auto">
+              @for (row of getBulkModalRows(formArray.at(siblingIndex)!); track $index) {
+                <div [formGroup]="$any(row)" class="flex items-center gap-2 px-3 py-2 border-t border-violet-100/60 hover:bg-violet-50">
+                  <input type="checkbox" formControlName="checked" class="rounded" />
+                  <span class="text-sm text-slate-600">{{ row.get('containerSerialNo')?.value }}</span>
+                </div>
+              } @empty {
+                <div class="px-3 py-3 text-center text-xs text-slate-400">All containers on {{ getShipmentNoLabel(siblingIndex) }} have been assigned.</div>
+              }
+            </div>
+          </div>
+        }
       </div>
 
       <div class="border-t border-slate-200 pt-4">
