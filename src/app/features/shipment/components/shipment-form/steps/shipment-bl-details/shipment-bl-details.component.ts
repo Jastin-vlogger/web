@@ -513,11 +513,13 @@ export class ShipmentBlDetailsComponent {
     return this.canViewPackagingList() && this.rbacService.hasPermission('shipment.tab.bl_details.packaging_list.edit');
   }
 
-  // ── Point 9: per-row editable "No of Bags" on the Packing List Confirmation tab ──
+  // ── Point 9: per-row editable "No of Bags" / "Container No" on the Packing List Confirmation tab ──
   /** Working values for rows currently in edit mode, keyed by `${shipmentIndex}:${rowIndex}`. */
-  private readonly packagingBagEdits = signal<Record<string, string>>({});
+  private readonly packagingBagEdits = signal<Record<string, { noOfBags: string; containerNumber: string }>>({});
   /** Rows with an in-flight save, keyed the same way. */
   private readonly packagingBagSaving = signal<Record<string, boolean>>({});
+  /** True once "Add Container" has appended a new blank row awaiting its first save. */
+  private readonly packagingRowAdding = signal<Record<number, boolean>>({});
 
   private packagingBagKey(shipmentIndex: number, rowIndex: number): string {
     return `${shipmentIndex}:${rowIndex}`;
@@ -531,19 +533,37 @@ export class ShipmentBlDetailsComponent {
     return !!this.packagingBagSaving()[this.packagingBagKey(shipmentIndex, rowIndex)];
   }
 
-  startPackagingRowEdit(shipmentIndex: number, rowIndex: number, currentBags: number | null | undefined): void {
+  startPackagingRowEdit(shipmentIndex: number, rowIndex: number, currentBags: number | null | undefined, currentContainerNumber: string | null | undefined): void {
     if (!this.canEditPackagingList()) return;
     const key = this.packagingBagKey(shipmentIndex, rowIndex);
-    this.packagingBagEdits.update((current) => ({ ...current, [key]: String(currentBags ?? 0) }));
+    this.packagingBagEdits.update((current) => ({
+      ...current,
+      [key]: { noOfBags: String(currentBags ?? 0), containerNumber: currentContainerNumber || '' },
+    }));
   }
 
   getPackagingRowBagValue(shipmentIndex: number, rowIndex: number): string {
-    return this.packagingBagEdits()[this.packagingBagKey(shipmentIndex, rowIndex)] ?? '';
+    return this.packagingBagEdits()[this.packagingBagKey(shipmentIndex, rowIndex)]?.noOfBags ?? '';
   }
 
   setPackagingRowBagValue(shipmentIndex: number, rowIndex: number, value: string): void {
     const key = this.packagingBagKey(shipmentIndex, rowIndex);
-    this.packagingBagEdits.update((current) => ({ ...current, [key]: value }));
+    this.packagingBagEdits.update((current) => ({
+      ...current,
+      [key]: { ...(current[key] || { noOfBags: '', containerNumber: '' }), noOfBags: value },
+    }));
+  }
+
+  getPackagingRowContainerNumberValue(shipmentIndex: number, rowIndex: number): string {
+    return this.packagingBagEdits()[this.packagingBagKey(shipmentIndex, rowIndex)]?.containerNumber ?? '';
+  }
+
+  setPackagingRowContainerNumberValue(shipmentIndex: number, rowIndex: number, value: string): void {
+    const key = this.packagingBagKey(shipmentIndex, rowIndex);
+    this.packagingBagEdits.update((current) => ({
+      ...current,
+      [key]: { ...(current[key] || { noOfBags: '', containerNumber: '' }), containerNumber: value },
+    }));
   }
 
   cancelPackagingRowEdit(shipmentIndex: number, rowIndex: number): void {
@@ -553,6 +573,31 @@ export class ShipmentBlDetailsComponent {
       delete next[key];
       return next;
     });
+    // If this was a not-yet-saved "Add Container" row, drop it from the local view entirely.
+    if (this.packagingRowAdding()[shipmentIndex]) {
+      this.packagingRowAdding.update((current) => ({ ...current, [shipmentIndex]: false }));
+      const row = this.formArray.at(shipmentIndex);
+      const control = row?.get('packagingList');
+      const containerInfo = control?.value?.containerInfo;
+      if (Array.isArray(containerInfo) && containerInfo.length && rowIndex === containerInfo.length - 1) {
+        control!.patchValue({ ...control!.value, containerInfo: containerInfo.slice(0, -1) });
+      }
+    }
+  }
+
+  /** Appends a new blank row (locally only) at the end of the packing list and opens it for
+   * editing — nothing is persisted until the row's own Save is clicked. */
+  addPackagingContainer(shipmentIndex: number): void {
+    if (!this.canEditPackagingList()) return;
+    const row = this.formArray.at(shipmentIndex);
+    const control = row?.get('packagingList');
+    if (!control) return;
+    const current = control.value || {};
+    const containerInfo = Array.isArray(current.containerInfo) ? current.containerInfo : [];
+    const newIndex = containerInfo.length;
+    control.patchValue({ ...current, containerInfo: [...containerInfo, { container_number: '', no_of_bags: 0 }] });
+    this.packagingRowAdding.update((cur) => ({ ...cur, [shipmentIndex]: true }));
+    this.startPackagingRowEdit(shipmentIndex, newIndex, 0, '');
   }
 
   savePackagingRowBags(shipmentIndex: number, rowIndex: number): void {
@@ -565,28 +610,35 @@ export class ShipmentBlDetailsComponent {
     }
 
     const key = this.packagingBagKey(shipmentIndex, rowIndex);
-    const raw = this.packagingBagEdits()[key];
+    const draft = this.packagingBagEdits()[key];
+    const raw = draft?.noOfBags;
     const noOfBags = raw === '' || raw == null ? 0 : Number(raw);
     if (!Number.isFinite(noOfBags) || noOfBags < 0) {
       this.notificationService.error('Invalid value', 'No of Bags must be a number of 0 or more.');
       return;
     }
+    const containerNumber = (draft?.containerNumber || '').trim();
+    if (this.packagingRowAdding()[shipmentIndex] && !containerNumber) {
+      this.notificationService.error('Container No required', 'Enter a container number before saving.');
+      return;
+    }
 
     this.packagingBagSaving.update((current) => ({ ...current, [key]: true }));
-    this.shipmentService.updatePackagingBags(containerId, [{ index: rowIndex, no_of_bags: noOfBags }]).subscribe({
+    this.shipmentService.updatePackagingBags(containerId, [{ index: rowIndex, no_of_bags: noOfBags, container_number: containerNumber }]).subscribe({
       next: (response) => {
         // Reflect the saved value back into the form control so the display updates.
         const control = row?.get('packagingList');
         if (control && response?.packagingList) {
           control.patchValue(response.packagingList);
         }
+        this.packagingRowAdding.update((current) => ({ ...current, [shipmentIndex]: false }));
         this.packagingBagSaving.update((current) => {
           const next = { ...current };
           delete next[key];
           return next;
         });
         this.cancelPackagingRowEdit(shipmentIndex, rowIndex);
-        this.notificationService.success('Saved', 'No of Bags updated successfully.');
+        this.notificationService.success('Saved', 'Packing list row updated successfully.');
       },
       error: (error) => {
         this.packagingBagSaving.update((current) => {
@@ -594,7 +646,7 @@ export class ShipmentBlDetailsComponent {
           delete next[key];
           return next;
         });
-        this.notificationService.error('Save failed', error?.error?.message || 'Could not update No of Bags.');
+        this.notificationService.error('Save failed', error?.error?.message || 'Could not update the packing list row.');
       },
     });
   }

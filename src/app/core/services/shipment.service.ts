@@ -518,7 +518,7 @@ export class ShipmentService {
    */
   updatePackagingBags(
     containerId: string,
-    bags: { index: number; no_of_bags: number }[]
+    bags: { index: number; no_of_bags?: number; container_number?: string }[]
   ): Observable<{ message: string; packagingList: any }> {
     return this.http.patch<{ message: string; packagingList: any }>(
       `${this.apiUrl}/container/bl-details/${containerId}/packaging-bags`,

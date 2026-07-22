@@ -540,6 +540,12 @@
                 <div class="rounded-2xl border border-slate-200 overflow-hidden" [class.rbac-readonly-shell]="!canEditStorageAllocations(i)">
                   <div class="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between gap-3">
                     <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Packing List Confirmation</span>
+                    @if (canEditPackagingList()) {
+                      <button type="button" (click)="addPackagingContainer(i)"
+                        class="rbac-allow-interaction inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-[11px] font-bold text-blue-600 hover:bg-blue-100" title="Add Container">
+                        <i class="pi pi-plus text-[10px]"></i> Add Container
+                      </button>
+                    }
                   </div>
                   <div class="hidden md:grid md:grid-cols-[50px_minmax(0,1.4fr)_minmax(150px,1fr)_minmax(0,1.4fr)_110px] gap-3 px-4 py-2.5 bg-slate-50/70 border-b border-slate-100">
                     <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">SN</span>
@@ -553,10 +559,18 @@
                       <div class="border-b last:border-b-0 border-slate-100 p-4">
                         <div class="hidden md:grid md:grid-cols-[50px_minmax(0,1.4fr)_minmax(150px,1fr)_minmax(0,1.4fr)_110px] gap-3 items-center">
                           <div class="text-sm font-bold text-slate-700">{{ pkgIndex + 1 }}</div>
-                          <div class="text-sm text-slate-600 font-medium">{{ pkg.container_number || 'N/A' }}</div>
                           <div class="text-sm text-slate-600 font-medium">
                             @if (isPackagingRowEditing(i, pkgIndex)) {
-                              <input type="number" min="0" class="table-input-text w-full"
+                              <input type="text" class="rbac-allow-interaction !border !border-slate-300 !rounded-lg !bg-white !shadow-sm !px-3 !py-2 !text-sm !font-medium !text-slate-900 focus:!border-blue-400 focus:!ring-2 focus:!ring-blue-100 focus:!outline-none w-full"
+                                [value]="getPackagingRowContainerNumberValue(i, pkgIndex)"
+                                (input)="setPackagingRowContainerNumberValue(i, pkgIndex, $any($event.target).value)" />
+                            } @else {
+                              {{ pkg.container_number || 'N/A' }}
+                            }
+                          </div>
+                          <div class="text-sm text-slate-600 font-medium">
+                            @if (isPackagingRowEditing(i, pkgIndex)) {
+                              <input type="number" min="0" class="rbac-allow-interaction !border !border-slate-300 !rounded-lg !bg-white !shadow-sm !px-3 !py-2 !text-sm !font-medium !text-slate-900 focus:!border-blue-400 focus:!ring-2 focus:!ring-blue-100 focus:!outline-none w-full"
                                 [value]="getPackagingRowBagValue(i, pkgIndex)"
                                 (input)="setPackagingRowBagValue(i, pkgIndex, $any($event.target).value)" />
                             } @else {
@@ -568,16 +582,16 @@
                             @if (canEditPackagingList()) {
                               @if (isPackagingRowEditing(i, pkgIndex)) {
                                 <button type="button" (click)="savePackagingRowBags(i, pkgIndex)" [disabled]="isPackagingRowSaving(i, pkgIndex)"
-                                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 disabled:opacity-50" title="Save No of Bags">
+                                  class="rbac-allow-interaction inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 disabled:opacity-50" title="Save">
                                   @if (isPackagingRowSaving(i, pkgIndex)) { <i class="pi pi-spin pi-spinner text-[11px]"></i> } @else { <i class="pi pi-check text-[11px]"></i> }
                                 </button>
                                 <button type="button" (click)="cancelPackagingRowEdit(i, pkgIndex)" [disabled]="isPackagingRowSaving(i, pkgIndex)"
-                                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 disabled:opacity-50" title="Cancel">
+                                  class="rbac-allow-interaction inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 disabled:opacity-50" title="Cancel">
                                   <i class="pi pi-times text-[11px]"></i>
                                 </button>
                               } @else {
-                                <button type="button" (click)="startPackagingRowEdit(i, pkgIndex, pkg.no_of_bags)"
-                                  class="rbac-allow-interaction inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600" title="Edit No of Bags">
+                                <button type="button" (click)="startPackagingRowEdit(i, pkgIndex, pkg.no_of_bags, pkg.container_number)"
+                                  class="rbac-allow-interaction inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600" title="Edit row">
                                   <i class="pi pi-pencil text-[11px]"></i>
                                 </button>
                               }
@@ -585,23 +599,29 @@
                           </div>
                         </div>
                         <div class="md:hidden flex flex-col gap-2">
-                           <div class="flex justify-between items-center">
+                           <div class="flex justify-between items-center gap-2">
                              <span class="text-[10px] font-black text-slate-400 uppercase">Container No</span>
-                             <span class="text-sm font-bold text-slate-700">{{ pkg.container_number || 'N/A' }}</span>
+                             @if (isPackagingRowEditing(i, pkgIndex)) {
+                               <input type="text" class="rbac-allow-interaction !border !border-slate-300 !rounded-lg !bg-white !shadow-sm !px-3 !py-2 !text-sm !font-medium !text-slate-900 focus:!border-blue-400 focus:!ring-2 focus:!ring-blue-100 focus:!outline-none w-32"
+                                 [value]="getPackagingRowContainerNumberValue(i, pkgIndex)"
+                                 (input)="setPackagingRowContainerNumberValue(i, pkgIndex, $any($event.target).value)" />
+                             } @else {
+                               <span class="text-sm font-bold text-slate-700">{{ pkg.container_number || 'N/A' }}</span>
+                             }
                            </div>
                            <div class="flex justify-between items-center gap-2">
                              <span class="text-[10px] font-black text-slate-400 uppercase">No of Bags</span>
                              @if (isPackagingRowEditing(i, pkgIndex)) {
                                <span class="flex items-center gap-1.5">
-                                 <input type="number" min="0" class="table-input-text w-24"
+                                 <input type="number" min="0" class="rbac-allow-interaction !border !border-slate-300 !rounded-lg !bg-white !shadow-sm !px-3 !py-2 !text-sm !font-medium !text-slate-900 focus:!border-blue-400 focus:!ring-2 focus:!ring-blue-100 focus:!outline-none w-24"
                                    [value]="getPackagingRowBagValue(i, pkgIndex)"
                                    (input)="setPackagingRowBagValue(i, pkgIndex, $any($event.target).value)" />
                                  <button type="button" (click)="savePackagingRowBags(i, pkgIndex)" [disabled]="isPackagingRowSaving(i, pkgIndex)"
-                                   class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600 disabled:opacity-50" title="Save">
+                                   class="rbac-allow-interaction inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600 disabled:opacity-50" title="Save">
                                    @if (isPackagingRowSaving(i, pkgIndex)) { <i class="pi pi-spin pi-spinner text-[11px]"></i> } @else { <i class="pi pi-check text-[11px]"></i> }
                                  </button>
                                  <button type="button" (click)="cancelPackagingRowEdit(i, pkgIndex)" [disabled]="isPackagingRowSaving(i, pkgIndex)"
-                                   class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 disabled:opacity-50" title="Cancel">
+                                   class="rbac-allow-interaction inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 disabled:opacity-50" title="Cancel">
                                    <i class="pi pi-times text-[11px]"></i>
                                  </button>
                                </span>
@@ -609,8 +629,8 @@
                                <span class="flex items-center gap-2">
                                  <span class="text-sm text-slate-600">{{ pkg.no_of_bags || 0 }}</span>
                                  @if (canEditPackagingList()) {
-                                   <button type="button" (click)="startPackagingRowEdit(i, pkgIndex, pkg.no_of_bags)"
-                                     class="rbac-allow-interaction inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600" title="Edit No of Bags">
+                                   <button type="button" (click)="startPackagingRowEdit(i, pkgIndex, pkg.no_of_bags, pkg.container_number)"
+                                     class="rbac-allow-interaction inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600" title="Edit row">
                                      <i class="pi pi-pencil text-[11px]"></i>
                                    </button>
                                  }
