@@ -220,6 +220,26 @@ export class ShipmentStorageComponent {
     return { reached, pending: rows.length - reached, total: rows.length };
   }
 
+  /** Bag totals for the stat cards: planned = every row's "bags" value (seeded from the packing
+   * list when the container split was created); received = the same field but only for rows
+   * already "recorded" (grn & batch present) — there is no separate received-bags field, a row's
+   * bags count only becomes "received" once the warehouse actually confirms it via GRN/batch. */
+  getStorageArrivalBagCounts(index: number): { planned: number; received: number; shortage: number } {
+    const group = this.formArray.at(index) as FormGroup | null;
+    if (!group) return { planned: 0, received: 0, shortage: 0 };
+    const rows = this.getContainersArray(group);
+    let planned = 0;
+    let received = 0;
+    rows.forEach((row) => {
+      const g = row as FormGroup;
+      const bags = Number(g.get('bags')?.value) || 0;
+      planned += bags;
+      const recorded = !!String(g.get('grn')?.value || '').trim() && !!String(g.get('batch')?.value || '').trim();
+      if (recorded) received += bags;
+    });
+    return { planned, received, shortage: Math.max(planned - received, 0) };
+  }
+
   getBlockOptions(warehouseName: string): Array<{ label: string; value: string }> {
     const label = warehouseName?.trim();
     if (!label) return [];

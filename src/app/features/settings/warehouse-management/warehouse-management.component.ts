@@ -251,7 +251,7 @@ import { RbacService } from '../../../core/services/rbac.service';
         </div>
 
         <div class="field">
-          <label class="block text-sm font-bold text-slate-800 mb-2">Assigned Storekeepers</label>
+          <label class="block text-sm font-bold text-slate-800 mb-2">Assigned Storekeepers / Warehouse Managers</label>
           <div class="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 max-h-56 overflow-y-auto">
             @if (storekeepers().length) {
               <div class="grid grid-cols-1 gap-3">
@@ -270,7 +270,7 @@ import { RbacService } from '../../../core/services/rbac.service';
                 }
               </div>
             } @else {
-              <p class="text-sm text-slate-500">No active storekeepers available.</p>
+              <p class="text-sm text-slate-500">No active storekeepers or warehouse managers available.</p>
             }
           </div>
         </div>

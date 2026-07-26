@@ -383,6 +383,7 @@
                 </div>
                 <!-- Reached vs Pending stat card -->
                 @let arrivalCounts = getStorageArrivalCounts(i);
+                @let bagCounts = getStorageArrivalBagCounts(i);
                 <div class="flex flex-wrap items-center gap-3 px-4 py-3 bg-white border-b border-slate-200">
                   <div class="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
                     <i class="pi pi-check-circle text-emerald-600 text-xs"></i>
@@ -395,6 +396,24 @@
                     <span class="text-xs font-black text-amber-700">{{ arrivalCounts.pending }}</span>
                   </div>
                   <span class="text-[10px] font-semibold text-slate-400">of {{ arrivalCounts.total }} container(s)</span>
+
+                  <span class="hidden sm:inline-block w-px h-6 bg-slate-200 mx-1"></span>
+
+                  <div class="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2">
+                    <i class="pi pi-box text-blue-600 text-xs"></i>
+                    <span class="text-[10px] font-black uppercase tracking-wider text-blue-700">Total Planned Bags:</span>
+                    <span class="text-xs font-black text-blue-700">{{ bagCounts.planned }}</span>
+                  </div>
+                  <div class="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                    <i class="pi pi-inbox text-emerald-600 text-xs"></i>
+                    <span class="text-[10px] font-black uppercase tracking-wider text-emerald-700">Total Received Bags:</span>
+                    <span class="text-xs font-black text-emerald-700">{{ bagCounts.received }}</span>
+                  </div>
+                  <div class="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
+                    <i class="pi pi-exclamation-triangle text-rose-600 text-xs"></i>
+                    <span class="text-[10px] font-black uppercase tracking-wider text-rose-700">Total Shortage Bags:</span>
+                    <span class="text-xs font-black text-rose-700">{{ bagCounts.shortage }}</span>
+                  </div>
                 </div>
                 <div class="storage-arrival-viewport overflow-x-auto">
                   @let visibleContainers = getVisibleArrivalContainers(group);
