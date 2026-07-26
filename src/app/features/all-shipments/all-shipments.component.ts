@@ -102,7 +102,7 @@ export class AllShipmentsComponent implements OnInit {
    * "Final Data.xlsx" reference format: 74 columns, grouped under department
    * headers (Purchase / Logistics / FAS / Warehouse) on row 1, column names on row 2.
    */
-  private buildExportColumns(): Array<{ group: string; header: string; colorGroup?: string; value: (row: FlatShipmentRow, idx: number) => string | number }> {
+  private buildExportColumns(): Array<{ group: string; header: string; colorGroup?: string; isAmount?: boolean; value: (row: FlatShipmentRow, idx: number) => string | number }> {
     const PURCHASE = 'Purchase Department';
     const LOGISTICS = 'Logistics Department';
     const FAS = 'FAS Department';
@@ -150,7 +150,7 @@ export class AllShipmentsComponent implements OnInit {
       { group: PURCHASE, header: 'Arrival Document Received', value: (r) => r.arrivalDocumentReceived || '' },
       // Logistics Department (Clearing Advance request)
       { group: LOGISTICS, header: 'Clearing Advance Request Date', value: (r) => fmt(r.clearingAdvanceRequestDate) },
-      { group: LOGISTICS, header: 'Clearing Advance Amount', value: (r) => r.clearingAdvanceAmount ?? '' },
+      { group: LOGISTICS, header: 'Clearing Advance Amount', isAmount: true, value: (r) => r.clearingAdvanceAmount ?? '' },
       // FAS Department (Clearing Advance approval)
       { group: FAS, header: 'Clearing Advance Approved Date', value: (r) => fmt(r.clearingAdvanceApprovedDate) },
       { group: FAS, header: 'Cheque No', value: (r) => r.chequeNo || '' },
@@ -175,7 +175,7 @@ export class AllShipmentsComponent implements OnInit {
       { group: LOGISTICS, header: 'DO Date', value: (r) => fmt(r.doDate) },
       { group: LOGISTICS, header: 'BOE Number', value: (r) => r.boeNumber || '' },
       { group: LOGISTICS, header: 'BOE Date', value: (r) => fmt(r.boeDate) },
-      { group: LOGISTICS, header: 'Customer Inspection Required', value: (r) => r.customerInspectionRequired || '' },
+      { group: LOGISTICS, header: 'Customs Inspection Required', value: (r) => r.customsInspectionRequired || '' },
       { group: LOGISTICS, header: 'Municipality Applicable', value: (r) => r.municipalityApplicable || '' },
       { group: LOGISTICS, header: 'Municipality Ref No', value: (r) => r.municipalityRefNo || '' },
       { group: LOGISTICS, header: 'Municipality Inspection Date', value: (r) => fmt(r.municipalityInspectionDate) },
@@ -183,18 +183,20 @@ export class AllShipmentsComponent implements OnInit {
       { group: LOGISTICS, header: 'Municipality Released Date', value: (r) => fmt(r.municipalityReleasedDate) },
       { group: LOGISTICS, header: 'Transportation Arrangement', value: (r) => r.transportationArrangement || '' },
       { group: LOGISTICS, header: 'Transport Companies', value: (r) => r.transportCompany || '' },
+      { group: LOGISTICS, header: 'Selected Companies', value: (r) => r.selectedCompaniesCount ?? '' },
       { group: LOGISTICS, header: 'Planned (Containers)', value: (r) => r.plannedContainers ?? '' },
       { group: LOGISTICS, header: 'Not Planned (Containers)', value: (r) => r.notPlannedContainers ?? '' },
       // Ungrouped (no department label) — but colored to match the Logistics band either
       // side of it, same as the reference file.
       { group: '', colorGroup: LOGISTICS, header: 'Payment Allocation Request Date', value: (r) => fmt(r.paymentAllocationRequestDate) },
-      { group: '', colorGroup: LOGISTICS, header: 'Payment Received Amount', value: (r) => r.paymentReceivedAmount ?? '' },
+      { group: '', colorGroup: LOGISTICS, header: 'Payment Received Amount', isAmount: true, value: (r) => r.paymentReceivedAmount ?? '' },
       // FAS Department
       { group: FAS, header: 'Payment Approved Date', value: (r) => fmt(r.paymentApprovedDate) },
-      { group: FAS, header: 'Diiference Amount', value: (r) => r.differenceAmount ?? '' },
+      { group: FAS, header: 'Diiference Amount', isAmount: true, value: (r) => r.differenceAmount ?? '' },
       // Warehouse Department (Storekeepers)
       { group: WH_STOREKEEPER, header: 'Containers Received', value: (r) => r.containersReceived ?? '' },
       { group: WH_STOREKEEPER, header: 'Containers Remaining', value: (r) => r.containersRemaining ?? '' },
+      { group: WH_STOREKEEPER, header: 'Shortage Bags', value: (r) => r.shortageBags ?? '' },
       // Ungrouped
       { group: '', header: 'Status', value: (r) => this.getDisplayStageName(r.status) },
     ];
@@ -259,7 +261,7 @@ export class AllShipmentsComponent implements OnInit {
    */
   private applyExportStyles(
     worksheet: XLSX.WorkSheet,
-    columns: Array<{ group: string; colorGroup?: string }>,
+    columns: Array<{ group: string; colorGroup?: string; isAmount?: boolean }>,
     dataRowCount: number
   ): void {
     const PURCHASE = 'Purchase Department';
@@ -305,11 +307,17 @@ export class AllShipmentsComponent implements OnInit {
         border: borders,
       };
 
-      // Data rows: thin borders only, matching the reference file.
+      // Data rows: thin borders, plus a comma-thousands number format on amount columns
+      // (e.g. 67114.71 -> 67,114.71) so large values are readable at a glance. xlsx-js-style
+      // (unlike plain SheetJS) reads the number format from the style's `numFmt`, not `cell.z`.
       for (let r = 0; r < dataRowCount; r++) {
         const dataCellRef = cellRef(r + 2, c);
         const dataCell = worksheet[dataCellRef];
-        if (dataCell) dataCell.s = { border: borders };
+        if (!dataCell) continue;
+        dataCell.s = {
+          border: borders,
+          ...(column.isAmount && dataCell.t === 'n' ? { numFmt: '#,##0.00' } : {}),
+        };
       }
     });
   }

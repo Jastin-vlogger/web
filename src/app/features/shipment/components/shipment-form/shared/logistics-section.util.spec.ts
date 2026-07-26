@@ -4,8 +4,8 @@ import {
   resolveAttachmentDisplayName,
 } from './logistics-section.util';
 
-describe('Point 6: municipality section validation', () => {
-  it('passes (no missing fields) when Inspection Date is empty but Status is set', () => {
+describe('municipality section validation', () => {
+  it('passes (no missing fields) when not applicable and Status is set', () => {
     expect(
       getMunicipalitySectionMissingFields({ municipalityStatus: 'open', municipalityDate: null })
     ).toEqual([]);
@@ -21,10 +21,34 @@ describe('Point 6: municipality section validation', () => {
     ).toEqual(['Status']);
   });
 
-  it('never requires the Inspection Date', () => {
-    const missing = getMunicipalitySectionMissingFields({ municipalityStatus: 'closed' });
-    expect(missing).not.toContain('Municipality Clearance Application Date');
+  it('does not require the Inspection Date when Applicable is not Yes', () => {
+    const missing = getMunicipalitySectionMissingFields({ municipalityStatus: 'closed', municipalityReleasedDate: new Date() });
     expect(missing).not.toContain('Municipality Inspection Date');
+  });
+
+  it('requires Inspection Date once Municipality Applicable is Yes', () => {
+    const missing = getMunicipalitySectionMissingFields({ municipalityApplicable: true, municipalityStatus: 'open', municipalityDate: null });
+    expect(missing).toContain('Municipality Inspection Date');
+  });
+
+  it('does not require Inspection Date when Applicable is Yes and it is provided', () => {
+    const missing = getMunicipalitySectionMissingFields({ municipalityApplicable: true, municipalityStatus: 'open', municipalityDate: new Date() });
+    expect(missing).not.toContain('Municipality Inspection Date');
+  });
+
+  it('requires Released Date once Status is Closed', () => {
+    const missing = getMunicipalitySectionMissingFields({ municipalityStatus: 'closed', municipalityReleasedDate: null });
+    expect(missing).toContain('Municipality Released Date');
+  });
+
+  it('does not require Released Date when Status is Closed and it is provided', () => {
+    const missing = getMunicipalitySectionMissingFields({ municipalityStatus: 'closed', municipalityReleasedDate: new Date() });
+    expect(missing).not.toContain('Municipality Released Date');
+  });
+
+  it('does not require Released Date while Status is Open', () => {
+    const missing = getMunicipalitySectionMissingFields({ municipalityStatus: 'open', municipalityReleasedDate: null });
+    expect(missing).not.toContain('Municipality Released Date');
   });
 });
 

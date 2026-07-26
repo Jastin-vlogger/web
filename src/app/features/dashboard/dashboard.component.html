@@ -51,7 +51,14 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @for (row of statusSnapshotRows(); track row.label) {
+                                @for (row of statusSnapshotRows(); track row.label; let isFirst = $first) {
+                                    @if (isFirst || row.section !== statusSnapshotRows()[$index - 1].section) {
+                                        <tr class="bg-slate-50/70">
+                                            <td colspan="4" class="py-1.5 px-3 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                                                {{ row.section === 'lpo' ? 'LPO' : 'Shipment' }}
+                                            </td>
+                                        </tr>
+                                    }
                                     <tr class="border-b border-slate-50 last:border-0">
                                         <td class="py-4 px-3">
                                             <span class="flex items-center gap-2.5 min-w-0">

@@ -103,7 +103,7 @@ export interface FlatShipmentRow {
   doDate?: string | null;
   boeNumber?: string;
   boeDate?: string | null;
-  customerInspectionRequired?: string;
+  customsInspectionRequired?: string;
   municipalityApplicable?: string;
   municipalityRefNo?: string;
   municipalityInspectionDate?: string | null;
@@ -111,6 +111,7 @@ export interface FlatShipmentRow {
   municipalityReleasedDate?: string | null;
   transportationArrangement?: string;
   transportCompany?: string;
+  selectedCompaniesCount?: number;
   plannedContainers?: number;
   notPlannedContainers?: number;
   // FAS / Warehouse (Storekeepers) — Payment
@@ -120,6 +121,7 @@ export interface FlatShipmentRow {
   differenceAmount?: number;
   containersReceived?: number;
   containersRemaining?: number;
+  shortageBags?: number;
 }
 
 export interface FlatShipmentListResponse {
@@ -1218,6 +1220,7 @@ export interface ActualContainer {
     hsCode?: string;
     grossWeight?: string;
     netWeight?: string;
+    shortageBags?: number;
     remarks?: string;
     documentUrl?: string;
     documentName?: string;

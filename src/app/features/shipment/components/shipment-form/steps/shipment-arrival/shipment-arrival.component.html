@@ -531,10 +531,10 @@
                               }
                             </div>
                           </div>
-                          <!-- Customer Inspection Required Toggle -->
+                          <!-- Customs Inspection Required Toggle -->
                           <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-3 flex items-center justify-between gap-3">
                             <div class="flex flex-col gap-0.5">
-                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Customer Inspection Required</label>
+                              <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Customs Inspection Required</label>
                               <span class="text-[11px]" [class.text-green-600]="group.get('customerInspectionRequired')?.value === true" [class.text-slate-400]="group.get('customerInspectionRequired')?.value !== true">
                                 {{ group.get('customerInspectionRequired')?.value === true ? 'Yes — Inspection Required' : 'No Inspection Required' }}
                               </span>
@@ -723,7 +723,7 @@
                     <p-accordion-panel [value]="'customerInspection-' + i" styleClass="border border-amber-100 rounded-lg">
                       <p-accordion-header styleClass="bg-amber-50 hover:bg-amber-100 px-3 py-2">
                         <div class="flex items-center justify-between w-full gap-2 pr-2">
-                          <span class="text-xs font-bold text-amber-800">Customer Inspection</span>
+                          <span class="text-xs font-bold text-amber-800">Customs Inspection</span>
                           <div class="flex items-center gap-2">
                             @if (isLogisticsSectionLocked(i, 'customerInspection')) {
                               <span class="text-[9px] text-blue-600 uppercase font-bold flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded">

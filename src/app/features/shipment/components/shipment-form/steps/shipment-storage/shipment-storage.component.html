@@ -428,6 +428,7 @@
                           <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200">Block</th>
                           <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200">GRN #</th>
                           <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200">Delay</th>
+                          <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200">Shortage Bags</th>
                           <th class="px-3 py-2.5 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200">Status</th>
                           <th class="px-3 py-2.5 text-right text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap border-b border-slate-200 w-24">Action</th>
                         </tr>
@@ -454,6 +455,10 @@
                             <td class="px-3 py-2.5 text-xs">
                               @let delayLabel = getArrivalDelayLabel(i, c);
                               <span [class.text-rose-600]="delayLabel.endsWith('late')" [class.text-emerald-600]="delayLabel === 'On time'" [class.text-slate-400]="delayLabel === '–'" class="font-semibold">{{ delayLabel }}</span>
+                            </td>
+                            <td class="px-3 py-2.5 text-xs font-semibold">
+                              @let shortageVal = $any(cGroup).get('shortageBags')?.value || 0;
+                              <span [class.text-rose-600]="shortageVal > 0" [class.text-slate-400]="shortageVal === 0">{{ shortageVal }}</span>
                             </td>
                             <td class="px-3 py-2.5">
                               @if (recorded) {
@@ -621,6 +626,10 @@
           <div class="flex flex-col gap-1.5">
             <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Expiry Date<span class="text-red-500 ml-0.5">*</span></label>
             <p-datepicker formControlName="expiryDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" [disabled]="locked" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Shortage (Bags)</label>
+            <input pInputText type="number" min="0" formControlName="shortageBags" class="table-input-text w-full" placeholder="0" [readonly]="locked" />
           </div>
           <div class="flex flex-col gap-1.5 md:col-span-2">
             <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Remarks</label>

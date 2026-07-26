@@ -162,15 +162,16 @@ export class DashboardComponent implements OnInit {
    * operations dashboard design. Each entry maps one or more backend metric labels to a
    * display label + icon; rows the user can't view (by permission) are dropped.
    */
-  private readonly STATUS_SNAPSHOT_CONFIG: { match: string[]; label: string; icon: string }[] = [
-    { match: ['total lpo', 'total lpos'], label: 'Total LPOs', icon: 'pi pi-clipboard' },
-    { match: ['completed lpo', 'completed'], label: 'Completed', icon: 'pi pi-box' },
-    { match: ['open lpo', 'open'], label: 'Open', icon: 'pi pi-inbox' },
-    { match: ['total shipments', 'no. of shipments', 'no of shipments'], label: 'No. of Shipments', icon: 'pi pi-server' },
-    { match: ['at the port', 'at port'], label: 'At the Port', icon: 'pi pi-compass' },
-    { match: ['on transit'], label: 'On Transit', icon: 'pi pi-truck' },
-    { match: ['etd yet to due', 'eta yet to due'], label: 'ETA Yet To Due', icon: 'pi pi-calendar' },
-    { match: ['etd yet to be confirmed'], label: 'ETD Yet To Be Confirmed', icon: 'pi pi-question-circle' },
+  private readonly STATUS_SNAPSHOT_CONFIG: { match: string[]; label: string; icon: string; section: 'lpo' | 'shipment' }[] = [
+    { match: ['total lpo', 'total lpos'], label: 'Total LPOs', icon: 'pi pi-clipboard', section: 'lpo' },
+    { match: ['completed lpo', 'completed'], label: 'Completed', icon: 'pi pi-box', section: 'lpo' },
+    { match: ['open lpo', 'open'], label: 'Open', icon: 'pi pi-inbox', section: 'lpo' },
+    { match: ['total shipments', 'no. of shipments', 'no of shipments'], label: 'No. of Shipments', icon: 'pi pi-server', section: 'shipment' },
+    { match: ['at the port', 'at port'], label: 'At the Port', icon: 'pi pi-compass', section: 'shipment' },
+    { match: ['on transit'], label: 'On Transit', icon: 'pi pi-truck', section: 'shipment' },
+    { match: ['delivered wh', 'delivered to wh', 'delivered to warehouse'], label: 'Delivered to WH', icon: 'pi pi-warehouse', section: 'shipment' },
+    { match: ['etd yet to due', 'eta yet to due'], label: 'ETA Yet To Due', icon: 'pi pi-calendar', section: 'shipment' },
+    { match: ['etd yet to be confirmed'], label: 'ETD Yet To Be Confirmed', icon: 'pi pi-question-circle', section: 'shipment' },
   ];
 
   readonly statusSnapshotRows = computed(() => {
@@ -187,6 +188,7 @@ export class DashboardComponent implements OnInit {
         return {
           label: config.label,
           icon: config.icon,
+          section: config.section,
           quantity: metric.quantity ?? metric.value ?? 0,
           fcl: metric.fcl ?? 0,
           mt: metric.mt ?? 0,

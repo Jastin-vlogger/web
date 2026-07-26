@@ -684,7 +684,8 @@ export class ShipmentArrivalComponent {
       const activeWarehouses = whs
         .filter((w: any) => w.status === 'Active')
         .map((w: any) => {
-          const codeSuffix = w.code ? ` - ${w.code}` : '';
+          const trimmedCode = (w.code || '').trim();
+          const codeSuffix = trimmedCode && trimmedCode.toLowerCase() !== (w.name || '').trim().toLowerCase() ? ` - ${trimmedCode}` : '';
           const label = `${w.name}${codeSuffix}`;
           return { label, value: label };
         });
@@ -1304,10 +1305,11 @@ export class ShipmentArrivalComponent {
   }
 
   private validateMunicipalitySection(group: AbstractControl): string[] {
-    // Municipality Inspection Date is optional — only Status is required (see util).
     return getMunicipalitySectionMissingFields({
+      municipalityApplicable: group.get('municipalityApplicable')?.value,
       municipalityStatus: group.get('municipalityStatus')?.value,
       municipalityDate: group.get('municipalityDate')?.value,
+      municipalityReleasedDate: group.get('municipalityReleasedDate')?.value,
     });
   }
 
@@ -2863,7 +2865,8 @@ export class ShipmentArrivalComponent {
       const activeWarehouses = whs
         .filter((w: any) => w.status === 'Active')
         .map((w: any) => {
-          const codeSuffix = w.code ? ` - ${w.code}` : '';
+          const trimmedCode = (w.code || '').trim();
+          const codeSuffix = trimmedCode && trimmedCode.toLowerCase() !== (w.name || '').trim().toLowerCase() ? ` - ${trimmedCode}` : '';
           const label = `${w.name}${codeSuffix}`;
           return { label, value: label };
         });

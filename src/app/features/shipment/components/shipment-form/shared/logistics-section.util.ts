@@ -2,19 +2,28 @@
 // from the component so they can be unit-tested without Angular's TestBed.
 
 export interface MunicipalitySectionValues {
+  municipalityApplicable?: boolean | null;
   municipalityStatus?: string | null;
   municipalityDate?: unknown;
+  municipalityReleasedDate?: unknown;
 }
 
 /**
  * Returns the list of missing required fields for the Municipality section.
- * Point 6: the Inspection Date is OPTIONAL — only Status is required.
+ * - Municipality Applicable = Yes -> Inspection Date is mandatory (otherwise N/A, nothing required).
+ * - Status = Closed -> Released Date is mandatory.
  */
 export function getMunicipalitySectionMissingFields(values: MunicipalitySectionValues): string[] {
   const missing: string[] = [];
   const status = String(values?.municipalityStatus ?? 'open').trim().toLowerCase();
   if (!status) {
     missing.push('Status');
+  }
+  if (values?.municipalityApplicable === true && !values?.municipalityDate) {
+    missing.push('Municipality Inspection Date');
+  }
+  if (status === 'closed' && !values?.municipalityReleasedDate) {
+    missing.push('Municipality Released Date');
   }
   return missing;
 }

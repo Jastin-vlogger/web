@@ -65,7 +65,8 @@ export class ShipmentStorageComponent {
         const activeWarehouses = warehouses
           .filter((warehouse) => warehouse.status === 'Active')
           .map((warehouse) => {
-            const codeSuffix = warehouse.code ? ` - ${warehouse.code}` : '';
+            const trimmedCode = (warehouse.code || '').trim();
+            const codeSuffix = trimmedCode && trimmedCode.toLowerCase() !== (warehouse.name || '').trim().toLowerCase() ? ` - ${trimmedCode}` : '';
             const label = `${warehouse.name}${codeSuffix}`;
             return { label, value: label };
           });
@@ -221,23 +222,29 @@ export class ShipmentStorageComponent {
   }
 
   /** Bag totals for the stat cards: planned = every row's "bags" value (seeded from the packing
-   * list when the container split was created); received = the same field but only for rows
-   * already "recorded" (grn & batch present) — there is no separate received-bags field, a row's
-   * bags count only becomes "received" once the warehouse actually confirms it via GRN/batch. */
+   * list when the container split was created); shortage = the warehouse-entered "Shortage
+   * Bags" count per row (structured field, not parsed from free-text remarks); received =
+   * planned - shortage for recorded rows (grn & batch present) — unrecorded rows contribute
+   * neither received nor shortage yet, since nothing has actually been confirmed for them. */
   getStorageArrivalBagCounts(index: number): { planned: number; received: number; shortage: number } {
     const group = this.formArray.at(index) as FormGroup | null;
     if (!group) return { planned: 0, received: 0, shortage: 0 };
     const rows = this.getContainersArray(group);
     let planned = 0;
     let received = 0;
+    let shortage = 0;
     rows.forEach((row) => {
       const g = row as FormGroup;
       const bags = Number(g.get('bags')?.value) || 0;
       planned += bags;
       const recorded = !!String(g.get('grn')?.value || '').trim() && !!String(g.get('batch')?.value || '').trim();
-      if (recorded) received += bags;
+      if (recorded) {
+        const rowShortage = Number(g.get('shortageBags')?.value) || 0;
+        shortage += rowShortage;
+        received += Math.max(bags - rowShortage, 0);
+      }
     });
-    return { planned, received, shortage: Math.max(planned - received, 0) };
+    return { planned, received, shortage };
   }
 
   getBlockOptions(warehouseName: string): Array<{ label: string; value: string }> {
@@ -1030,6 +1037,7 @@ export class ShipmentStorageComponent {
     formData.append('batch', row.get('batch')?.value || '');
     formData.append('productionDate', this.toDate(row.get('productionDate')?.value));
     formData.append('expiryDate', this.toDate(row.get('expiryDate')?.value));
+    formData.append('shortageBags', String(Number(row.get('shortageBags')?.value) || 0));
     formData.append('remarks', row.get('remarks')?.value || '');
     formData.append('documentUrl', row.get('documentUrl')?.value || '');
     formData.append('documentName', row.get('documentName')?.value || '');
@@ -1158,6 +1166,7 @@ export class ShipmentStorageComponent {
         batch,
         productionDate: this.toDate(productionDate),
         expiryDate: this.toDate(expiryDate),
+        shortageBags: Number(row.get('shortageBags')?.value) || 0,
         remarks: row.get('remarks')?.value || '',
         documentUrl: row.get('documentUrl')?.value || '',
         documentName: row.get('documentName')?.value || '',

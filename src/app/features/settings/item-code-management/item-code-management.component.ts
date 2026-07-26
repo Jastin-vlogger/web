@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TableModule } from 'primeng/table';
@@ -72,11 +72,21 @@ import { RbacService } from '../../../core/services/rbac.service';
         }
       </div>
 
+      <!-- Search -->
+      <div class="mb-4 max-w-md">
+        <span class="p-input-icon-left w-full block relative">
+          <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+          <input pInputText type="text" class="w-full !pl-9" placeholder="Search by item code, HS code, or description"
+            [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" [ngModelOptions]="{standalone: true}" />
+        </span>
+      </div>
+
       <!-- Table Card -->
       <div class="rounded-lg border border-slate-200 bg-white shadow overflow-hidden">
-        <p-table [value]="items()" [loading]="loading()" [paginator]="true" [rows]="10" responsiveLayout="scroll">
+        <p-table [value]="filteredItems()" [loading]="loading()" [paginator]="true" [rows]="10" responsiveLayout="scroll">
           <ng-template pTemplate="header">
             <tr>
+              <th class="bg-slate-50 text-slate-700 font-semibold py-4 text-[11px] uppercase tracking-wider w-14">SN</th>
               <th class="bg-slate-50 text-slate-700 font-semibold py-4 text-[11px] uppercase tracking-wider">Item Code</th>
               <th class="bg-slate-50 text-slate-700 font-semibold py-4 text-[11px] uppercase tracking-wider">Description</th>
               <th class="bg-slate-50 text-slate-700 font-semibold py-4 text-[11px] uppercase tracking-wider">Packing</th>
@@ -85,8 +95,9 @@ import { RbacService } from '../../../core/services/rbac.service';
               <th class="bg-slate-50 text-slate-700 font-semibold py-4 text-[11px] uppercase tracking-wider text-right px-6">Actions</th>
             </tr>
           </ng-template>
-          <ng-template pTemplate="body" let-item>
+          <ng-template pTemplate="body" let-item let-rowIndex="rowIndex">
             <tr class="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
+              <td class="py-4 text-slate-500 font-medium">{{ rowIndex + 1 }}</td>
               <td class="py-4 font-semibold text-slate-800">{{ item.itemCode }}</td>
               <td class="py-4 text-slate-700">{{ item.description }}</td>
               <td class="py-4 text-slate-600">{{ item.packing || '—' }}</td>
@@ -110,7 +121,7 @@ import { RbacService } from '../../../core/services/rbac.service';
           </ng-template>
           <ng-template pTemplate="emptymessage">
             <tr>
-              <td colspan="6" class="p-12 text-center text-slate-400">
+              <td colspan="7" class="p-12 text-center text-slate-400">
                 <i class="pi pi-box text-4xl mb-3 block opacity-20"></i>
                 <p class="text-base font-semibold mb-1">No items found</p>
                 <p class="text-sm">Click "Add Item" to create one.</p>
@@ -189,6 +200,17 @@ export class ItemCodeManagementComponent implements OnInit {
   saving = signal(false);
   displayDialog = false;
   editingItem = signal<Item | null>(null);
+  searchTerm = signal('');
+
+  filteredItems = computed(() => {
+    const term = this.searchTerm().trim().toLowerCase();
+    if (!term) return this.items();
+    return this.items().filter((item) =>
+      String(item.itemCode || '').toLowerCase().includes(term) ||
+      String(item.hsCode || '').toLowerCase().includes(term) ||
+      String(item.description || '').toLowerCase().includes(term)
+    );
+  });
 
   itemForm: FormGroup = this.fb.group({
     itemCode: ['', Validators.required],

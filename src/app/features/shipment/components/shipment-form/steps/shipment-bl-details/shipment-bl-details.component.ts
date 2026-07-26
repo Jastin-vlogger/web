@@ -199,7 +199,8 @@ export class ShipmentBlDetailsComponent {
         const activeWarehouses = warehouses
           .filter((warehouse) => warehouse.status === 'Active')
           .map((warehouse) => {
-            const codeSuffix = warehouse.code ? ` - ${warehouse.code}` : '';
+            const trimmedCode = (warehouse.code || '').trim();
+            const codeSuffix = trimmedCode && trimmedCode.toLowerCase() !== (warehouse.name || '').trim().toLowerCase() ? ` - ${trimmedCode}` : '';
             const label = `${warehouse.name}${codeSuffix}`;
             return { label, value: label };
           });
