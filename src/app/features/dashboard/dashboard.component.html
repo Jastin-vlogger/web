@@ -60,15 +60,15 @@
                                         </tr>
                                     }
                                     <tr class="border-b border-slate-50 last:border-0">
-                                        <td class="py-4 px-3">
+                                        <td class="py-2 px-3">
                                             <span class="flex items-center gap-2.5 min-w-0">
-                                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600"><i [class]="row.icon"></i></span>
+                                                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600"><i [class]="row.icon"></i></span>
                                                 <span class="text-[11px] font-bold uppercase tracking-wide leading-tight text-slate-700 truncate" [title]="row.label">{{ row.label }}</span>
                                             </span>
                                         </td>
-                                        <td class="py-4 px-3 text-center text-lg font-black tabular-nums text-slate-900">{{ row.quantity }}</td>
-                                        <td class="py-4 px-3 text-center text-base font-black tabular-nums text-blue-600">{{ formatPivotNumber(row.fcl) }}</td>
-                                        <td class="py-4 px-3 text-center text-base font-black tabular-nums text-emerald-600">{{ formatPivotNumber(row.mt) }}</td>
+                                        <td class="py-2 px-3 text-center text-lg font-black tabular-nums text-slate-900">{{ row.quantity }}</td>
+                                        <td class="py-2 px-3 text-center text-base font-black tabular-nums text-blue-600">{{ formatPivotNumber(row.fcl) }}</td>
+                                        <td class="py-2 px-3 text-center text-base font-black tabular-nums text-emerald-600">{{ formatPivotNumber(row.mt) }}</td>
                                     </tr>
                                 } @empty {
                                     <tr><td colspan="4" class="py-4 text-center text-xs text-slate-400">No snapshot data available.</td></tr>
