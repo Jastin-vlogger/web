@@ -508,8 +508,11 @@ export class ShipmentStorageComponent {
 
   getStorageArrivalApprovalLabel(index: number): string {
     const status = this.getStorageArrivalApprovalStatus(index);
+    // "Submission Approved" (not just "Approved") — this is the warehouse manager's one-time
+    // sign-off on the arrival submission, independent of whether every container row below has
+    // been individually recorded (GRN/batch) yet. The two can legitimately disagree.
     return status === 'approved'
-      ? 'Approved'
+      ? 'Submission Approved'
       : status === 'pending_warehouse_manager'
         ? 'Pending for Approval'
         : 'Draft';

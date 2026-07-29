@@ -85,7 +85,7 @@
                 <div class="flex flex-col gap-1.5">
                   <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">B/L No<span class="text-red-500 ml-0.5">*</span></label>
                   <div class="flex items-center gap-2 min-w-0">
-                    <input pInputText formControlName="blNo" class="table-input-text w-full min-w-0" placeholder="Enter B/L No" [readonly]="submittedActualIndices().includes(i)" />
+                    <input pInputText formControlName="blNo" class="table-input-text w-full min-w-0" placeholder="Enter B/L No" [readonly]="submittedActualIndices().includes(i) && !canOverrideBlNo()" />
                     @if (getSavedBlDocumentUrl(group)) {
                       <button
                         type="button"

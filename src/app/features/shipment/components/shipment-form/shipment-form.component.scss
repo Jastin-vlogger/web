@@ -313,7 +313,7 @@
             th.actual-col-bags, td.actual-col-bags { width: 90px; min-width: 90px; }
             th.actual-col-compact, td.actual-col-compact { width: 78px; min-width: 78px; }
             th.actual-col-ci, td.actual-col-ci { width: 220px; min-width: 220px; }
-            th.actual-col-bl, td.actual-col-bl { width: 200px; min-width: 200px; }
+            th.actual-col-bl, td.actual-col-bl { width: 280px; min-width: 280px; }
             th.actual-col-date, td.actual-col-date { width: 180px; min-width: 180px; }
             th.actual-col-action, td.actual-col-action { width: 100px; min-width: 100px; }
 
@@ -332,7 +332,7 @@
                 padding-right: 0.5rem !important;
                 text-align: center;
             }
-            .actual-col-bl .table-input-text { min-width: 0; }
+            .actual-col-bl .table-input-text { width: 100%; min-width: 0; font-size: 0.8125rem; }
             .actual-col-date .date-mini { width: 100%; min-width: 80px; }
         }
 

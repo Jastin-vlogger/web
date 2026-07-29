@@ -680,6 +680,15 @@ export class ShipmentBlDetailsComponent {
     return this.rbacService.hasPermission('shipment.tab.bl_details.edit');
   }
 
+  /** Purchase dept override: lets B/L No be corrected after submission when the
+   * extraction AI mis-numbers it, without reopening the whole BL Details section.
+   * Reuses the existing 'shipment.field.bl_details.blNo.edit' permission key, which was
+   * already registered in Access Control (access-control.component.ts) but never checked. */
+  canOverrideBlNo(): boolean {
+    if (this.authService.isAdminLevelRole()) return true;
+    return this.rbacService.hasPermission('shipment.field.bl_details.blNo.edit');
+  }
+
   canViewBlTab(tab: 'cost' | 'storage' | 'packaging' | 'payment_allocation' | 'payment_costing'): boolean {
     switch (tab) {
       case 'cost':

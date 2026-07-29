@@ -382,9 +382,16 @@ export interface DashboardSummaryResponse {
   statusPivot?: DashboardStatusPivot;
   statusPivotByItem?: DashboardStatusPivot;
   departmentCharts?: DashboardDepartmentCharts;
+  departmentJobPending?: DashboardDepartmentJobPending[];
   fasDashboard?: any;
   warehouseDashboard?: WarehouseDashboard;
   storekeeperDashboard?: StorekeeperDashboard;
+}
+
+export interface DashboardDepartmentJobPending {
+  department: string;
+  label: string;
+  pendingCount: number;
 }
 
 export interface StorekeeperWarehouseRow {

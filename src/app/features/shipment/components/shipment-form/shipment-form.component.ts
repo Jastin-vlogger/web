@@ -1767,7 +1767,10 @@ export class ShipmentFormComponent implements OnDestroy {
     fallbackTokenReceivedDate?: string | Date | null
   ): FormArray {
     const rows = new FormArray<FormGroup>([]);
-    const safeCount = Math.max(1, extractedContainers?.length || count || 1);
+    // Containers can be appended later via Packing List Confirmation (backend pushes a
+    // matching row into actual.transportationBooked at that point) — never truncate below
+    // what's already persisted, or newly-added containers vanish from Bulk Update Transportation.
+    const safeCount = Math.max(1, existingRows?.length || 0, extractedContainers?.length || count || 1);
     const shipmentNo = this.shipmentData()?.shipment?.shipmentNo || 'SHIPMENT';
     const defaultDate = this.createTodayDate();
     const defaultTime = this.createCurrentTimeDate();
