@@ -60,16 +60,16 @@
                                         </tr>
                                     }
                                     <tr class="border-b border-slate-50 last:border-0"
-                                        [class.bg-blue-50/60]="row.label === 'No. of Shipments'"
+                                        [class.bg-amber-50/60]="row.label === 'No. of Shipments'"
                                         [class.border-l-4]="row.label === 'No. of Shipments'"
-                                        [class.border-l-blue-500!]="row.label === 'No. of Shipments'">
+                                        [class.border-l-amber-500!]="row.label === 'No. of Shipments'">
                                         <td class="py-2 px-3">
                                             <span class="flex items-center gap-2.5 min-w-0">
                                                 <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600"><i [class]="row.icon"></i></span>
                                                 <span class="text-[11px] font-bold uppercase tracking-wide leading-tight text-slate-700 truncate" [title]="row.label">{{ row.label }}</span>
                                             </span>
                                         </td>
-                                        <td class="py-2 px-3 text-center text-lg font-black tabular-nums" [class.text-blue-700]="row.label === 'No. of Shipments'" [class.text-slate-900]="row.label !== 'No. of Shipments'">{{ row.quantity }}</td>
+                                        <td class="py-2 px-3 text-center text-lg font-black tabular-nums" [class.text-amber-700]="row.label === 'No. of Shipments'" [class.text-slate-900]="row.label !== 'No. of Shipments'">{{ row.quantity }}</td>
                                         <td class="py-2 px-3 text-center text-base font-black tabular-nums text-blue-600">{{ formatPivotNumber(row.fcl) }}</td>
                                         <td class="py-2 px-3 text-center text-base font-black tabular-nums text-emerald-600">{{ formatPivotNumber(row.mt) }}</td>
                                     </tr>
