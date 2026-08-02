@@ -555,6 +555,21 @@ export class ShipmentService {
   }
 
   /**
+   * PATCH /shipment/:id/line-item/:index/refresh-from-catalog
+   * Backfills a single line item's blank Brand/Barcode/DM Barcode/Variant/H.S Code/
+   * Country of Origin/Packing from the Item Master catalog.
+   */
+  refreshLineItemFromCatalog(
+    shipmentId: string,
+    index: number
+  ): Observable<{ message: string; changedFields: string[]; lineItem?: any }> {
+    return this.http.patch<{ message: string; changedFields: string[]; lineItem?: any }>(
+      `${this.apiUrl}/${shipmentId}/line-item/${index}/refresh-from-catalog`,
+      {}
+    );
+  }
+
+  /**
    * Upload additional document to repository
    * POST /shipment/container/:id/additional-document
    */

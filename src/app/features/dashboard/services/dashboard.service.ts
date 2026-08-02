@@ -77,6 +77,8 @@ export class DashboardService {
         statusPivotByItem: response?.statusPivotByItem,
         departmentCharts: response?.departmentCharts,
         departmentJobPending: Array.isArray(response?.departmentJobPending) ? response.departmentJobPending : [],
+        fasPendingCompletedDashboard: Array.isArray(response?.fasPendingCompletedDashboard) ? response.fasPendingCompletedDashboard : [],
+        logisticsPendingCompletedDashboard: Array.isArray(response?.logisticsPendingCompletedDashboard) ? response.logisticsPendingCompletedDashboard : [],
         fasDashboard: response?.fasDashboard,
         warehouseDashboard: response?.warehouseDashboard,
         storekeeperDashboard: response?.storekeeperDashboard

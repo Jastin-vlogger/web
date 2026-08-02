@@ -12,6 +12,7 @@ import { ShipmentService } from '../../../../../../core/services/shipment.servic
 import * as ShipmentActions from '../../../../../../store/shipment/shipment.actions';
 import { RbacService } from '../../../../../../core/services/rbac.service';
 import { ExchangeRateService } from '../../../../../../core/services/exchange-rate.service';
+import { NotificationService } from '../../../../../../core/services/notification.service';
 import { getComputedShipmentStatus, getShipmentStatusSeverity, type ShipmentStatusSeverity } from '../../shared/shipment-status';
 
 @Component({
@@ -28,6 +29,7 @@ export class ShipmentSummaryComponent {
   private shipmentService = inject(ShipmentService);
   private rbacService = inject(RbacService);
   private exchangeRateService = inject(ExchangeRateService);
+  private notificationService = inject(NotificationService);
 
   readonly shipmentData = toSignal(this.store.select(selectShipmentData));
   readonly isPlannedLocked = toSignal(this.store.select(selectIsPlannedLocked), { initialValue: false });
@@ -37,6 +39,7 @@ export class ShipmentSummaryComponent {
   );
   readonly canViewBankName = computed(() => this.rbacService.hasPermission('shipment.field.shipment_entry.bankName.view'));
   readonly canEditBankName = computed(() => this.rbacService.hasPermission('shipment.field.shipment_entry.bankName.edit'));
+  readonly canRefreshLineItems = computed(() => this.rbacService.hasPermission('shipment.field.shipment_entry.lineItems.refresh'));
 
   // ── Document preview ──────────────────────────────────────────────────────
   readonly showPreviewModal = signal(false);
@@ -140,6 +143,30 @@ export class ShipmentSummaryComponent {
       error: (err) => {
         this.bankNameSaving.set(false);
         this.bankNameError.set(err?.error?.message || 'Failed to update bank name. Please try again.');
+      },
+    });
+  }
+
+  // ── Refresh line item from Item Master ──────────────────────────────────────
+  readonly refreshingLineItemIndex = signal<number | null>(null);
+
+  refreshLineItem(index: number): void {
+    if (!this.canRefreshLineItems()) return;
+    const shipmentId = this.shipmentData()?.shipment?._id;
+    if (!shipmentId) return;
+
+    this.refreshingLineItemIndex.set(index);
+    this.shipmentService.refreshLineItemFromCatalog(shipmentId, index).subscribe({
+      next: (res) => {
+        this.refreshingLineItemIndex.set(null);
+        this.notificationService.success('Line Item', res.message);
+        if (res.changedFields?.length) {
+          this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+        }
+      },
+      error: (err) => {
+        this.refreshingLineItemIndex.set(null);
+        this.notificationService.error('Line Item', err?.error?.message || 'Failed to refresh line item. Please try again.');
       },
     });
   }

@@ -943,6 +943,17 @@ export class ShipmentStorageComponent {
     return parts.length ? `${parts.join(' ')} late` : 'On time';
   }
 
+  /**
+   * Collapses "NAME - NAME" down to "NAME" (when a warehouse's code equals its name) and
+   * lowercases for comparison. Historical rows were saved under both forms depending on
+   * which save path wrote them, so exact string matching against the raw label silently
+   * dropped containers whose stored warehouse string didn't happen to match the current
+   * label-building convention.
+   */
+  private normalizeWarehouseLabel(label: string): string {
+    return String(label || '').trim().replace(/^(.*?)\s*-\s*\1$/i, '$1').toLowerCase();
+  }
+
   /** Warehouse names assigned to the current storekeeper, or null when the user sees all warehouses. */
   private getAssignedWarehouseNames(): string[] | null {
     if (this.authService.isAdminLevelRole() || !this.shouldEnforceTabPermissions()) return null;
@@ -950,14 +961,14 @@ export class ShipmentStorageComponent {
     if (!user) return [];
     return this.allWarehouses()
       .filter((w) => (w.assignedStorekeepers || []).some((s) => s._id === user.id || s.email === user.email))
-      .map((w) => `${w.name}${w.code ? ` - ${w.code}` : ''}`);
+      .map((w) => this.normalizeWarehouseLabel(`${w.name}${w.code ? ` - ${w.code}` : ''}`));
   }
 
   isContainerVisibleForUser(warehouseName: string): boolean {
     const assigned = this.getAssignedWarehouseNames();
     if (assigned === null) return true; // admin / manager / management
     if (!warehouseName) return true; // not yet allocated — keep visible
-    return assigned.includes(warehouseName);
+    return assigned.includes(this.normalizeWarehouseLabel(warehouseName));
   }
 
   getVisibleArrivalContainers(group: AbstractControl): Array<{ control: AbstractControl; index: number }> {

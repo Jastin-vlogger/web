@@ -174,6 +174,62 @@
         </section>
         }
 
+        <!-- FAS Dashboard: Pending vs Completed per sub-process -->
+        @if (canViewDashboardSection('dashboard.section.fas_pending_completed.view')) {
+        <section class="mb-6">
+            <article class="sl-panel flex flex-col gap-4 p-5 bg-white border border-slate-200 rounded-xl shadow-sm w-full">
+                <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">FAS Dashboard</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    @for (tile of dashboard()?.fasPendingCompletedDashboard ?? []; track tile.key) {
+                        <div class="flex flex-col gap-2 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                            <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 truncate" [title]="tile.label">{{ tile.label }}</span>
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="flex flex-col">
+                                    <span class="text-[9px] font-bold uppercase tracking-wider text-amber-600">Pending</span>
+                                    <strong class="text-lg font-black text-slate-800 leading-none mt-0.5">{{ tile.pending }}</strong>
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-[9px] font-bold uppercase tracking-wider text-emerald-600">Completed</span>
+                                    <strong class="text-lg font-black text-slate-800 leading-none mt-0.5">{{ tile.completed }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    } @empty {
+                        <p class="text-xs text-slate-400 col-span-full">No FAS dashboard data available.</p>
+                    }
+                </div>
+            </article>
+        </section>
+        }
+
+        <!-- Logistics Dashboard: Pending vs Completed per sub-process -->
+        @if (canViewDashboardSection('dashboard.section.logistics_pending_completed.view')) {
+        <section class="mb-6">
+            <article class="sl-panel flex flex-col gap-4 p-5 bg-white border border-slate-200 rounded-xl shadow-sm w-full">
+                <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Logistics Dashboard</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    @for (tile of dashboard()?.logisticsPendingCompletedDashboard ?? []; track tile.key) {
+                        <div class="flex flex-col gap-2 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                            <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 truncate" [title]="tile.label">{{ tile.label }}</span>
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="flex flex-col">
+                                    <span class="text-[9px] font-bold uppercase tracking-wider text-amber-600">Pending</span>
+                                    <strong class="text-lg font-black text-slate-800 leading-none mt-0.5">{{ tile.pending }}</strong>
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-[9px] font-bold uppercase tracking-wider text-emerald-600">Completed</span>
+                                    <strong class="text-lg font-black text-slate-800 leading-none mt-0.5">{{ tile.completed }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    } @empty {
+                        <p class="text-xs text-slate-400 col-span-full">No Logistics dashboard data available.</p>
+                    }
+                </div>
+            </article>
+        </section>
+        }
+
         <!-- Shipment Status as of the date — full width -->
         @if (canViewDashboardSection('dashboard.section.shipment_status_chart.view')) {
         <section class="mb-6">

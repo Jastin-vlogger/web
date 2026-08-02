@@ -1321,11 +1321,12 @@ export class ShipmentBlDetailsComponent {
     );
   }
 
-  hasItemAllocationOverage(group: AbstractControl): boolean {
+  /** True when any item's assigned total doesn't exactly match its expected container count — over or under. */
+  hasItemAllocationMismatch(group: AbstractControl): boolean {
     const decision = this.getStorageDecision(group).getRawValue();
     if (decision.allocateSameWarehouse) return false;
     const itemAllocations = decision.itemAllocations || [];
-    return itemAllocations.some((item: any) => this.getItemAllocationTotal(item) > Number(item.expectedContainers || 0));
+    return itemAllocations.some((item: any) => this.getItemAllocationTotal(item) !== Number(item.expectedContainers || 0));
   }
 
   onItemAllocationSpinnerChange(group: AbstractControl, itemIndex: number, warehouse: string, value: number, index: number): void {
@@ -1339,15 +1340,6 @@ export class ShipmentBlDetailsComponent {
       const changedAlloc = item.allocations.find((a: any) => a.warehouse === warehouse);
       if (changedAlloc) {
         changedAlloc.containersAssigned = newValue;
-        const others = item.allocations.filter((a: any) => a.warehouse !== warehouse);
-        if (others.length > 0) {
-          const remainder = Math.max(0, Number(item.expectedContainers || 0) - newValue);
-          const base = Math.floor(remainder / others.length);
-          const extra = remainder % others.length;
-          others.forEach((a: any, idx: number) => {
-            a.containersAssigned = base + (idx < extra ? 1 : 0);
-          });
-        }
       }
     }
 

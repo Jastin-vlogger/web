@@ -705,8 +705,8 @@
                         <button
                           type="button"
                           (click)="saveStorageAllocations(i)"
-                          [disabled]="isSaving(i, 'storage') || hasItemAllocationOverage(group) || !isStorageWarehouseValid(group)"
-                          [title]="!isStorageWarehouseValid(group) ? 'Select a destination warehouse before saving' : hasItemAllocationOverage(group) ? 'Container count exceeds expected — correct allocation before saving' : ''"
+                          [disabled]="isSaving(i, 'storage') || hasItemAllocationMismatch(group) || !isStorageWarehouseValid(group)"
+                          [title]="!isStorageWarehouseValid(group) ? 'Select a destination warehouse before saving' : hasItemAllocationMismatch(group) ? 'Assigned container count must match expected — correct allocation before saving' : ''"
                           class="inline-flex h-10 items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-[10px] font-black uppercase tracking-wider text-emerald-600 hover:bg-emerald-100 disabled:opacity-50"
                         >
                           @if (isSaving(i, 'storage')) {
@@ -874,11 +874,11 @@
                           Warehouse Allocation by Item
                         </div>
 
-                        @if (hasItemAllocationOverage(group)) {
+                        @if (hasItemAllocationMismatch(group)) {
                           <div class="rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 flex items-start gap-3">
                             <i class="pi pi-exclamation-triangle text-red-500 text-sm shrink-0 mt-0.5"></i>
                             <div class="text-xs text-red-700 font-semibold leading-relaxed">
-                              One or more items have containers assigned that exceed their expected count. Correct the values below before saving.
+                              One or more items have a container count that does not match the expected total. Correct the values below before saving.
                             </div>
                           </div>
                         }
@@ -948,22 +948,22 @@
                                   <!-- Total Row inside item card matching screenshot style -->
                                   @let totalAllocated = getItemAllocationTotal(item);
                                   <div class="rounded-lg px-4 py-2.5 flex justify-between items-center"
-                                    [class.bg-red-50]="totalAllocated > item.expectedContainers"
-                                    [class.border]="totalAllocated > item.expectedContainers"
-                                    [class.border-red-200]="totalAllocated > item.expectedContainers"
-                                    [class.bg-blue-50]="totalAllocated <= item.expectedContainers"
-                                    [class.border-blue-100]="totalAllocated <= item.expectedContainers">
+                                    [class.bg-red-50]="totalAllocated !== item.expectedContainers"
+                                    [class.border]="totalAllocated !== item.expectedContainers"
+                                    [class.border-red-200]="totalAllocated !== item.expectedContainers"
+                                    [class.bg-blue-50]="totalAllocated === item.expectedContainers"
+                                    [class.border-blue-100]="totalAllocated === item.expectedContainers">
                                     <span class="text-[10px] font-black uppercase tracking-wider"
-                                      [class.text-red-600]="totalAllocated > item.expectedContainers"
-                                      [class.text-slate-500]="totalAllocated <= item.expectedContainers">
+                                      [class.text-red-600]="totalAllocated !== item.expectedContainers"
+                                      [class.text-slate-500]="totalAllocated === item.expectedContainers">
                                       Total Assigned for Item {{ itemIdx + 1 }}
-                                      @if (totalAllocated > item.expectedContainers) {
+                                      @if (totalAllocated !== item.expectedContainers) {
                                         <i class="pi pi-exclamation-triangle ml-1 text-[10px]"></i>
                                       }
                                     </span>
                                     <span class="text-xs font-black"
-                                      [class.text-red-600]="totalAllocated > item.expectedContainers"
-                                      [class.text-blue-600]="totalAllocated <= item.expectedContainers">
+                                      [class.text-red-600]="totalAllocated !== item.expectedContainers"
+                                      [class.text-blue-600]="totalAllocated === item.expectedContainers">
                                       {{ totalAllocated }} / {{ item.expectedContainers }}
                                     </span>
                                   </div>
@@ -1504,12 +1504,24 @@
   header="Storage Allocation — Audit Trail"
   [visible]="storageAuditModalVisible()"
   (visibleChange)="!$event && closeStorageAuditModal()"
+  (onHide)="closeStorageAuditModal()"
   [modal]="true"
   [dismissableMask]="true"
+  [closable]="false"
   [style]="{ width: '480px' }"
   [draggable]="false"
   [resizable]="false"
   styleClass="audit-trail-dialog">
+  <!-- PrimeNG's own built-in header close icon doesn't reliably respond to a real mouse
+       click in this app (confirmed: synthetic .click() works, a genuine click sequence
+       doesn't) — [closable]="false" hides it and this button replaces it. -->
+  <button
+    type="button"
+    (click)="closeStorageAuditModal()"
+    class="absolute top-4 right-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-700 z-10"
+    aria-label="Close">
+    <i class="pi pi-times text-xs"></i>
+  </button>
   @if (storageAuditModalIndex() !== null) {
     @let auditApproval = getStorageAllocationApproval(storageAuditModalIndex()!);
     <div class="flex flex-col gap-0 divide-y divide-slate-100">
