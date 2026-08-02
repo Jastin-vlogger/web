@@ -182,6 +182,7 @@ export class ShipmentBlDetailsComponent {
   });
 
   readonly collapsedItems = signal<Record<string, boolean>>({});
+  private allWarehouses = signal<any[]>([]);
 
   toggleItemCollapse(shipmentIndex: number, itemIdx: number): void {
     const key = `${shipmentIndex}-${itemIdx}`;
@@ -205,6 +206,7 @@ export class ShipmentBlDetailsComponent {
             return { label, value: label };
           });
         this.warehouseOptions.set(activeWarehouses);
+        this.allWarehouses.set(warehouses);
       },
     });
 
@@ -706,6 +708,58 @@ export class ShipmentBlDetailsComponent {
 
   private getActualShipment(index: number): any {
     return this.actualOverrides()[index] || this.shipmentData()?.actual?.[index] || null;
+  }
+
+  /** Collapses "NAME - NAME" down to "NAME" (code equals name) and lowercases for comparison. */
+  private normalizeWarehouseLabelForBlMatch(label: string): string {
+    return String(label || '').trim().replace(/^(.*?)\s*-\s*\1$/i, '$1').toLowerCase();
+  }
+
+  /** Warehouse names assigned to the current storekeeper, or null for every other role (see all). */
+  private getAssignedWarehouseNamesForStorekeeper(): string[] | null {
+    const role = this.authService.getCurrentUser()?.role;
+    if (String(role || '').toLowerCase() !== 'storekeeper') return null;
+    const user = this.authService.getCurrentUser();
+    if (!user) return [];
+    return this.allWarehouses()
+      .filter((w) => (w.assignedStorekeepers || []).some((s: any) => s._id === user.id || s.email === user.email))
+      .map((w) => this.normalizeWarehouseLabelForBlMatch(`${w.name}${w.code ? ` - ${w.code}` : ''}`));
+  }
+
+  /**
+   * A storekeeper should only see a child shipment on the BL Details tab once it's really
+   * headed to (or already at) one of their assigned warehouses — not every child under an
+   * LPO just because a SIBLING child happens to match. Once transport has been booked, that's
+   * the real/current destination and takes priority over a (possibly stale/superseded)
+   * allocation plan — same rule the backend list endpoints apply. Unlike the Storage Arrival
+   * tab, an entirely unallocated child (nothing booked, nothing planned) is HIDDEN here, not
+   * kept visible — there's nothing yet to confirm it's even relevant to this storekeeper.
+   */
+  isBlRowVisibleForStorekeeper(index: number): boolean {
+    const assigned = this.getAssignedWarehouseNamesForStorekeeper();
+    if (assigned === null) return true;
+    const labelSet = new Set(assigned);
+    const actual = this.getActualShipment(index) || {};
+
+    const booked: any[] = Array.isArray(actual.transportationBooked) ? actual.transportationBooked : [];
+    if (booked.length) {
+      return booked.some((b) => labelSet.has(this.normalizeWarehouseLabelForBlMatch(b?.warehouse)));
+    }
+
+    const allocs: any[] = Array.isArray(actual.storageAllocations) ? actual.storageAllocations : [];
+    const splits: any[] = Array.isArray(actual.storageSplits) ? actual.storageSplits : [];
+    const itemAllocs: any[] = Array.isArray(actual.storageAllocationDecision?.itemAllocations)
+      ? actual.storageAllocationDecision.itemAllocations
+      : [];
+    return (
+      allocs.some((a) => labelSet.has(this.normalizeWarehouseLabelForBlMatch(a?.warehouse))) ||
+      splits.some((s) => labelSet.has(this.normalizeWarehouseLabelForBlMatch(s?.warehouse))) ||
+      itemAllocs.some((item) =>
+        (Array.isArray(item?.allocations) ? item.allocations : []).some((a: any) =>
+          labelSet.has(this.normalizeWarehouseLabelForBlMatch(a?.warehouse))
+        )
+      )
+    );
   }
 
   private getEffectiveClearingAdvanceStatus(index: number): 'draft' | 'pending_fas' | 'pending_fas_manager' | 'approved' {

@@ -15,6 +15,7 @@
     [value]="activeAccordionValues()"
     (valueChange)="activeAccordionValues.set($any($event))">
     @for (group of formArray.controls; track $index; let i = $index) {
+      @if (isBlRowVisibleForStorekeeper(i)) {
       <p-accordion-panel [value]="'bl-' + i" styleClass="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
         <p-accordion-header styleClass="bg-white hover:bg-slate-50 px-4 py-3">
           <div class="flex flex-wrap items-center justify-between w-full pr-2 gap-4">
@@ -1098,6 +1099,7 @@
           </div>
         </p-accordion-content>
       </p-accordion-panel>
+      }
     }
   </p-accordion>
 

@@ -210,12 +210,13 @@ export class ShipmentStorageComponent {
   getStorageArrivalCounts(index: number): { reached: number; pending: number; total: number } {
     const group = this.formArray.at(index) as FormGroup | null;
     if (!group) return { reached: 0, pending: 0, total: 0 };
-    const rows = this.getContainersArray(group);
+    // Only count rows the current user can actually see (a storekeeper's stat card must match
+    // their own filtered table below, not the shipment's full container count).
+    const rows = this.getVisibleArrivalContainers(group).map((item) => item.control as FormGroup);
     // Matches the same "Recorded" definition used by the Status column for each row (grn &
     // batch both present) — NOT receivedOnDate/receivedOnTime, which get auto-prefilled with
     // "now" as a UI convenience the moment the edit modal opens, before anything is saved.
-    const reached = rows.filter((row) => {
-      const g = row as FormGroup;
+    const reached = rows.filter((g) => {
       return !!String(g.get('grn')?.value || '').trim() && !!String(g.get('batch')?.value || '').trim();
     }).length;
     return { reached, pending: rows.length - reached, total: rows.length };
@@ -229,12 +230,12 @@ export class ShipmentStorageComponent {
   getStorageArrivalBagCounts(index: number): { planned: number; received: number; shortage: number } {
     const group = this.formArray.at(index) as FormGroup | null;
     if (!group) return { planned: 0, received: 0, shortage: 0 };
-    const rows = this.getContainersArray(group);
+    // Only count rows the current user can actually see — same reasoning as getStorageArrivalCounts.
+    const rows = this.getVisibleArrivalContainers(group).map((item) => item.control as FormGroup);
     let planned = 0;
     let received = 0;
     let shortage = 0;
-    rows.forEach((row) => {
-      const g = row as FormGroup;
+    rows.forEach((g) => {
       const bags = Number(g.get('bags')?.value) || 0;
       planned += bags;
       const recorded = !!String(g.get('grn')?.value || '').trim() && !!String(g.get('batch')?.value || '').trim();
@@ -257,7 +258,7 @@ export class ShipmentStorageComponent {
   }
 
   hasVisibleShipments(): boolean {
-    return this.visibleShipmentIndices.length > 0;
+    return this.visibleShipmentIndices.some((index) => this.isShipmentVisibleForStorekeeper(index));
   }
 
   shouldShowShipment(index: number): boolean {
@@ -975,6 +976,41 @@ export class ShipmentStorageComponent {
     return this.getContainersArray(group)
       .map((control, index) => ({ control, index }))
       .filter(({ control }) => this.isContainerVisibleForUser((control as FormGroup).get('warehouse')?.value || ''));
+  }
+
+  /**
+   * A storekeeper should only see a whole child shipment (this accordion panel) once it's
+   * really headed to one of their assigned warehouses — not just because SOME container inside
+   * it happens to have a stray/leftover match. Once transport is booked, that's the real/current
+   * destination and takes priority over a (possibly stale/superseded) allocation plan — same
+   * rule applied on the BL Details tab and the backend list endpoints. Entirely unallocated
+   * shipments (nothing booked, nothing planned) are hidden — nothing yet confirms relevance.
+   */
+  isShipmentVisibleForStorekeeper(index: number): boolean {
+    const assigned = this.getAssignedWarehouseNames();
+    if (assigned === null) return true;
+    const labelSet = new Set(assigned);
+    const actual = this.getActualRow(index) || {};
+
+    const booked: any[] = Array.isArray(actual.transportationBooked) ? actual.transportationBooked : [];
+    if (booked.length) {
+      return booked.some((b) => labelSet.has(this.normalizeWarehouseLabel(b?.warehouse)));
+    }
+
+    const allocs: any[] = Array.isArray(actual.storageAllocations) ? actual.storageAllocations : [];
+    const splits: any[] = Array.isArray(actual.storageSplits) ? actual.storageSplits : [];
+    const itemAllocs: any[] = Array.isArray(actual.storageAllocationDecision?.itemAllocations)
+      ? actual.storageAllocationDecision.itemAllocations
+      : [];
+    return (
+      allocs.some((a) => labelSet.has(this.normalizeWarehouseLabel(a?.warehouse))) ||
+      splits.some((s) => labelSet.has(this.normalizeWarehouseLabel(s?.warehouse))) ||
+      itemAllocs.some((item) =>
+        (Array.isArray(item?.allocations) ? item.allocations : []).some((a: any) =>
+          labelSet.has(this.normalizeWarehouseLabel(a?.warehouse))
+        )
+      )
+    );
   }
 
   async saveArrivalFromModal(): Promise<void> {
