@@ -10,6 +10,7 @@ import {
   DashboardShippingStatusMetric,
   DashboardStatusPivot,
   DashboardSummaryResponse,
+  DashboardPendingCompletedTile,
   StorekeeperWarehouseRow,
 } from '../../core/models/shipment.model';
 import { DashboardService } from './services/dashboard.service';
@@ -33,6 +34,16 @@ export class DashboardComponent implements OnInit {
   readonly canCreateShipment = computed(() =>
     this.rbacService.hasPermission('shipment.screen.create_shipment.view')
   );
+
+  readonly activeDrillDownTile = signal<DashboardPendingCompletedTile | null>(null);
+
+  openDrillDown(tile: DashboardPendingCompletedTile): void {
+    this.activeDrillDownTile.set(tile);
+  }
+
+  closeDrillDown(): void {
+    this.activeDrillDownTile.set(null);
+  }
 
   canViewDashboardSection(permissionKey: string): boolean {
     if (!this.rbacService.hasPermissionDefinition('dashboard.section.')) {

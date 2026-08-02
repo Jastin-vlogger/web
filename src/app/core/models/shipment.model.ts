@@ -395,6 +395,13 @@ export interface DashboardPendingCompletedTile {
   label: string;
   pending: number;
   completed: number;
+  pendingShipments: DashboardPendingShipmentRef[];
+}
+
+export interface DashboardPendingShipmentRef {
+  _id: string;
+  shipmentNo: string;
+  supplier: string | null;
 }
 
 export interface DashboardDepartmentJobPending {
