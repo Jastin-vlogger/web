@@ -1232,13 +1232,31 @@ export class ShipmentFormComponent implements OnDestroy {
         // different length/order than the current canonical list, so matching against them BY
         // ARRAY POSITION (rather than by serial) silently cross-matches or duplicates unrelated
         // containers — that's what produced duplicate/garbled rows here before this fix.
-        const canonicalContainers: Array<{ serial: string; pkgCt?: number | null }> =
+        //
+        // Bag counts specifically come from packagingList.containerInfo — the "Packing List
+        // Confirmation" table, which is the only place a user can actually correct a per-container
+        // bag count after the initial OCR extraction (via savePackagingRowBags). transportationBooked
+        // never carries a bag count at all, and extractedContainers is a frozen snapshot from the
+        // original extraction that a later Packing List Confirmation edit never updates — so once
+        // transportationBooked exists (i.e. any shipment that's reached Storage Arrival), bag counts
+        // must be looked up here by serial rather than taken from either of those.
+        const packagingBagsBySerial = new Map<string, number | null>(
+          (actualData?.packagingList?.containerInfo || []).map((c: any) => [
+            normalizeSerial(c?.container_number || c?.containerNo),
+            c?.no_of_bags != null && c.no_of_bags !== '' ? Number(c.no_of_bags) : null,
+          ])
+        );
+        const canonicalContainers: Array<{ serial: string; pkgCt?: number | null }> = (
           existingTransportationBooked.length
             ? existingTransportationBooked.map((row: any) => ({ serial: String(row?.containerSerialNo || '') }))
             : storageExtractedContainerSource.map((c: any) => ({
                 serial: String(c?.containerNo || c?.container_no || c?.container_number || c?.containerNumber || ''),
                 pkgCt: c?.pkgCt ?? c?.pkg_ct ?? null,
-              }));
+              }))
+        ).map((c: { serial: string; pkgCt?: number | null }) => ({
+          ...c,
+          pkgCt: packagingBagsBySerial.get(normalizeSerial(c.serial)) ?? c.pkgCt ?? null,
+        }));
 
         // A storageSplits row already holding real recorded arrival data (GRN/batch/received
         // date) whose serial doesn't match anything in the canonical list is an orphaned
