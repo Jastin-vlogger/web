@@ -456,8 +456,15 @@ export class ShipmentStorageComponent {
 
     const rows = this.getContainersArray(group);
     const actualRows = Array.isArray(actual.storageSplits) ? actual.storageSplits : [];
-    rows.forEach((control, rowIndex) => {
-      const saved = actualRows[rowIndex];
+    const normalizeSerial = (value: unknown) => String(value || '').trim().toUpperCase().replace(/\s+/g, ' ');
+    rows.forEach((control) => {
+      // Match by container serial, not raw array position — this array's storage order can
+      // drift from the canonical display order (e.g. after a container is added later), so a
+      // positional lookup here silently applies one row's saved data to a different row.
+      const currentSerial = normalizeSerial((control as FormGroup).get('containerSerialNo')?.value);
+      const saved = currentSerial
+        ? actualRows.find((row: any) => normalizeSerial(row?.containerSerialNo) === currentSerial)
+        : undefined;
       if (!saved) return;
       (control as FormGroup).patchValue(
         {

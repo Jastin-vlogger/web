@@ -1038,12 +1038,24 @@ export class ShipmentBlDetailsComponent {
     const status = this.getEffectiveStorageAllocationStatus(index);
     switch (status) {
       case 'pending_warehouse_manager':
-        return 'Pending Warehouse Manager Approval';
+        // Transportation can already be arranged (containers physically routed) while the
+        // storage ALLOCATION PLAN itself is still awaiting sign-off — those are two separate
+        // approvals. Flag it here so "pending approval" doesn't read as "nothing has happened
+        // yet" when containers have, in fact, already been dispatched.
+        return this.hasTransportationArranged(index)
+          ? 'Transportation Arranged'
+          : 'Pending Warehouse Manager Approval';
       case 'approved':
         return 'Approved';
       default:
         return 'Draft';
     }
+  }
+
+  private hasTransportationArranged(index: number): boolean {
+    const actual = this.getActualShipment(index);
+    const booked: any[] = Array.isArray(actual?.transportationBooked) ? actual.transportationBooked : [];
+    return booked.some((row) => String(row?.warehouse || '').trim().length > 0);
   }
 
   getApprovalBadgeClasses(label: string): string {

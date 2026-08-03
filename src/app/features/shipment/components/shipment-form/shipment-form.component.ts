@@ -1218,48 +1218,61 @@ export class ShipmentFormComponent implements OnDestroy {
           actualData?.extractedContainers?.length
             ? actualData.extractedContainers
             : actualData?.billExtractionData?.containers || [];
-        const storageContainerCount = Math.max(1, storageExtractedContainerSource.length || containerCount);
+        const normalizeSerial = (value: unknown) =>
+          String(value || '')
+            .trim()
+            .toUpperCase()
+            .replace(/\s+/g, ' ');
+
+        // The canonical list of "which containers really exist, in what order" — preferring
+        // transportationBooked (the authoritative source for the actual/current destination,
+        // set once transport is arranged) and falling back to the extraction feed when nothing
+        // has been booked yet. Deliberately NOT derived from storageSplits/storageAllocations:
+        // those arrays were saved at different points in this shipment's history and can have a
+        // different length/order than the current canonical list, so matching against them BY
+        // ARRAY POSITION (rather than by serial) silently cross-matches or duplicates unrelated
+        // containers — that's what produced duplicate/garbled rows here before this fix.
+        const canonicalContainers: Array<{ serial: string; pkgCt?: number | null }> =
+          existingTransportationBooked.length
+            ? existingTransportationBooked.map((row: any) => ({ serial: String(row?.containerSerialNo || '') }))
+            : storageExtractedContainerSource.map((c: any) => ({
+                serial: String(c?.containerNo || c?.container_no || c?.container_number || c?.containerNumber || ''),
+                pkgCt: c?.pkgCt ?? c?.pkg_ct ?? null,
+              }));
+
+        // A storageSplits row already holding real recorded arrival data (GRN/batch/received
+        // date) whose serial doesn't match anything in the canonical list is an orphaned
+        // historical record (e.g. entered under an old/corrected serial) — keep it visible
+        // rather than silently dropping already-recorded data.
+        const canonicalKeys = new Set(canonicalContainers.map((c) => normalizeSerial(c.serial)));
+        const orphanedRecordedSplits = existingStorageSplits.filter((row: any) => {
+          const hasRealData = !!(row?.grn || row?.batch || row?.receivedOnDate || row?.containerSerialNo);
+          return hasRealData && !canonicalKeys.has(normalizeSerial(row?.containerSerialNo));
+        });
+
+        const rowSources: Array<{ serial: string; pkgCt?: number | null }> = [
+          ...canonicalContainers,
+          ...orphanedRecordedSplits.map((row: any) => ({ serial: String(row?.containerSerialNo || '') })),
+        ];
+
+        const storageContainerCount = Math.max(1, rowSources.length, containerCount);
 
         const containersArray = this.fb.array(
           Array.from({ length: storageContainerCount }, (_, c) => {
-            const normalizeSerial = (value: unknown) =>
-              String(value || '')
-                .trim()
-                .toUpperCase()
-                .replace(/\s+/g, ' ');
-            const extractedContainer = storageExtractedContainerSource[c];
-            const extractedSerial =
-              extractedContainer?.containerNo ||
-              (extractedContainer as any)?.container_no ||
-              (extractedContainer as any)?.container_number ||
-              (extractedContainer as any)?.containerNumber ||
-              '';
+            const source = rowSources[c];
+            const containerLabel = source?.serial || `${shipmentNo}-C${c + 1}`;
+            const normalizedKey = normalizeSerial(containerLabel);
 
-            // Determine the container serial label first (this is our matching key).
-            const containerLabelCandidate =
-              existingStorageSplits?.[c]?.containerSerialNo ||
-              existingStorageAllocations?.[c]?.containerSerialNo ||
-              extractedSerial ||
-              `${shipmentNo}-C${c + 1}`;
-
-            const normalizedKey = normalizeSerial(containerLabelCandidate);
-            const storageMatch =
-              existingStorageSplits.find((row: any) => normalizeSerial(row?.containerSerialNo) === normalizedKey) ||
-              existingStorageSplits[c];
-            const allocationMatch =
-              existingStorageAllocations.find((row: any) => normalizeSerial(row?.containerSerialNo) === normalizedKey) ||
-              existingStorageAllocations[c];
+            // Match strictly by serial — never fall back to a positional index into a
+            // differently-ordered historical array (see comment above).
+            const storageMatch = existingStorageSplits.find((row: any) => normalizeSerial(row?.containerSerialNo) === normalizedKey);
+            const allocationMatch = existingStorageAllocations.find((row: any) => normalizeSerial(row?.containerSerialNo) === normalizedKey);
             const transportationMatch = existingTransportationBooked.find(
               (row: any) => normalizeSerial(row?.containerSerialNo) === normalizedKey
             );
-            const containerLabel =
-              storageMatch?.containerSerialNo ||
-              allocationMatch?.containerSerialNo ||
-              extractedSerial ||
-              `${shipmentNo}-C${c + 1}`;
             return this.fb.group({
               containerSerialNo: [containerLabel],
-              bags: [storageMatch?.bags ?? allocationMatch?.bags ?? extractedContainer?.pkgCt ?? (extractedContainer as any)?.pkg_ct ?? null],
+              bags: [storageMatch?.bags ?? allocationMatch?.bags ?? source?.pkgCt ?? null],
               // Transportation Arrangement (Milestone 4) is the source of truth for which warehouse
               // a container was actually shipped to — it must win over the earlier storage allocation plan.
               warehouse: [transportationMatch?.warehouse || storageMatch?.warehouse || allocationMatch?.warehouse || ''],
