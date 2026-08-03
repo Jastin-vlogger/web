@@ -178,11 +178,11 @@ export class DashboardComponent implements OnInit {
     { match: ['completed lpo', 'completed'], label: 'Completed', icon: 'pi pi-box', section: 'lpo' },
     { match: ['open lpo', 'open'], label: 'Open', icon: 'pi pi-inbox', section: 'lpo' },
     { match: ['total shipments', 'no. of shipments', 'no of shipments'], label: 'No. of Shipments', icon: 'pi pi-server', section: 'shipment' },
+    { match: ['delivered wh', 'delivered to wh', 'delivered to warehouse'], label: 'Delivered to WH', icon: 'pi pi-warehouse', section: 'shipment' },
     { match: ['at the port', 'at port'], label: 'At the Port', icon: 'pi pi-compass', section: 'shipment' },
     { match: ['on transit'], label: 'On Transit', icon: 'pi pi-truck', section: 'shipment' },
-    { match: ['delivered wh', 'delivered to wh', 'delivered to warehouse'], label: 'Delivered to WH', icon: 'pi pi-warehouse', section: 'shipment' },
-    { match: ['etd yet to due', 'eta yet to due'], label: 'ETA Yet To Due', icon: 'pi pi-calendar', section: 'shipment' },
-    { match: ['etd yet to be confirmed'], label: 'ETD Yet To Be Confirmed', icon: 'pi pi-question-circle', section: 'shipment' },
+    { match: ['etd yet to due', 'eta yet to due'], label: 'ETD Yet To Due', icon: 'pi pi-calendar', section: 'shipment' },
+    { match: ['etd yet to be confirmed'], label: 'Shipment Not Schedule', icon: 'pi pi-question-circle', section: 'shipment' },
   ];
 
   readonly statusSnapshotRows = computed(() => {
@@ -459,19 +459,15 @@ export class DashboardComponent implements OnInit {
     const f = this.dashboard()?.fasDashboard?.stageOverview;
     const totalBank = f?.totalBank ?? 0;
     const labels = [
-      'DA Received',
-      'Submitted to Bank',
       'DA Signed & Stamped',
-      'Murabaha Required',
-      'Murabaha Submitted to Bank',
-      'Final Contract Submitted'
+      'Murabaha Skipped',
+      'Murabaha Received',
+      'Final Contract (Include DA & Murabaha)'
     ];
     const completedData = [
-      f?.daReceived ?? 0,
-      f?.submittedToBank ?? 0,
       f?.daSigned ?? 0,
-      f?.murabahaRequired ?? 0,
-      f?.murabahaSubmitted ?? 0,
+      f?.murabahaSkipped ?? 0,
+      f?.murabahaReceived ?? 0,
       f?.finalContract ?? 0
     ];
     const pendingData = completedData.map(v => Math.max(totalBank - v, 0));
@@ -496,20 +492,17 @@ export class DashboardComponent implements OnInit {
   });
 
   readonly fasProviderWiseChartConfig = computed<ChartData<'bar'>>(() => {
-    const p = this.dashboard()?.fasDashboard?.providerWise || {};
-    const allProviders = [
-      { label: 'DHL', value: p.DHL ?? 0, color: '#3b82f6' },
-      { label: 'Aramex', value: p.Aramex ?? 0, color: '#10b981' },
-      { label: 'UPS', value: p.UPS ?? 0, color: '#f59e0b' },
-      { label: 'TNT', value: p.TNT ?? 0, color: '#ef4444' },
-    ];
-    const providers = allProviders.filter((provider) => provider.value > 0);
+    // providerWise is now a dynamic array of { label, value } — real free-text courier names
+    // (e.g. "Kara Express company"), not a fixed DHL/Aramex/UPS/TNT set. See buildDashboardStatusPivot's
+    // palette below for the same cyclical-color pattern used elsewhere on this dashboard.
+    const colors = ['#10b981', '#f59e0b', '#3b82f6', '#64748b', '#8b5cf6', '#06b6d4', '#ef4444', '#f97316'];
+    const providers: Array<{ label: string; value: number }> = this.dashboard()?.fasDashboard?.providerWise || [];
     return {
       labels: providers.map((provider) => provider.label),
       datasets: [
         {
           data: providers.map((provider) => provider.value),
-          backgroundColor: providers.map((provider) => provider.color)
+          backgroundColor: providers.map((_, index) => colors[index % colors.length])
         }
       ]
     };

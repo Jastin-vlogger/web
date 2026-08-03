@@ -114,25 +114,6 @@
                         <canvas baseChart [data]="fasProviderWiseChartConfig()" [options]="horizontalBarChartOptions" [type]="'bar'"></canvas>
                     </div>
                 </article>
-                <!-- Pending cards -->
-                <div class="flex items-center gap-3 p-4 bg-emerald-50/50 border border-emerald-100 rounded-xl shadow-sm">
-                    <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500 text-white shadow-sm">
-                        <i class="pi pi-wallet text-sm"></i>
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Pending Payment Requested</span>
-                        <strong class="text-xl font-black text-slate-800 leading-none mt-1">{{ dashboard()?.fasDashboard?.pendingPaymentRequested ?? 0 }}</strong>
-                    </div>
-                </div>
-                <div class="flex items-center gap-3 p-4 bg-amber-50/50 border border-amber-100 rounded-xl shadow-sm">
-                    <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm">
-                        <i class="pi pi-calculator text-sm"></i>
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Payment Allocation Pending</span>
-                        <strong class="text-xl font-black text-slate-800 leading-none mt-1">{{ dashboard()?.fasDashboard?.paymentAllocationPending ?? 0 }}</strong>
-                    </div>
-                </div>
             </div>
             }
         </section>
@@ -145,30 +126,6 @@
                 <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Document Stage Overview (Bank Receiver Only)</h4>
                 <div class="relative h-[300px] w-full">
                     <canvas baseChart [data]="fasStageOverviewChartConfig()" [options]="horizontalStackedBarChartOptions" [type]="'bar'"></canvas>
-                </div>
-            </article>
-        </section>
-        }
-
-        <!-- Department Wise Job Pending Report -->
-        @if (canViewDashboardSection('dashboard.section.department_job_pending.view')) {
-        <section class="mb-6">
-            <article class="sl-panel flex flex-col gap-4 p-5 bg-white border border-slate-200 rounded-xl shadow-sm w-full">
-                <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Department Wise Job Pending Report</h4>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    @for (dept of dashboard()?.departmentJobPending ?? []; track dept.department) {
-                        <div class="flex items-center gap-3 p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white shadow-sm">
-                                <i class="pi pi-briefcase text-sm"></i>
-                            </div>
-                            <div class="flex flex-col min-w-0">
-                                <span class="text-[9px] font-black uppercase tracking-widest text-slate-400 truncate" [title]="dept.label">{{ dept.label }}</span>
-                                <strong class="text-xl font-black text-slate-800 leading-none mt-1">{{ dept.pendingCount }}</strong>
-                            </div>
-                        </div>
-                    } @empty {
-                        <p class="text-xs text-slate-400 col-span-full">No pending-job data available.</p>
-                    }
                 </div>
             </article>
         </section>
@@ -422,7 +379,7 @@
                     <canvas baseChart [data]="warehouseAllocationStatusChartConfig()" [options]="doughnutChartOptions" [type]="'doughnut'"></canvas>
                     <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                         <span class="text-xl font-black text-slate-800">{{ wh.allocationStatus.total }}</span>
-                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total Shipments</span>
+                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total FCL</span>
                     </div>
                 </div>
                 <div class="flex flex-col gap-1.5 mt-2 text-xs text-slate-600">
