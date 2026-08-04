@@ -1139,7 +1139,8 @@ export class ShipmentFormComponent implements OnDestroy {
               this.actualSplits.length - 1,
               existingTransportationBooked,
               extractedContainerSource,
-              (actualData as any)?.tokenReceivedDate || actualData?.tokenDate
+              (actualData as any)?.tokenReceivedDate || actualData?.tokenDate,
+              (actualData as any)?.packagingList?.containerInfo
             ),
             transportationTransactions: this.fb.array(
               ((actualData as any)?.transportationTransactions || []).map((txn: any) =>
@@ -1795,7 +1796,8 @@ export class ShipmentFormComponent implements OnDestroy {
     shipmentIndex: number,
     existingRows: any[] = [],
     extractedContainers?: any[],
-    fallbackTokenReceivedDate?: string | Date | null
+    fallbackTokenReceivedDate?: string | Date | null,
+    packagingContainerInfo?: any[]
   ): FormArray {
     const rows = new FormArray<FormGroup>([]);
     // Containers can be appended later via Packing List Confirmation (backend pushes a
@@ -1808,12 +1810,17 @@ export class ShipmentFormComponent implements OnDestroy {
     for (let i = 0; i < safeCount; i++) {
       const existing = existingRows[i];
       const extracted = extractedContainers?.[i];
+      // packagingList.containerInfo is the user-editable, CURRENT container list (Packing List
+      // Confirmation) — it must win over extractedContainers, which is a frozen OCR snapshot
+      // from upload time that's never updated when a container is renamed there.
+      const fromPackagingList = packagingContainerInfo?.[i]?.container_number;
       rows.push(
         this.fb.group({
           sn: [i + 1],
           transactionId: [existing?.transactionId || ''],
 	          containerSerialNo: [
 	            existing?.containerSerialNo ||
+	            fromPackagingList ||
 	            extracted?.containerNo ||
 	            (extracted as any)?.container_no ||
 	            `${shipmentNo}-${shipmentIndex + 1}-C${i + 1}`

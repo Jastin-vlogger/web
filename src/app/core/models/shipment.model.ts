@@ -221,6 +221,7 @@ export interface StorageArrivalReportRow {
   pDate: string;
   eDate: string;
   status: 'Arrived' | 'Pending';
+  shortageBags: string | number;
   remarks: string;
 }
 

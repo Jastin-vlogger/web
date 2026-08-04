@@ -223,6 +223,7 @@ export class ReportsLandingComponent implements OnInit {
     { header: 'Production Date', key: 'pDate', width: 12 },
     { header: 'Expiry Date', key: 'eDate', width: 12 },
     { header: 'Status', key: 'status', width: 14 },
+    { header: 'Shortage Bag', key: 'shortageBags', width: 12 },
     { header: 'Remarks', key: 'remarks', width: 22 },
   ];
 
