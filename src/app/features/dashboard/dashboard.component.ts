@@ -459,18 +459,22 @@ export class DashboardComponent implements OnInit {
     const f = this.dashboard()?.fasDashboard?.stageOverview;
     const totalBank = f?.totalBank ?? 0;
     const labels = [
-      'DA Signed & Stamped',
-      'Murabaha Skipped',
-      'Murabaha Received',
-      'Final Contract (Include DA & Murabaha)'
+      'Cash Against Document (CAD)',
+      'Murabaha Through',
+      'Final Contract (Include CAD & Murabaha)'
     ];
     const completedData = [
-      f?.daSigned ?? 0,
-      f?.murabahaSkipped ?? 0,
-      f?.murabahaReceived ?? 0,
+      f?.cadCompleted ?? 0,
+      f?.murabahaCompleted ?? 0,
       f?.finalContract ?? 0
     ];
-    const pendingData = completedData.map(v => Math.max(totalBank - v, 0));
+    // CAD and Murabaha Through each have their own denominator (containers that skipped
+    // Murabaha vs. didn't) — only Final Contract's pending is "everything else out of totalBank".
+    const pendingData = [
+      f?.cadPending ?? 0,
+      f?.murabahaPending ?? 0,
+      Math.max(totalBank - (f?.finalContract ?? 0), 0)
+    ];
 
     return {
       labels,
@@ -508,6 +512,13 @@ export class DashboardComponent implements OnInit {
     };
   });
 
+  // Enough height per provider bar for its label to render legibly — a fixed short height
+  // is what caused Chart.js to silently drop labels for a real (variable-length) provider list.
+  readonly providerChartHeight = computed(() => {
+    const count = (this.dashboard()?.fasDashboard?.providerWise || []).length;
+    return Math.max(110, count * 28);
+  });
+
   horizontalBarChartOptions: ChartConfiguration<'bar'>['options'] = {
     indexAxis: 'y',
     responsive: true,
@@ -517,7 +528,10 @@ export class DashboardComponent implements OnInit {
     },
     scales: {
       x: { grid: { display: false } },
-      y: { grid: { display: false } }
+      // autoSkip (Chart.js default: true) silently drops category labels when there isn't
+      // enough vertical space per bar — with a dynamic, real provider list (not a fixed
+      // 4-name set) this was hiding 2 of 5 names outright. Every category must show its label.
+      y: { grid: { display: false }, ticks: { autoSkip: false } }
     }
   };
 

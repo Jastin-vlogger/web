@@ -110,7 +110,7 @@
                 <!-- Provider Wise Documents -->
                 <article class="sl-panel flex flex-col gap-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
                     <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Provider</h4>
-                    <div class="relative h-[110px] w-full">
+                    <div class="relative w-full" [style.height.px]="providerChartHeight()">
                         <canvas baseChart [data]="fasProviderWiseChartConfig()" [options]="horizontalBarChartOptions" [type]="'bar'"></canvas>
                     </div>
                 </article>
@@ -148,15 +148,9 @@
                                     </button>
                                 }
                             </div>
-                            <div class="flex items-center justify-between gap-3">
-                                <div class="flex flex-col">
-                                    <span class="text-[9px] font-bold uppercase tracking-wider text-amber-600">Pending</span>
-                                    <strong class="text-lg font-black text-slate-800 leading-none mt-0.5">{{ tile.pending }}</strong>
-                                </div>
-                                <div class="flex flex-col">
-                                    <span class="text-[9px] font-bold uppercase tracking-wider text-emerald-600">Completed</span>
-                                    <strong class="text-lg font-black text-slate-800 leading-none mt-0.5">{{ tile.completed }}</strong>
-                                </div>
+                            <div class="flex flex-col">
+                                <span class="text-[9px] font-bold uppercase tracking-wider text-amber-600">Pending</span>
+                                <strong class="text-lg font-black text-slate-800 leading-none mt-0.5">{{ tile.pending }}</strong>
                             </div>
                         </div>
                     } @empty {
@@ -184,15 +178,9 @@
                                     </button>
                                 }
                             </div>
-                            <div class="flex items-center justify-between gap-3">
-                                <div class="flex flex-col">
-                                    <span class="text-[9px] font-bold uppercase tracking-wider text-amber-600">Pending</span>
-                                    <strong class="text-lg font-black text-slate-800 leading-none mt-0.5">{{ tile.pending }}</strong>
-                                </div>
-                                <div class="flex flex-col">
-                                    <span class="text-[9px] font-bold uppercase tracking-wider text-emerald-600">Completed</span>
-                                    <strong class="text-lg font-black text-slate-800 leading-none mt-0.5">{{ tile.completed }}</strong>
-                                </div>
+                            <div class="flex flex-col">
+                                <span class="text-[9px] font-bold uppercase tracking-wider text-amber-600">Pending</span>
+                                <strong class="text-lg font-black text-slate-800 leading-none mt-0.5">{{ tile.pending }}</strong>
                             </div>
                         </div>
                     } @empty {
