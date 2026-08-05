@@ -9,6 +9,7 @@
               @switch (activeReport()) {
                 @case ('storage-arrival') { Warehouse Activity Status }
                 @case ('fas-document-tracking') { FAS Activity Status }
+                @case ('rh-status-summary') { Shipment Status Summary RH }
                 @default { Quality Activity Status }
               }
             </h1>
@@ -16,6 +17,7 @@
               @switch (activeReport()) {
                 @case ('storage-arrival') { All shipment storage arrival and receipt records. }
                 @case ('fas-document-tracking') { FAS department document tracking — courier, DA, Murabaha and final contract status. }
+                @case ('rh-status-summary') { GRN-level receiving status for every container across all shipments. }
                 @default { Filter shipment records, preview the report, and export selected columns to Excel or PDF. }
               }
             </p>
@@ -29,12 +31,14 @@
                 @if (isFasUser()) {
                   @if (canViewReport('default')) { <option value="default">Transit</option> }
                   @if (canViewReport('fas-document-tracking')) { <option value="fas-document-tracking">Reports</option> }
+                  @if (canViewReport('rh-status-summary')) { <option value="rh-status-summary">Shipment Status Summary RH</option> }
                 } @else if (isStorekeeper()) {
                   @if (canViewReport('storage-arrival')) { <option value="storage-arrival">Warehouse Activity Status</option> }
                 } @else {
                   @if (canViewReport('default')) { <option value="default">Quality Activity Status</option> }
                   @if (canViewReport('storage-arrival')) { <option value="storage-arrival">Warehouse Activity Status</option> }
                   @if (canViewReport('fas-document-tracking')) { <option value="fas-document-tracking">FAS Activity Status</option> }
+                  @if (canViewReport('rh-status-summary')) { <option value="rh-status-summary">Shipment Status Summary RH</option> }
                 }
               </select>
             </div>
@@ -311,6 +315,8 @@
         </div>
       }
     </section>
+  } @else if (activeReport() === 'rh-status-summary') {
+    <app-shipment-status-summary-rh />
   }
 </div>
 

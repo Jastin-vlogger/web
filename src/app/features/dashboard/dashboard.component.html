@@ -127,6 +127,44 @@
                 <div class="relative h-[300px] w-full">
                     <canvas baseChart [data]="fasStageOverviewChartConfig()" [options]="horizontalStackedBarChartOptions" [type]="'bar'"></canvas>
                 </div>
+                <div class="flex flex-col gap-1.5 border-t border-slate-100 pt-3">
+                    <div class="flex items-center justify-between text-xs text-slate-600">
+                        <span>Cash Against Document (CAD) Pending</span>
+                        <span class="flex items-center gap-1.5">
+                            <span class="font-bold text-slate-800">{{ dashboard()?.fasDashboard?.stageOverview?.cadPending ?? 0 }}</span>
+                            @if ((dashboard()?.fasDashboard?.stageOverview?.cadPending ?? 0) > 0) {
+                                <button type="button" (click)="openStageOverviewDrillDown('cad')" title="View pending shipments"
+                                    class="shrink-0 inline-flex h-5 w-5 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600">
+                                    <i class="pi pi-eye text-[9px]"></i>
+                                </button>
+                            }
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-slate-600">
+                        <span>Murabaha Through Pending</span>
+                        <span class="flex items-center gap-1.5">
+                            <span class="font-bold text-slate-800">{{ dashboard()?.fasDashboard?.stageOverview?.murabahaPending ?? 0 }}</span>
+                            @if ((dashboard()?.fasDashboard?.stageOverview?.murabahaPending ?? 0) > 0) {
+                                <button type="button" (click)="openStageOverviewDrillDown('murabaha')" title="View pending shipments"
+                                    class="shrink-0 inline-flex h-5 w-5 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600">
+                                    <i class="pi pi-eye text-[9px]"></i>
+                                </button>
+                            }
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-slate-600">
+                        <span>Final Contract Pending</span>
+                        <span class="flex items-center gap-1.5">
+                            <span class="font-bold text-slate-800">{{ (dashboard()?.fasDashboard?.stageOverview?.totalBank ?? 0) - (dashboard()?.fasDashboard?.stageOverview?.finalContract ?? 0) }}</span>
+                            @if (((dashboard()?.fasDashboard?.stageOverview?.totalBank ?? 0) - (dashboard()?.fasDashboard?.stageOverview?.finalContract ?? 0)) > 0) {
+                                <button type="button" (click)="openStageOverviewDrillDown('finalContract')" title="View pending shipments"
+                                    class="shrink-0 inline-flex h-5 w-5 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600">
+                                    <i class="pi pi-eye text-[9px]"></i>
+                                </button>
+                            }
+                        </span>
+                    </div>
+                </div>
             </article>
         </section>
         }
@@ -332,7 +370,15 @@
                             <span class="text-base font-black text-emerald-600">{{ row.received }} <span class="text-xs font-bold text-emerald-400">FCL</span></span>
                         </div>
                         <div class="flex flex-col gap-0.5">
-                            <span class="text-[10px] font-bold uppercase text-slate-400">Pending Receiving</span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[10px] font-bold uppercase text-slate-400">Pending Receiving</span>
+                                @if (row.pendingReceiving > 0) {
+                                    <button type="button" (click)="openStorekeeperPendingDrillDown(row)" title="View pending shipments"
+                                        class="shrink-0 inline-flex h-5 w-5 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600">
+                                        <i class="pi pi-eye text-[9px]"></i>
+                                    </button>
+                                }
+                            </div>
                             <span class="text-base font-black text-amber-500">{{ row.pendingReceiving }} <span class="text-xs font-bold text-amber-300">FCL</span></span>
                         </div>
                     </div>

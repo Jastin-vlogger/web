@@ -45,6 +45,36 @@ export class DashboardComponent implements OnInit {
     this.activeDrillDownTile.set(null);
   }
 
+  openStorekeeperPendingDrillDown(row: StorekeeperWarehouseRow): void {
+    // Reuses the same drill-down modal as the FAS/Logistics tiles — it only ever reads
+    // `label` and `pendingShipments` from the tile, so a lightweight compatible object is enough.
+    this.openDrillDown({
+      key: `storekeeper-pending-${row.warehouse}`,
+      label: `Pending Receiving — ${row.warehouse}`,
+      pending: row.pendingReceiving,
+      completed: row.received,
+      pendingShipments: row.pendingShipments,
+    });
+  }
+
+  openStageOverviewDrillDown(stage: 'cad' | 'murabaha' | 'finalContract'): void {
+    const f = this.dashboard()?.fasDashboard?.stageOverview;
+    if (!f) return;
+    const configByStage = {
+      cad: { label: 'Cash Against Document (CAD) — Pending', pending: f.cadPending, completed: f.cadCompleted, pendingShipments: f.cadPendingShipments },
+      murabaha: { label: 'Murabaha Through — Pending', pending: f.murabahaPending, completed: f.murabahaCompleted, pendingShipments: f.murabahaPendingShipments },
+      finalContract: { label: 'Final Contract — Pending', pending: Math.max((f.totalBank ?? 0) - (f.finalContract ?? 0), 0), completed: f.finalContract, pendingShipments: f.finalContractPendingShipments },
+    };
+    const cfg = configByStage[stage];
+    this.openDrillDown({
+      key: `stage-overview-${stage}`,
+      label: cfg.label,
+      pending: cfg.pending ?? 0,
+      completed: cfg.completed ?? 0,
+      pendingShipments: cfg.pendingShipments ?? [],
+    });
+  }
+
   canViewDashboardSection(permissionKey: string): boolean {
     if (!this.rbacService.hasPermissionDefinition('dashboard.section.')) {
       return this.rbacService.hasPermission('menu.dashboard.view');

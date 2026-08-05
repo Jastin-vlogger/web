@@ -417,6 +417,7 @@ export interface StorekeeperWarehouseRow {
   received: number;
   pendingReceiving: number;
   progress: number;
+  pendingShipments: DashboardPendingShipmentRef[];
 }
 
 export interface StorekeeperTimelinePoint {
