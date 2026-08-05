@@ -1800,10 +1800,12 @@ export class ShipmentFormComponent implements OnDestroy {
     packagingContainerInfo?: any[]
   ): FormArray {
     const rows = new FormArray<FormGroup>([]);
-    // Containers can be appended later via Packing List Confirmation (backend pushes a
-    // matching row into actual.transportationBooked at that point) — never truncate below
-    // what's already persisted, or newly-added containers vanish from Bulk Update Transportation.
-    const safeCount = Math.max(1, existingRows?.length || 0, extractedContainers?.length || count || 1);
+    // Containers can be appended later via Packing List Confirmation (backend is supposed to
+    // push a matching row into actual.transportationBooked at that point, but historical/legacy
+    // rows can predate that sync or otherwise fall through) — never truncate below what's
+    // already persisted OR what's in the current packaging list, or newly-added containers
+    // vanish from Bulk Update Transportation entirely, not just show under the wrong name.
+    const safeCount = Math.max(1, existingRows?.length || 0, extractedContainers?.length || count || 1, packagingContainerInfo?.length || 0);
     const shipmentNo = this.shipmentData()?.shipment?.shipmentNo || 'SHIPMENT';
     const defaultDate = this.createTodayDate();
     const defaultTime = this.createCurrentTimeDate();
