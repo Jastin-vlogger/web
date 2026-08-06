@@ -964,7 +964,12 @@ export class ShipmentStorageComponent {
 
   /** Warehouse names assigned to the current storekeeper, or null when the user sees all warehouses. */
   private getAssignedWarehouseNames(): string[] | null {
-    if (this.authService.isAdminLevelRole() || !this.shouldEnforceTabPermissions()) return null;
+    // Only storekeepers are scoped to their assigned warehouse(s) — every other non-admin role
+    // (Logistic, FAS, etc.) has RBAC-granted access to this tab but no warehouse assignment of
+    // its own, so `!shouldEnforceTabPermissions()` alone wrongly collapsed their visible set to
+    // empty (assigned = [] is a real "sees nothing" scope, not "no restriction").
+    const role = String(this.authService.getCurrentUser()?.role || '').trim().toLowerCase();
+    if (this.authService.isAdminLevelRole() || role !== 'storekeeper') return null;
     const user = this.authService.getCurrentUser();
     if (!user) return [];
     return this.allWarehouses()
