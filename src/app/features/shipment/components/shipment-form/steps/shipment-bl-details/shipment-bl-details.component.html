@@ -1305,7 +1305,11 @@
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div class="flex flex-col gap-1.5">
           <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Title<span class="ml-0.5 text-red-500">*</span></label>
-          <input pInputText class="table-input-text w-full" [value]="additionalRequestDraft().title" (input)="updateAdditionalRequestDraft('title', $any($event.target).value)" placeholder="Request title" />
+          <select class="table-input-text w-full" [value]="additionalRequestDraft().title" (change)="updateAdditionalRequestDraft('title', $any($event.target).value)">
+            <option value="" disabled>Select request title</option>
+            <option value="Shipping Line Demurrage">Shipping Line Demurrage</option>
+            <option value="Port Storage - DP World">Port Storage - DP World</option>
+          </select>
         </div>
         <div class="flex flex-col gap-1.5">
           <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Request Amount<span class="ml-0.5 text-red-500">*</span></label>
