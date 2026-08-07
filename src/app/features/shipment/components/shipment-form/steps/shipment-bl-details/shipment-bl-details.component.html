@@ -1305,7 +1305,7 @@
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div class="flex flex-col gap-1.5">
           <label class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Title<span class="ml-0.5 text-red-500">*</span></label>
-          <select class="table-input-text w-full" [value]="additionalRequestDraft().title" (change)="updateAdditionalRequestDraft('title', $any($event.target).value)">
+          <select class="w-full border border-slate-200 bg-white py-1 px-2 text-xs font-bold text-slate-900 text-center rounded-lg shadow-sm focus:ring-1 focus:ring-blue-400 focus:bg-white focus:border-blue-400 focus:outline-none" [value]="additionalRequestDraft().title" (change)="updateAdditionalRequestDraft('title', $any($event.target).value)">
             <option value="" disabled>Select request title</option>
             <option value="Shipping Line Demurrage">Shipping Line Demurrage</option>
             <option value="Port Storage - DP World">Port Storage - DP World</option>
