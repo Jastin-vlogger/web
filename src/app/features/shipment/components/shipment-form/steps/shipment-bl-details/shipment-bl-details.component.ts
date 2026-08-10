@@ -69,7 +69,17 @@ export class ShipmentBlDetailsComponent {
   /** Point 5: when navigated from the Shipments list "Track", open this shipment's accordion. */
   @Input() set focusShipmentIndex(index: number | null | undefined) {
     if (index == null || index < 0) return;
-    queueMicrotask(() => this.ensureAccordionOpen(index));
+    queueMicrotask(() => {
+      this.ensureAccordionOpen(index);
+      if (this.pendingFocusSubTab) this.setActiveTab(index, this.pendingFocusSubTab);
+    });
+  }
+
+  /** Sub-tab to focus alongside focusShipmentIndex (e.g. 'cost' for Clearing Advance,
+   * 'payment_costing' for Payment Costing) — dashboard drill-down deep-links set this. */
+  private pendingFocusSubTab: 'cost' | 'storage' | 'packaging' | 'payment_allocation' | 'payment_costing' | null = null;
+  @Input() set focusSubTab(subTab: 'cost' | 'storage' | 'packaging' | 'payment_allocation' | 'payment_costing' | null | undefined) {
+    this.pendingFocusSubTab = subTab || null;
   }
 
   private sanitizer = inject(DomSanitizer);

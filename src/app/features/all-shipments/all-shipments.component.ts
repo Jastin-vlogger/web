@@ -45,7 +45,7 @@ export class AllShipmentsComponent implements OnInit {
     { label: 'On Transit', value: 'On Transit' },
     { label: 'Delivered WH', value: 'Delivered WH' },
     { label: 'ETA Yet To Due', value: 'ETA yet to Due' },
-    { label: 'ETD Yet To Be Confirmed', value: 'ETD yet to be confirmed' },
+    { label: 'Shipment Not Scheduled', value: 'ETD yet to be confirmed' },
   ];
 
   private readonly searchInput$ = new Subject<string>();
@@ -350,7 +350,7 @@ export class AllShipmentsComponent implements OnInit {
   getDisplayStageName(status: string | null | undefined): string {
     const normalized = String(status || '').trim();
     if (normalized === 'Planned Split') return 'Shipment Split';
-    if (normalized === 'Shipment Entry') return 'ETD yet to be confirmed';
+    if (normalized === 'Shipment Entry' || normalized.toLowerCase() === 'etd yet to be confirmed') return 'Shipment Not Scheduled';
     return normalized;
   }
 

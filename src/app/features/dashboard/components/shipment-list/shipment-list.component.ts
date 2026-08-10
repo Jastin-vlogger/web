@@ -45,7 +45,7 @@ export class ShipmentListComponent implements OnInit {
         { label: 'At Port of Discharge', value: 'At Port of Discharge' },
         { label: 'Delivered WH', value: 'Delivered WH' },
         { label: 'ETA Yet To Due', value: 'ETA yet to Due' },
-        { label: 'ETD Yet To Be Confirmed', value: 'ETD yet to be confirmed' },
+        { label: 'Shipment Not Scheduled', value: 'ETD yet to be confirmed' },
     ];
     readonly canCreateShipment = computed(() =>
         this.rbacService.hasPermission('shipment.screen.create_shipment.view')
@@ -117,7 +117,7 @@ export class ShipmentListComponent implements OnInit {
     getDisplayStageName(status: string | null | undefined): string {
         const normalized = String(status || '').trim();
         if (normalized === 'Planned Split') return 'Shipment Split';
-        if (normalized === 'Shipment Entry') return 'ETD yet to be confirmed';
+        if (normalized === 'Shipment Entry' || normalized.toLowerCase() === 'etd yet to be confirmed') return 'Shipment Not Scheduled';
         return normalized;
     }
 

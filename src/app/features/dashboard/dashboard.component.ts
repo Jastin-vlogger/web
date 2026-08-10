@@ -15,6 +15,7 @@ import {
 } from '../../core/models/shipment.model';
 import { DashboardService } from './services/dashboard.service';
 import { RbacService } from '../../core/services/rbac.service';
+import { getShipmentStatusSeverity } from '../shipment/components/shipment-form/shared/shipment-status';
 
 @Component({
   selector: 'app-dashboard',
@@ -39,6 +40,29 @@ export class DashboardComponent implements OnInit {
 
   openDrillDown(tile: DashboardPendingCompletedTile): void {
     this.activeDrillDownTile.set(tile);
+  }
+
+  // Per-tile drill-down destination — most tiles land on Document Tracker; Clearing Advance and
+  // Payment Costing jump straight into the relevant BL Details sub-tab instead.
+  private readonly DRILL_DOWN_SUB_TAB_BY_TILE_KEY: Record<string, 'cost' | 'payment_costing'> = {
+    pendingClearingAdvanceProcessApproval: 'cost',
+    pendingPaymentCosting: 'payment_costing',
+  };
+
+  getDrillDownQueryParams(tileKey: string, shipmentIndex: number | null | undefined): Record<string, any> {
+    const subTab = this.DRILL_DOWN_SUB_TAB_BY_TILE_KEY[tileKey];
+    if (subTab && shipmentIndex != null) {
+      return { tab: 'bl_details', shipmentIndex, subTab };
+    }
+    return { tab: 'document_tracker' };
+  }
+
+  getDrillDownStatusClasses(status: string | null | undefined): string {
+    const severity = getShipmentStatusSeverity(status || '');
+    if (severity === 'success') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    if (severity === 'info') return 'bg-sky-50 text-sky-700 border-sky-200';
+    if (severity === 'warn') return 'bg-amber-50 text-amber-700 border-amber-200';
+    return 'bg-slate-100 text-slate-600 border-slate-200';
   }
 
   closeDrillDown(): void {
@@ -212,7 +236,7 @@ export class DashboardComponent implements OnInit {
     { match: ['at the port', 'at port'], label: 'At the Port', icon: 'pi pi-compass', section: 'shipment' },
     { match: ['on transit'], label: 'On Transit', icon: 'pi pi-truck', section: 'shipment' },
     { match: ['etd yet to due', 'eta yet to due'], label: 'ETD Yet To Due', icon: 'pi pi-calendar', section: 'shipment' },
-    { match: ['etd yet to be confirmed'], label: 'Shipment Not Schedule', icon: 'pi pi-question-circle', section: 'shipment' },
+    { match: ['etd yet to be confirmed'], label: 'Shipment Not Scheduled', icon: 'pi pi-question-circle', section: 'shipment' },
   ];
 
   readonly statusSnapshotRows = computed(() => {

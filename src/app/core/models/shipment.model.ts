@@ -403,6 +403,9 @@ export interface DashboardPendingShipmentRef {
   _id: string;
   shipmentNo: string;
   supplier: string | null;
+  shipmentIndex?: number | null;
+  status?: string | null;
+  commercialInvoiceNo?: string | null;
 }
 
 export interface DashboardDepartmentJobPending {

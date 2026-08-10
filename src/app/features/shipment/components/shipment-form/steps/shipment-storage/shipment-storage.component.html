@@ -366,6 +366,14 @@
                     @if (!isStorageArrivalLocked(i)) {
                     <button
                       type="button"
+                      (click)="openBulkUpdateModal(i)"
+                      class="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-indigo-600 hover:bg-indigo-100"
+                    >
+                      <i class="pi pi-table text-[10px]"></i>
+                      Bulk Update
+                    </button>
+                    <button
+                      type="button"
                       (click)="saveAllArrivalRows(i)"
                       [disabled]="savingAllRows()"
                       class="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-violet-600 hover:bg-violet-100 disabled:opacity-50"
@@ -677,6 +685,136 @@
           </button>
           }
         </div>
+      </div>
+    </p-dialog>
+  }
+}
+
+<!-- ===== Storage Arrival bulk-update modal: edit every container's arrival fields in one
+     table, then a single Save (reuses saveAllArrivalRows — one API call, one email round). ===== -->
+@if (bulkUpdateVisible()) {
+  @let bsi = bulkUpdateShipmentIndex();
+  @if (bsi !== null) {
+    @let bGroup = formArray.at(bsi);
+    @let bRows = bGroup ? getVisibleArrivalContainers(bGroup) : [];
+    <p-dialog
+      header="Bulk Update — Storage Arrival"
+      [visible]="bulkUpdateVisible()"
+      (visibleChange)="bulkUpdateVisible.set($event)"
+      (onHide)="closeBulkUpdateModal()"
+      [modal]="true"
+      [dismissableMask]="false"
+      [style]="{ width: '95vw', maxWidth: '1400px' }"
+      [contentStyle]="{ overflow: 'auto' }"
+      [draggable]="false"
+      appendTo="body">
+      <p class="text-xs text-slate-500 mb-3">
+        Fill in each container's row, or set the first row then use the <i class="pi pi-copy text-[10px]"></i> icon to copy that value to every other row for that field. One click of Save All below persists every row in a single request — one email round, not one per container.
+      </p>
+      <div class="overflow-x-auto">
+        <table class="w-full border-separate border-spacing-0 min-w-[1600px]">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200">
+              <th class="px-2 py-2 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap w-8">#</th>
+              <th class="px-2 py-2 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">Container No</th>
+              <th class="px-2 py-2 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">Bags</th>
+              <th class="px-2 py-2 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">Warehouse</th>
+              <th class="px-2 py-2 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap min-w-[140px]">Block</th>
+              <th class="px-2 py-2 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap min-w-[140px]">GRN #</th>
+              <th class="px-2 py-2 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap min-w-[140px]">Batch #</th>
+              <th class="px-2 py-2 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap min-w-[150px]">Production Date</th>
+              <th class="px-2 py-2 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap min-w-[150px]">Expiry Date</th>
+              <th class="px-2 py-2 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap">Received On</th>
+              <th class="px-2 py-2 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap min-w-[120px]">Shortage Bags</th>
+              <th class="px-2 py-2 text-left text-[9px] font-black text-slate-400 uppercase tracking-wider whitespace-nowrap min-w-[160px]">Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of bRows; track item.index; let displayIdx = $index) {
+              @let row = $any(item.control);
+              <tr [formGroup]="row" class="border-b border-slate-100 last:border-b-0">
+                <td class="px-2 py-2 text-xs font-bold text-slate-500">{{ displayIdx + 1 }}</td>
+                <td class="px-2 py-2 text-xs font-semibold text-slate-700 font-mono whitespace-nowrap">{{ row.get('containerSerialNo')?.value || '–' }}</td>
+                <td class="px-2 py-2 text-xs text-slate-600">{{ row.get('bags')?.value ?? '–' }}</td>
+                <td class="px-2 py-2 text-xs text-slate-600 whitespace-nowrap">{{ row.get('warehouse')?.value || '–' }}</td>
+                <td class="px-2 py-2">
+                  <div class="flex items-center gap-1">
+                    <p-select formControlName="block" [options]="getBlockOptions(row.get('warehouse')?.value)" optionLabel="label" optionValue="value" placeholder="Block" styleClass="w-full" appendTo="body" [showClear]="true"></p-select>
+                    @if (displayIdx === 0 && bRows.length > 1) {
+                      <button type="button" (click)="applyFieldToAllRows(bsi, 'block')" title="Copy to all rows" class="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-400 hover:text-blue-600 hover:bg-blue-50"><i class="pi pi-copy text-[10px]"></i></button>
+                    }
+                  </div>
+                </td>
+                <td class="px-2 py-2">
+                  <div class="flex items-center gap-1">
+                    <input pInputText formControlName="grn" class="table-input-text w-full" placeholder="GRN #" />
+                    @if (displayIdx === 0 && bRows.length > 1) {
+                      <button type="button" (click)="applyFieldToAllRows(bsi, 'grn')" title="Copy to all rows" class="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-400 hover:text-blue-600 hover:bg-blue-50"><i class="pi pi-copy text-[10px]"></i></button>
+                    }
+                  </div>
+                </td>
+                <td class="px-2 py-2">
+                  <div class="flex items-center gap-1">
+                    <input pInputText formControlName="batch" class="table-input-text w-full" placeholder="Batch #" />
+                    @if (displayIdx === 0 && bRows.length > 1) {
+                      <button type="button" (click)="applyFieldToAllRows(bsi, 'batch')" title="Copy to all rows" class="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-400 hover:text-blue-600 hover:bg-blue-50"><i class="pi pi-copy text-[10px]"></i></button>
+                    }
+                  </div>
+                </td>
+                <td class="px-2 py-2">
+                  <div class="flex items-center gap-1">
+                    <p-datepicker formControlName="productionDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" />
+                    @if (displayIdx === 0 && bRows.length > 1) {
+                      <button type="button" (click)="applyFieldToAllRows(bsi, 'productionDate')" title="Copy to all rows" class="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-400 hover:text-blue-600 hover:bg-blue-50"><i class="pi pi-copy text-[10px]"></i></button>
+                    }
+                  </div>
+                </td>
+                <td class="px-2 py-2">
+                  <div class="flex items-center gap-1">
+                    <p-datepicker formControlName="expiryDate" appendTo="body" inputStyleClass="table-input" placeholder="Select date" styleClass="w-full" dateFormat="dd/mm/yy" />
+                    @if (displayIdx === 0 && bRows.length > 1) {
+                      <button type="button" (click)="applyFieldToAllRows(bsi, 'expiryDate')" title="Copy to all rows" class="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-400 hover:text-blue-600 hover:bg-blue-50"><i class="pi pi-copy text-[10px]"></i></button>
+                    }
+                  </div>
+                </td>
+                <td class="px-2 py-2 text-xs text-slate-500 whitespace-nowrap">
+                  {{ row.get('receivedOnDate')?.value | date:'dd/MM/yyyy' }} {{ row.get('receivedOnTime')?.value | date:'HH:mm' }}
+                </td>
+                <td class="px-2 py-2">
+                  <div class="flex items-center gap-1">
+                    <input pInputText type="number" min="0" formControlName="shortageBags" class="table-input-text w-full" placeholder="0" />
+                    @if (displayIdx === 0 && bRows.length > 1) {
+                      <button type="button" (click)="applyFieldToAllRows(bsi, 'shortageBags')" title="Copy to all rows" class="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-400 hover:text-blue-600 hover:bg-blue-50"><i class="pi pi-copy text-[10px]"></i></button>
+                    }
+                  </div>
+                </td>
+                <td class="px-2 py-2">
+                  <div class="flex items-center gap-1">
+                    <input pInputText formControlName="remarks" class="table-input-text w-full" placeholder="Remarks" />
+                    @if (displayIdx === 0 && bRows.length > 1) {
+                      <button type="button" (click)="applyFieldToAllRows(bsi, 'remarks')" title="Copy to all rows" class="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-400 hover:text-blue-600 hover:bg-blue-50"><i class="pi pi-copy text-[10px]"></i></button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="12" class="py-6 text-center text-xs text-slate-400">No containers to update.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="flex gap-3 pt-4">
+        <button type="button" (click)="closeBulkUpdateModal()" class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50">
+          Cancel
+        </button>
+        <button type="button" (click)="saveBulkUpdate(bsi)" [disabled]="savingAllRows()" class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-600 hover:bg-emerald-100 disabled:opacity-50">
+          @if (savingAllRows()) {
+            <i class="pi pi-spin pi-spinner text-sm"></i> Saving {{ saveAllProgress()?.current ?? 0 }} / {{ saveAllProgress()?.total ?? bRows.length }}...
+          } @else {
+            <i class="pi pi-check text-sm"></i> Save All ({{ bRows.length }})
+          }
+        </button>
       </div>
     </p-dialog>
   }

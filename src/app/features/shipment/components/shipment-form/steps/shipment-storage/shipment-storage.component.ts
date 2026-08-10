@@ -167,6 +167,10 @@ export class ShipmentStorageComponent {
   readonly arrivalEditVisible = signal(false);
   readonly arrivalEditCtx = signal<{ shipmentIndex: number; containerIndex: number } | null>(null);
 
+  // ===== Storage Arrival bulk-update modal (all containers, one save, one email) =====
+  readonly bulkUpdateVisible = signal(false);
+  readonly bulkUpdateShipmentIndex = signal<number | null>(null);
+
   // ===== Storage Arrival approval info modal (Requested/Approved by & date) =====
   readonly storageArrivalInfoVisible = signal(false);
   readonly storageArrivalInfoIndex = signal<number | null>(null);
@@ -206,7 +210,7 @@ export class ShipmentStorageComponent {
   }
 
   /** Reached-WH vs Pending counts for the stat card, using the same "recorded" definition as
-   * the backend's isStorageArrivalRowRecorded (received date/time or GRN present). */
+   * the backend's isStorageArrivalRowRecorded (GRN + batch both present). */
   getStorageArrivalCounts(index: number): { reached: number; pending: number; total: number } {
     const group = this.formArray.at(index) as FormGroup | null;
     if (!group) return { reached: 0, pending: 0, total: 0 };
@@ -897,6 +901,48 @@ export class ShipmentStorageComponent {
     this.arrivalEditCtx.set(null);
   }
 
+  // ===== Bulk update modal: fill every container's arrival fields in one table, one save,
+  // one email — instead of opening the per-row EDIT modal (which saves + emails immediately)
+  // once per container. =====
+
+  openBulkUpdateModal(shipmentIndex: number): void {
+    const group = this.formArray.at(shipmentIndex) as FormGroup | null;
+    if (group) {
+      // Same "default Received On Date/Time to now when empty" behavior as the per-row modal
+      // (openArrivalEditModal), just applied to every visible row up front.
+      const now = new Date();
+      this.getVisibleArrivalContainers(group).forEach(({ control }) => {
+        const row = control as FormGroup;
+        if (!row.get('receivedOnDate')?.value) row.get('receivedOnDate')?.patchValue(now, { emitEvent: false });
+        if (!row.get('receivedOnTime')?.value) row.get('receivedOnTime')?.patchValue(now, { emitEvent: false });
+      });
+    }
+    this.bulkUpdateShipmentIndex.set(shipmentIndex);
+    this.bulkUpdateVisible.set(true);
+  }
+
+  closeBulkUpdateModal(): void {
+    this.bulkUpdateVisible.set(false);
+    this.bulkUpdateShipmentIndex.set(null);
+  }
+
+  /** Copies row 0's value for `fieldName` into every other visible row's same field. */
+  applyFieldToAllRows(shipmentIndex: number, fieldName: string): void {
+    const group = this.formArray.at(shipmentIndex) as FormGroup | null;
+    if (!group) return;
+    const rows = this.getVisibleArrivalContainers(group);
+    if (rows.length < 2) return;
+    const sourceValue = (rows[0].control as FormGroup).get(fieldName)?.value;
+    for (let i = 1; i < rows.length; i++) {
+      (rows[i].control as FormGroup).get(fieldName)?.setValue(sourceValue);
+    }
+  }
+
+  saveBulkUpdate(shipmentIndex: number): void {
+    this.saveAllArrivalRows(shipmentIndex, () => this.closeBulkUpdateModal());
+  }
+
+
   /** Transportation date/time for a container, pulled from Milestone 4 (transportationBooked). */
   getTransportationInfo(shipmentIndex: number, containerSerialNo: string): { date: Date | null; time: string } {
     const actual = this.getActualRow(shipmentIndex);
@@ -1157,7 +1203,7 @@ export class ShipmentStorageComponent {
    * POINT 13: Save all arrival rows for a shipment at once (global save).
    * Single-row save is preserved alongside this.
    */
-  async saveAllArrivalRows(shipmentIndex: number): Promise<void> {
+  async saveAllArrivalRows(shipmentIndex: number, onSuccess?: () => void): Promise<void> {
     if (this.isStorageArrivalLocked(shipmentIndex)) return;
     if (!this.isTransportationArranged(shipmentIndex)) {
       this.notificationService.warn(
@@ -1276,6 +1322,7 @@ export class ShipmentStorageComponent {
         this.saveAllProgress.set(null);
         this.notificationService.success('All Saved', `${containers.length} storage arrival row(s) saved successfully.`);
         this.store.dispatch(ShipmentActions.submitClearanceFinalSuccess({ index: shipmentIndex }));
+        onSuccess?.();
       },
       error: (error) => {
         this.savingAllRows.set(false);

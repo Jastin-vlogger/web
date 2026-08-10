@@ -92,7 +92,11 @@ export class ShipmentFormComponent implements OnDestroy {
 
   // Point 5: deep-link target from the Shipments list "Track" action.
   readonly focusShipmentIndex = signal<number | null>(null);
-  private readonly pendingBlFocus = signal(false);
+  // Sub-tab inside BL Details to focus (e.g. 'cost' for Clearing Advance, 'payment_costing' for
+  // Payment Costing) — set alongside focusShipmentIndex by dashboard drill-down deep-links.
+  readonly focusSubTab = signal<'cost' | 'storage' | 'packaging' | 'payment_allocation' | 'payment_costing' | null>(null);
+  // tabKey of the tracker step to jump to on load (e.g. 'bl_details', 'document_tracker').
+  private readonly pendingTabKey = signal<string | null>(null);
 
   // Signals from store
   readonly loading = toSignal(this.store.select(selectShipmentLoading), { initialValue: false });
@@ -277,29 +281,33 @@ export class ShipmentFormComponent implements OnDestroy {
       }
     });
 
-    // Point 5: "Track" deep-link — open BL Details on a specific shipment row.
+    // Point 5: "Track" deep-link — open a specific tracker step (and BL Details row/sub-tab) on load.
     this.route.queryParams.subscribe((qp) => {
       const idxRaw = qp['shipmentIndex'];
       const idx = idxRaw != null && idxRaw !== '' ? Number(idxRaw) : null;
       if (idx != null && Number.isInteger(idx) && idx >= 0) {
         this.focusShipmentIndex.set(idx);
       }
-      if (qp['tab'] === 'bl_details') {
-        this.pendingBlFocus.set(true);
+      if (qp['subTab']) {
+        this.focusSubTab.set(qp['subTab']);
+      }
+      if (qp['tab']) {
+        this.pendingTabKey.set(qp['tab']);
       }
     });
 
-    // Once the tracker steps are available, jump to BL Details for the deep-link.
+    // Once the tracker steps are available, jump to the requested step for the deep-link.
     effect(() => {
-      if (!this.pendingBlFocus()) return;
+      const tabKey = this.pendingTabKey();
+      if (!tabKey) return;
       const visibleSteps = this.accessibleTrackerSteps();
       if (!visibleSteps.length) return;
-      const blStep = this.trackerStepConfigs().find((step) => step.tabKey === 'bl_details');
-      if (!blStep) return;
-      if (visibleSteps.some((step) => step.index === blStep.index)) {
-        this.store.dispatch(ShipmentActions.setCurrentStep({ step: blStep.index }));
+      const targetStep = this.trackerStepConfigs().find((step) => step.tabKey === tabKey);
+      if (!targetStep) return;
+      if (visibleSteps.some((step) => step.index === targetStep.index)) {
+        this.store.dispatch(ShipmentActions.setCurrentStep({ step: targetStep.index }));
       }
-      this.pendingBlFocus.set(false);
+      this.pendingTabKey.set(null);
     });
   }
 
