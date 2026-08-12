@@ -323,7 +323,21 @@ export interface DashboardChartData {
   valueMapping: ChartMappingRow[];
   yearlyQtyMapping: ChartMappingRow[];
   supplierAvgFc: ChartMappingRow[];
+  supplierAvgFcByPo: ChartMappingRow[];
   supplierYearlyQty: ChartMappingRow[];
+}
+
+export interface DashboardShipmentMovementEntry {
+  _id: string;
+  containerId: string;
+  shipmentNo: string;
+  shipmentIndex: number | null;
+  commercialInvoiceNo: string | null;
+}
+
+export interface DashboardShipmentMovement {
+  atPort: DashboardShipmentMovementEntry[];
+  onTransit: DashboardShipmentMovementEntry[];
 }
 
 export interface DashboardStatusPivotRow {
@@ -389,6 +403,8 @@ export interface DashboardSummaryResponse {
   fasDashboard?: any;
   warehouseDashboard?: WarehouseDashboard;
   storekeeperDashboard?: StorekeeperDashboard;
+  poNumbers?: string[];
+  shipmentMovement?: DashboardShipmentMovement;
 }
 
 export interface DashboardPendingCompletedTile {

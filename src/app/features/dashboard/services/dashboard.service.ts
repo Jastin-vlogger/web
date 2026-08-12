@@ -81,7 +81,9 @@ export class DashboardService {
         logisticsPendingCompletedDashboard: Array.isArray(response?.logisticsPendingCompletedDashboard) ? response.logisticsPendingCompletedDashboard : [],
         fasDashboard: response?.fasDashboard,
         warehouseDashboard: response?.warehouseDashboard,
-        storekeeperDashboard: response?.storekeeperDashboard
+        storekeeperDashboard: response?.storekeeperDashboard,
+        poNumbers: Array.isArray(response?.poNumbers) ? response.poNumbers : [],
+        shipmentMovement: response?.shipmentMovement
       };
   }
 

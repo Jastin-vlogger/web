@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration, ChartData } from 'chart.js';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
   DashboardArrivalSummary,
   DashboardMonthlyTrend,
@@ -15,6 +17,7 @@ import {
 } from '../../core/models/shipment.model';
 import { DashboardService } from './services/dashboard.service';
 import { RbacService } from '../../core/services/rbac.service';
+import { ShipmentService } from '../../core/services/shipment.service';
 import { getShipmentStatusSeverity } from '../shipment/components/shipment-form/shared/shipment-status';
 
 @Component({
@@ -27,6 +30,7 @@ import { getShipmentStatusSeverity } from '../shipment/components/shipment-form/
 export class DashboardComponent implements OnInit {
   private dashboardService = inject(DashboardService);
   private rbacService = inject(RbacService);
+  private shipmentService = inject(ShipmentService);
 
   dashboard = signal<DashboardSummaryResponse | null>(null);
   loading = signal(true);
@@ -261,6 +265,11 @@ export class DashboardComponent implements OnInit {
       })
       .filter((row): row is NonNullable<typeof row> => row !== null);
   });
+
+  // "Shipment Movement Tracker" card: real per-container shipments currently at the port or
+  // on transit (shipment no + commercial invoice no), from the dashboard's own shipmentMovement
+  // field — not derived from the Status Snapshot aggregate counts.
+  readonly shipmentMovement = computed(() => this.dashboard()?.shipmentMovement ?? { atPort: [], onTransit: [] });
 
   readonly inventoryRows = computed(() => {
     const inventory = this.dashboard()?.shippingStatus?.inventory ?? [];
@@ -709,6 +718,252 @@ export class DashboardComponent implements OnInit {
 
     return { labels, datasets };
   });
+
+  // PO-wise "Average FC per Unit" — same chart shape as comparisonChartConfig above, but rows
+  // are PO numbers instead of items (pre-aggregated server-side across ALL POs at once — no
+  // dropdown/selection needed, every PO's bar renders directly with its PO number as the axis
+  // label underneath, same as any other bar chart).
+  readonly poAvgFcChartConfig = computed<ChartData<'bar'>>(() => {
+    const matrix = this.dashboard()?.chartData?.supplierAvgFcByPo ?? [];
+    if (!matrix.length) return { labels: [], datasets: [] };
+
+    const labels = matrix.map((row: any) => row.rowLabel);
+    const columnsSet = new Set<string>();
+    matrix.forEach((row: any) => {
+      Object.keys(row).forEach(k => {
+        if (k !== 'rowLabel') columnsSet.add(k);
+      });
+    });
+
+    const columns = Array.from(columnsSet);
+    const colors = ['#f59e0b', '#3b82f6', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4'];
+
+    const datasets = columns.map((col, index) => ({
+      data: matrix.map((row: any) => Number(row[col]) || 0),
+      label: col,
+      backgroundColor: colors[index % colors.length]
+    }));
+
+    return { labels, datasets };
+  });
+
+  // ===== Point 7: per-chart Excel/PDF export =====
+  readonly EXPORTABLE_CHARTS: { key: string; label: string }[] = [
+    { key: 'statusSnapshot', label: 'Status Snapshot' },
+    { key: 'documentsReceived', label: 'Documents Received By' },
+    { key: 'shipmentMovement', label: 'Shipment Movement Tracker' },
+    { key: 'provider', label: 'Provider' },
+    { key: 'statusPivotSupplier', label: 'Shipment Status as of the date' },
+    { key: 'statusPivotItem', label: 'Shipment Status as of the date - By Item' },
+    { key: 'dynamicMetrics', label: 'Dynamic Metrics Explorer' },
+    { key: 'avgFcSupplier', label: 'Average FC per Unit by Supplier' },
+    { key: 'avgFcPoWise', label: 'Average FC per Unit by Supplier - PO Wise' },
+    { key: 'storekeeperSummary', label: 'Storekeeper Dashboard' },
+    { key: 'warehouseSummary', label: 'Warehouse Manager Dashboard' },
+  ];
+
+  readonly exportModalVisible = signal(false);
+  readonly selectedExportChartKey = signal<string>('');
+  readonly selectedExportFormat = signal<'excel' | 'pdf'>('excel');
+  readonly exportingChart = signal(false);
+  readonly exportError = signal<string>('');
+
+  openExportModal(): void {
+    this.selectedExportChartKey.set('');
+    this.selectedExportFormat.set('excel');
+    this.exportError.set('');
+    this.exportModalVisible.set(true);
+  }
+
+  closeExportModal(): void {
+    if (this.exportingChart()) return;
+    this.exportModalVisible.set(false);
+  }
+
+  private numOrEmpty(value: unknown): string | number {
+    return typeof value === 'number' ? value : (value ?? '') as string;
+  }
+
+  private buildMatrixExportPayload(
+    title: string,
+    matrix: any[],
+    firstColumnLabel: string
+  ): { title: string; columns: string[]; rows: (string | number)[][] } | null {
+    if (!matrix || !matrix.length) return null;
+    const columnsSet = new Set<string>();
+    matrix.forEach((row) => Object.keys(row).forEach((k) => { if (k !== 'rowLabel') columnsSet.add(k); }));
+    const columns = Array.from(columnsSet);
+    return {
+      title,
+      columns: [firstColumnLabel, ...columns],
+      rows: matrix.map((row) => [row.rowLabel, ...columns.map((c) => this.numOrEmpty(row[c]))]),
+    };
+  }
+
+  private getExportPayload(chartKey: string): { title: string; columns: string[]; rows: (string | number)[][] } | null {
+    switch (chartKey) {
+      case 'statusSnapshot': {
+        const rows = this.statusSnapshotRows();
+        if (!rows.length) return null;
+        return {
+          title: 'Status Snapshot',
+          columns: ['Status', 'Numbers', 'FCL', 'MT'],
+          rows: rows.map((r) => [r.label, r.quantity, r.fcl, r.mt]),
+        };
+      }
+      case 'documentsReceived': {
+        const d = this.dashboard()?.fasDashboard?.receiverType;
+        if (!d) return null;
+        return {
+          title: 'Documents Received By',
+          columns: ['Type', 'Count'],
+          rows: [['Bank', d.bank ?? 0], ['Direct', d.direct ?? 0]],
+        };
+      }
+      case 'shipmentMovement': {
+        const movement = this.shipmentMovement();
+        const rows = [
+          ...movement.atPort.map((s) => ['At the Port', s.shipmentNo, s.commercialInvoiceNo ?? '']),
+          ...movement.onTransit.map((s) => ['On Transit', s.shipmentNo, s.commercialInvoiceNo ?? '']),
+        ];
+        if (!rows.length) return null;
+        return {
+          title: 'Shipment Movement Tracker',
+          columns: ['Status', 'Shipment No.', 'Commercial Invoice No.'],
+          rows,
+        };
+      }
+      case 'provider': {
+        const providers: Array<{ label: string; value: number }> = this.dashboard()?.fasDashboard?.providerWise || [];
+        if (!providers.length) return null;
+        return {
+          title: 'Provider',
+          columns: ['Provider', 'Count'],
+          rows: providers.map((p) => [p.label, p.value]),
+        };
+      }
+      case 'statusPivotSupplier': {
+        const pivot = this.statusPivot();
+        if (!pivot || !pivot.rows?.length) return null;
+        return {
+          title: 'Shipment Status as of the date',
+          columns: [pivot.rowLabel || 'Supplier', ...pivot.columns, 'Grand Total'],
+          rows: pivot.rows.map((r) => [r.supplier, ...pivot.columns.map((c) => r.values[c] ?? 0), r.grandTotal]),
+        };
+      }
+      case 'statusPivotItem': {
+        const pivot = this.statusPivotByItem();
+        if (!pivot || !pivot.rows?.length) return null;
+        return {
+          title: 'Shipment Status as of the date - By Item',
+          columns: [pivot.rowLabel || 'Item', ...pivot.columns, 'Grand Total'],
+          rows: pivot.rows.map((r) => [r.supplier, ...pivot.columns.map((c) => r.values[c] ?? 0), r.grandTotal]),
+        };
+      }
+      case 'dynamicMetrics': {
+        const type = this.selectedChartType();
+        const matrix: any[] = (this.dashboard()?.chartData as any)?.[type] || [];
+        return this.buildMatrixExportPayload(`Dynamic Metrics Explorer (${type})`, matrix, 'Item');
+      }
+      case 'avgFcSupplier': {
+        const matrix = this.dashboard()?.chartData?.supplierAvgFc || [];
+        return this.buildMatrixExportPayload('Average FC per Unit by Supplier', matrix, 'Item');
+      }
+      case 'avgFcPoWise': {
+        const matrix = this.dashboard()?.chartData?.supplierAvgFcByPo || [];
+        return this.buildMatrixExportPayload('Average FC per Unit by Supplier - PO Wise', matrix, 'PO Number');
+      }
+      case 'storekeeperSummary': {
+        const rows = this.storekeeperDashboard()?.byWarehouse || [];
+        if (!rows.length) return null;
+        return {
+          title: 'Storekeeper Dashboard',
+          columns: ['Warehouse', 'Total Assigned (FCL)', 'Received (FCL)', 'Pending Receiving (FCL)', 'Progress %'],
+          rows: rows.map((r: any) => [r.warehouse, r.allocated, r.received, r.pendingReceiving, r.progress]),
+        };
+      }
+      case 'warehouseSummary': {
+        const rows = this.warehouseDashboard()?.byWarehouse || [];
+        if (!rows.length) return null;
+        return {
+          title: 'Warehouse Manager Dashboard',
+          columns: ['Warehouse', 'Allocated (FCL)', 'Received (FCL)', 'Pending (FCL)', 'Progress %'],
+          rows: rows.map((r: any) => [r.warehouse, r.allocated, r.received, r.pendingReceiving, r.progress]),
+        };
+      }
+      default:
+        return null;
+    }
+  }
+
+  confirmExport(): void {
+    const chartKey = this.selectedExportChartKey();
+    if (!chartKey) {
+      this.exportError.set('Select a chart to export.');
+      return;
+    }
+    const payload = this.getExportPayload(chartKey);
+    if (!payload) {
+      this.exportError.set('No data available to export for this chart.');
+      return;
+    }
+    this.exportError.set('');
+
+    if (this.selectedExportFormat() === 'pdf') {
+      this.exportPayloadToPdf(payload);
+      this.closeExportModal();
+      return;
+    }
+
+    this.exportingChart.set(true);
+    this.shipmentService.exportDashboardChartExcel(payload).subscribe({
+      next: (blob) => {
+        this.exportingChart.set(false);
+        this.downloadBlob(blob, `${payload.title.replace(/[^a-z0-9_-]/gi, '_')}.xlsx`);
+        this.closeExportModal();
+      },
+      error: () => {
+        this.exportingChart.set(false);
+        this.exportError.set('Export failed. Please try again.');
+      }
+    });
+  }
+
+  private exportPayloadToPdf(payload: { title: string; columns: string[]; rows: (string | number)[][] }): void {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('Royal Horizon Group', 28, 24);
+    doc.setFontSize(10);
+    doc.text(payload.title, 28, 38);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(80);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 28, 50);
+    doc.setTextColor(0);
+
+    autoTable(doc, {
+      startY: 58,
+      head: [payload.columns],
+      body: payload.rows,
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 4 },
+      headStyles: { fillColor: [226, 232, 240], textColor: [51, 65, 85], fontStyle: 'bold' },
+    });
+
+    doc.save(`${payload.title.replace(/[^a-z0-9_-]/gi, '_')}.pdf`);
+  }
+
+  private downloadBlob(blob: Blob, filename: string): void {
+    const url = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.URL.revokeObjectURL(url);
+  }
 
   ngOnInit(): void {
     this.dashboardService.getSummary().subscribe({

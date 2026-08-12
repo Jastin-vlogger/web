@@ -273,6 +273,10 @@ export class ShipmentService {
     return this.http.get<DashboardSummaryResponse>(`${this.apiUrl}/dashboard`);
   }
 
+  exportDashboardChartExcel(payload: { title: string; columns: string[]; rows: (string | number)[][] }): Observable<Blob> {
+    return this.http.post(`${this.apiUrl}/dashboard/export-chart`, payload, { responseType: 'blob' });
+  }
+
   private buildReportParams(options: ShipmentReportExportOptions | ShipmentReportFilters = {}): HttpParams {
     const maybeOptions = options as ShipmentReportExportOptions;
     const filters = maybeOptions.filters ?? (options as ShipmentReportFilters);
