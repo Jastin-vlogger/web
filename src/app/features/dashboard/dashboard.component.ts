@@ -1,8 +1,8 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { BaseChartDirective } from 'ng2-charts';
-import { ChartConfiguration, ChartData } from 'chart.js';
+import { Chart, ChartConfiguration, ChartData } from 'chart.js';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
@@ -762,22 +762,34 @@ export class DashboardComponent implements OnInit {
     { key: 'warehouseSummary', label: 'Warehouse Manager Dashboard' },
   ];
 
-  readonly exportModalVisible = signal(false);
-  readonly selectedExportChartKey = signal<string>('');
-  readonly selectedExportFormat = signal<'excel' | 'pdf'>('excel');
-  readonly exportingChart = signal(false);
+  // Canvas element id for each chart-bearing card (matches [id]="'chart-' + key" set on the
+  // <canvas baseChart> in the template) — used to grab the LIVE rendered chart at export time via
+  // Chart.getChart(), so export reproduces the same graphic the user sees, not just its numbers.
+  // Cards not listed here have no canvas (Status Snapshot etc. are plain tables) — export falls
+  // back to their table data alone.
+  private readonly CHART_CANVAS_KEYS = new Set([
+    'documentsReceived', 'provider', 'statusPivotSupplier', 'statusPivotItem',
+    'dynamicMetrics', 'avgFcSupplier', 'avgFcPoWise',
+  ]);
+
+  readonly openExportMenuKey = signal<string>('');
+  readonly exportingChartKey = signal<string>('');
   readonly exportError = signal<string>('');
 
-  openExportModal(): void {
-    this.selectedExportChartKey.set('');
-    this.selectedExportFormat.set('excel');
-    this.exportError.set('');
-    this.exportModalVisible.set(true);
+  toggleExportMenu(key: string): void {
+    this.openExportMenuKey.set(this.openExportMenuKey() === key ? '' : key);
   }
 
-  closeExportModal(): void {
-    if (this.exportingChart()) return;
-    this.exportModalVisible.set(false);
+  @HostListener('document:click')
+  closeExportMenus(): void {
+    this.openExportMenuKey.set('');
+  }
+
+  private getChartImage(key: string): string | null {
+    if (!this.CHART_CANVAS_KEYS.has(key)) return null;
+    const canvas = document.getElementById(`chart-${key}`) as HTMLCanvasElement | null;
+    const chart = canvas ? Chart.getChart(canvas) : undefined;
+    return chart ? chart.toBase64Image() : null;
   }
 
   private numOrEmpty(value: unknown): string | number {
@@ -896,62 +908,76 @@ export class DashboardComponent implements OnInit {
     }
   }
 
-  confirmExport(): void {
-    const chartKey = this.selectedExportChartKey();
-    if (!chartKey) {
-      this.exportError.set('Select a chart to export.');
-      return;
-    }
-    const payload = this.getExportPayload(chartKey);
-    if (!payload) {
-      this.exportError.set('No data available to export for this chart.');
-      return;
-    }
-    this.exportError.set('');
+  // Per-card export: click the card's own download icon → pick Excel or PDF from the small
+  // menu that opens right there. Chart-bearing cards export the ACTUAL rendered chart image
+  // (same graphic on screen) via getChartImage(); table-only cards fall back to their data.
+  exportCard(key: string, format: 'excel' | 'pdf'): void {
+    this.openExportMenuKey.set('');
+    const payload = this.getExportPayload(key);
+    const imageBase64 = this.getChartImage(key);
+    if (!payload && !imageBase64) return;
 
-    if (this.selectedExportFormat() === 'pdf') {
-      this.exportPayloadToPdf(payload);
-      this.closeExportModal();
+    const title = payload?.title ?? this.EXPORTABLE_CHARTS.find((c) => c.key === key)?.label ?? key;
+    const filenameBase = title.replace(/[^a-z0-9_-]/gi, '_');
+
+    if (format === 'pdf') {
+      this.exportToPdf(title, payload, imageBase64);
       return;
     }
 
-    this.exportingChart.set(true);
-    this.shipmentService.exportDashboardChartExcel(payload).subscribe({
-      next: (blob) => {
-        this.exportingChart.set(false);
-        this.downloadBlob(blob, `${payload.title.replace(/[^a-z0-9_-]/gi, '_')}.xlsx`);
-        this.closeExportModal();
-      },
-      error: () => {
-        this.exportingChart.set(false);
-        this.exportError.set('Export failed. Please try again.');
-      }
-    });
+    this.exportingChartKey.set(key);
+    this.shipmentService
+      .exportDashboardChartExcel({ title, columns: payload?.columns, rows: payload?.rows, imageBase64: imageBase64 ?? undefined })
+      .subscribe({
+        next: (blob) => {
+          this.exportingChartKey.set('');
+          this.downloadBlob(blob, `${filenameBase}.xlsx`);
+        },
+        error: () => {
+          this.exportingChartKey.set('');
+          this.exportError.set(`Export failed for ${title}.`);
+        }
+      });
   }
 
-  private exportPayloadToPdf(payload: { title: string; columns: string[]; rows: (string | number)[][] }): void {
+  private exportToPdf(
+    title: string,
+    payload: { columns: string[]; rows: (string | number)[][] } | null,
+    imageBase64: string | null
+  ): void {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.text('Royal Horizon Group', 28, 24);
     doc.setFontSize(10);
-    doc.text(payload.title, 28, 38);
+    doc.text(title, 28, 38);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(80);
     doc.text(`Generated: ${new Date().toLocaleString()}`, 28, 50);
     doc.setTextColor(0);
 
-    autoTable(doc, {
-      startY: 58,
-      head: [payload.columns],
-      body: payload.rows,
-      theme: 'grid',
-      styles: { fontSize: 8, cellPadding: 4 },
-      headStyles: { fillColor: [226, 232, 240], textColor: [51, 65, 85], fontStyle: 'bold' },
-    });
+    let nextY = 58;
+    if (imageBase64) {
+      // Same chart the user sees — embedded as-is, sized to fit the page width.
+      const imgWidth = 540;
+      const imgHeight = 300;
+      doc.addImage(imageBase64, 'PNG', 28, nextY, imgWidth, imgHeight);
+      nextY += imgHeight + 16;
+    }
 
-    doc.save(`${payload.title.replace(/[^a-z0-9_-]/gi, '_')}.pdf`);
+    if (payload && payload.rows.length) {
+      autoTable(doc, {
+        startY: nextY,
+        head: [payload.columns],
+        body: payload.rows,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 4 },
+        headStyles: { fillColor: [226, 232, 240], textColor: [51, 65, 85], fontStyle: 'bold' },
+      });
+    }
+
+    doc.save(`${title.replace(/[^a-z0-9_-]/gi, '_')}.pdf`);
   }
 
   private downloadBlob(blob: Blob, filename: string): void {

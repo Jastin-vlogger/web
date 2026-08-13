@@ -19,10 +19,6 @@
                 <h1 class="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">Dashboard</h1>
             </div>
             <div class="flex flex-col gap-3 sm:flex-row">
-                <button type="button" (click)="openExportModal()" class="sl-cta secondary">
-                    <i class="pi pi-download"></i>
-                    <span>Export</span>
-                </button>
                 <a routerLink="/shipments" class="sl-cta secondary">
                     <i class="pi pi-table"></i>
                     <span>Open Orders</span>
@@ -43,7 +39,10 @@
             @if (canViewDashboardSection('dashboard.section.status_snapshot.view')) {
                 <article class="status-panel border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm"
                     [ngClass]="canViewDashboardSection('dashboard.section.fas_chart.view') ? 'xl:col-span-2' : 'xl:col-span-4'">
-                    <div class="status-panel-title bg-slate-50/50 py-3 px-6 border-b border-slate-100 font-bold text-slate-700">Status Snapshot</div>
+                    <div class="status-panel-title flex items-center justify-between bg-slate-50/50 py-3 px-6 border-b border-slate-100 font-bold text-slate-700">
+                        <span>Status Snapshot</span>
+                        <ng-container *ngTemplateOutlet="exportMenu; context: {key: 'statusSnapshot'}"></ng-container>
+                    </div>
                     <div class="p-3 flex-1 overflow-x-auto">
                         <table class="w-full h-full border-collapse">
                             <thead>
@@ -92,9 +91,12 @@
                 [ngClass]="canViewDashboardSection('dashboard.section.status_snapshot.view') ? 'xl:col-span-2' : 'xl:col-span-4'">
                 <!-- Documents by Receiver Type -->
                 <article class="sl-panel flex flex-col gap-4 p-5 bg-white border border-slate-200 rounded-xl shadow-sm">
-                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Documents Received By</h4>
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Documents Received By</h4>
+                        <ng-container *ngTemplateOutlet="exportMenu; context: {key: 'documentsReceived'}"></ng-container>
+                    </div>
                     <div class="relative h-36 flex items-center justify-center">
-                        <canvas baseChart [data]="fasReceiverTypeChartConfig()" [options]="doughnutChartOptions" [type]="'doughnut'"></canvas>
+                        <canvas id="chart-documentsReceived" baseChart [data]="fasReceiverTypeChartConfig()" [options]="doughnutChartOptions" [type]="'doughnut'"></canvas>
                         <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                             <span class="text-xl font-black text-slate-800">{{ dashboard()?.fasDashboard?.receiverType?.total ?? 0 }}</span>
                             <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total</span>
@@ -117,7 +119,10 @@
                 @let movement = shipmentMovement();
                 @if (movement.atPort.length > 0 || movement.onTransit.length > 0) {
                 <article class="sl-panel flex flex-col gap-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Shipment Movement Tracker</h4>
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Shipment Movement Tracker</h4>
+                        <ng-container *ngTemplateOutlet="exportMenu; context: {key: 'shipmentMovement'}"></ng-container>
+                    </div>
                     <div class="flex flex-col gap-3 max-h-80 overflow-y-auto pr-1">
                         @if (movement.atPort.length > 0) {
                             <div class="flex flex-col gap-1.5">
@@ -146,9 +151,12 @@
                 }
                 <!-- Provider Wise Documents -->
                 <article class="sl-panel flex flex-col gap-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Provider</h4>
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Provider</h4>
+                        <ng-container *ngTemplateOutlet="exportMenu; context: {key: 'provider'}"></ng-container>
+                    </div>
                     <div class="relative w-full" [style.height.px]="providerChartHeight()">
-                        <canvas baseChart [data]="fasProviderWiseChartConfig()" [options]="horizontalBarChartOptions" [type]="'bar'"></canvas>
+                        <canvas id="chart-provider" baseChart [data]="fasProviderWiseChartConfig()" [options]="horizontalBarChartOptions" [type]="'bar'"></canvas>
                     </div>
                 </article>
             </div>
@@ -166,12 +174,15 @@
                             <h3 class="font-bold text-slate-800 text-lg">Shipment Status as of the date</h3>
                             <p class="text-sm font-semibold text-slate-500">{{ pivot.valueLabel }}</p>
                         </div>
-                        <span class="rounded-full bg-amber-100 px-4 py-2 text-sm font-black text-amber-900">{{ pivot.asOfDate | date:'dd/MM/yyyy' }}</span>
+                        <div class="flex items-center gap-3">
+                            <span class="rounded-full bg-amber-100 px-4 py-2 text-sm font-black text-amber-900">{{ pivot.asOfDate | date:'dd/MM/yyyy' }}</span>
+                            <ng-container *ngTemplateOutlet="exportMenu; context: {key: 'statusPivotSupplier'}"></ng-container>
+                        </div>
                     </div>
 
                     @if (statusPivotChartConfig().labels?.length) {
                         <div class="relative min-h-[360px] w-full flex-1">
-                            <canvas baseChart [data]="statusPivotChartConfig()" [options]="statusPivotChartOptions" [type]="'bar'"></canvas>
+                            <canvas id="chart-statusPivotSupplier" baseChart [data]="statusPivotChartConfig()" [options]="statusPivotChartOptions" [type]="'bar'"></canvas>
                         </div>
                         <div class="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
                             @for (column of pivot.columns; track column) {
@@ -205,12 +216,15 @@
                         <h3 class="font-bold text-slate-800 text-lg">Shipment Status as of the date - By Item</h3>
                         <p class="text-sm font-semibold text-slate-500">{{ pivot.valueLabel }}</p>
                     </div>
-                    <span class="rounded-full bg-amber-100 px-4 py-2 text-sm font-black text-amber-900">{{ pivot.asOfDate | date:'dd/MM/yyyy' }}</span>
+                    <div class="flex items-center gap-3">
+                        <span class="rounded-full bg-amber-100 px-4 py-2 text-sm font-black text-amber-900">{{ pivot.asOfDate | date:'dd/MM/yyyy' }}</span>
+                        <ng-container *ngTemplateOutlet="exportMenu; context: {key: 'statusPivotItem'}"></ng-container>
+                    </div>
                 </div>
 
                 @if (statusPivotByItemChartConfig().labels?.length) {
                     <div class="relative min-h-[420px] w-full flex-1">
-                        <canvas baseChart [data]="statusPivotByItemChartConfig()" [options]="statusPivotChartOptions" [type]="'bar'"></canvas>
+                        <canvas id="chart-statusPivotItem" baseChart [data]="statusPivotByItemChartConfig()" [options]="statusPivotChartOptions" [type]="'bar'"></canvas>
                     </div>
                 } @else {
                     <div class="flex h-[320px] items-center justify-center text-slate-400">No item status data available.</div>
@@ -236,12 +250,13 @@
                         <option value="supplierAvgFc">Average FC per Unit (by Supplier)</option>
                         <option value="supplierYearlyQty">Supplier Quantity (Yearly)</option>
                     </select>
+                    <ng-container *ngTemplateOutlet="exportMenu; context: {key: 'dynamicMetrics'}"></ng-container>
                 </div>
             </div>
 
             <div class="relative w-full min-h-[680px] h-[680px] flex-1">
                 @if (chartDataConfig().labels?.length) {
-                    <canvas baseChart [data]="chartDataConfig()" [options]="chartOptions" [type]="'bar'">
+                    <canvas id="chart-dynamicMetrics" baseChart [data]="chartDataConfig()" [options]="chartOptions" [type]="'bar'">
                     </canvas>
                 } @else {
                     <div class="absolute inset-0 flex items-center justify-center text-slate-400">
@@ -255,10 +270,13 @@
         @if (canViewDashboardSection('dashboard.section.average_fc.view')) {
         <!-- New Average FC per Unit Comparison Chart -->
         <section class="sl-panel p-6 bg-white border-slate-200 rounded-xl shadow-sm mb-6">
-            <h3 class="font-bold text-slate-800 text-lg mb-6">Average FC per Unit by Supplier</h3>
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="font-bold text-slate-800 text-lg">Average FC per Unit by Supplier</h3>
+                <ng-container *ngTemplateOutlet="exportMenu; context: {key: 'avgFcSupplier'}"></ng-container>
+            </div>
             <div class="relative w-full h-[400px]">
                 @if (comparisonChartConfig().labels?.length) {
-                    <canvas baseChart [data]="comparisonChartConfig()" [options]="chartOptions" [type]="'bar'">
+                    <canvas id="chart-avgFcSupplier" baseChart [data]="comparisonChartConfig()" [options]="chartOptions" [type]="'bar'">
                     </canvas>
                 } @else {
                     <div class="absolute inset-0 flex items-center justify-center text-slate-400">
@@ -273,10 +291,13 @@
         <!-- PO-wise Average FC per Unit: every PO's bar rendered directly, no dropdown — PO
              number is each bar group's own axis label underneath, same as any bar chart. -->
         <section class="sl-panel p-6 bg-white border-slate-200 rounded-xl shadow-sm mb-6">
-            <h3 class="font-bold text-slate-800 text-lg mb-6">Average FC per Unit by Supplier — PO Wise</h3>
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="font-bold text-slate-800 text-lg">Average FC per Unit by Supplier — PO Wise</h3>
+                <ng-container *ngTemplateOutlet="exportMenu; context: {key: 'avgFcPoWise'}"></ng-container>
+            </div>
             <div class="relative w-full h-[400px]">
                 @if (poAvgFcChartConfig().labels?.length) {
-                    <canvas baseChart [data]="poAvgFcChartConfig()" [options]="chartOptions" [type]="'bar'">
+                    <canvas id="chart-avgFcPoWise" baseChart [data]="poAvgFcChartConfig()" [options]="chartOptions" [type]="'bar'">
                     </canvas>
                 } @else {
                     <div class="absolute inset-0 flex items-center justify-center text-slate-400">
@@ -435,59 +456,28 @@
         </section>
         } -->
 
-        <!-- Point 7: Export chart modal -->
-        @if (exportModalVisible()) {
-            <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" (click)="closeExportModal()">
-                <div class="w-full max-w-md flex flex-col bg-white rounded-2xl shadow-xl overflow-hidden" (click)="$event.stopPropagation()">
-                    <div class="flex items-start justify-between gap-3 px-5 py-4 border-b border-slate-100">
-                        <h3 class="text-sm font-black text-slate-800">Export Dashboard Chart</h3>
-                        <button type="button" (click)="closeExportModal()" aria-label="Close"
-                            class="shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50">
-                            <i class="pi pi-times text-xs"></i>
-                        </button>
+        <!-- Point 7 (redesigned): per-card export — a small download icon on each card's own
+             header opens a 2-option Excel/PDF menu right there, instead of one global modal.
+             One shared template, instantiated per card via ngTemplateOutlet. -->
+        <ng-template #exportMenu let-key="key">
+            <div class="relative shrink-0">
+                <button type="button" (click)="toggleExportMenu(key); $event.stopPropagation()" title="Export"
+                    class="inline-flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-400 hover:text-blue-600 hover:bg-blue-50">
+                    <i class="pi pi-download text-[10px]"></i>
+                </button>
+                @if (openExportMenuKey() === key) {
+                    <div class="absolute right-0 top-7 z-30 w-28 rounded-lg border border-slate-200 bg-white shadow-lg py-1" (click)="$event.stopPropagation()">
+                        <button type="button" (click)="exportCard(key, 'excel')" [disabled]="exportingChartKey() === key"
+                            class="block w-full text-left px-3 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Excel</button>
+                        <button type="button" (click)="exportCard(key, 'pdf')" [disabled]="exportingChartKey() === key"
+                            class="block w-full text-left px-3 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">PDF</button>
                     </div>
-                    <div class="flex flex-col gap-4 px-5 py-4">
-                        <div class="flex flex-col gap-1.5">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Chart</label>
-                            <select class="sl-input py-2 pl-3 pr-8 text-sm w-full"
-                                [value]="selectedExportChartKey()"
-                                (change)="selectedExportChartKey.set($any($event.target).value)">
-                                <option value="">Select a chart...</option>
-                                @for (chart of EXPORTABLE_CHARTS; track chart.key) {
-                                    <option [value]="chart.key">{{ chart.label }}</option>
-                                }
-                            </select>
-                        </div>
-                        <div class="flex flex-col gap-1.5">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Format</label>
-                            <div class="flex gap-3">
-                                <label class="flex items-center gap-1.5 text-sm text-slate-600">
-                                    <input type="radio" name="exportFormat" value="excel" [checked]="selectedExportFormat() === 'excel'" (change)="selectedExportFormat.set('excel')" />
-                                    Excel
-                                </label>
-                                <label class="flex items-center gap-1.5 text-sm text-slate-600">
-                                    <input type="radio" name="exportFormat" value="pdf" [checked]="selectedExportFormat() === 'pdf'" (change)="selectedExportFormat.set('pdf')" />
-                                    PDF
-                                </label>
-                            </div>
-                        </div>
-                        @if (exportError()) {
-                            <p class="text-xs text-rose-600 font-semibold">{{ exportError() }}</p>
-                        }
-                    </div>
-                    <div class="flex gap-3 px-5 py-4 border-t border-slate-100">
-                        <button type="button" (click)="closeExportModal()" class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50">
-                            Cancel
-                        </button>
-                        <button type="button" (click)="confirmExport()" [disabled]="exportingChart()" class="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-600 hover:bg-emerald-100 disabled:opacity-50">
-                            @if (exportingChart()) {
-                                <i class="pi pi-spin pi-spinner text-sm"></i> Exporting...
-                            } @else {
-                                <i class="pi pi-check text-sm"></i> Confirm
-                            }
-                        </button>
-                    </div>
-                </div>
+                }
+            </div>
+        </ng-template>
+        @if (exportError()) {
+            <div class="fixed bottom-4 right-4 z-50 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-600 shadow-lg">
+                {{ exportError() }}
             </div>
         }
 
@@ -544,7 +534,10 @@
 
                 <!-- Allocation & Receiving Status doughnut -->
                 <article class="sl-panel flex flex-col gap-4 p-5 bg-white border border-slate-200 rounded-xl shadow-sm">
-                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Allocation &amp; Receiving Status</h4>
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Allocation &amp; Receiving Status</h4>
+                        <ng-container *ngTemplateOutlet="exportMenu; context: {key: 'storekeeperSummary'}"></ng-container>
+                    </div>
                     <div class="relative h-36 flex items-center justify-center">
                         <canvas baseChart [data]="storekeeperReceivingStatusChartConfig()" [options]="doughnutChartOptions" [type]="'doughnut'"></canvas>
                         <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -666,6 +659,7 @@
                 <div class="flex items-center justify-between">
                     <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Warehouse Allocation &amp; Receiving Status</h4>
                     <div class="flex items-center gap-3 text-[10px] font-bold text-slate-500">
+                        <ng-container *ngTemplateOutlet="exportMenu; context: {key: 'warehouseSummary'}"></ng-container>
                         <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-sm bg-emerald-500"></span>Received</span>
                         <span class="flex items-center gap-1"><span class="h-2 w-2 rounded-sm bg-amber-500"></span>Pending Receiving</span>
                     </div>

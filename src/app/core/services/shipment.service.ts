@@ -273,7 +273,12 @@ export class ShipmentService {
     return this.http.get<DashboardSummaryResponse>(`${this.apiUrl}/dashboard`);
   }
 
-  exportDashboardChartExcel(payload: { title: string; columns: string[]; rows: (string | number)[][] }): Observable<Blob> {
+  exportDashboardChartExcel(payload: {
+    title: string;
+    columns?: string[];
+    rows?: (string | number)[][];
+    imageBase64?: string;
+  }): Observable<Blob> {
     return this.http.post(`${this.apiUrl}/dashboard/export-chart`, payload, { responseType: 'blob' });
   }
 

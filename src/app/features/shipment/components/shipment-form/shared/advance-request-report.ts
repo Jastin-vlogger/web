@@ -14,6 +14,16 @@ export interface AdvanceRequestReportLineItem {
   paymentReference?: string;
 }
 
+export interface AdvanceRequestReportAdditionalItem {
+  sn: number | string;
+  title: string;
+  comment?: string;
+  amount: number | string;
+  status: string;
+  requestedAt?: string;
+  approvedAt?: string;
+}
+
 export interface AdvanceRequestReportConfig {
   fileStem: string;
   sourceLabel: string;
@@ -41,6 +51,7 @@ export interface AdvanceRequestReportConfig {
   preparedBy?: string;
   approvedBy?: string;
   lines: AdvanceRequestReportLineItem[];
+  additionalRequests?: AdvanceRequestReportAdditionalItem[];
 }
 
 function formatNumber(value: unknown, fallback = ''): string {
@@ -187,6 +198,72 @@ export function downloadAdvanceRequestReportPdf(config: AdvanceRequestReportConf
   });
 
   let y = (doc as any).lastAutoTable.finalY + 14;
+
+  if (config.additionalRequests?.length) {
+    if (y > pageHeight - 120) {
+      doc.addPage();
+      y = margin;
+    }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(0);
+    doc.text('ADDITIONAL REQUESTS', margin, y);
+    y += 6;
+
+    const additionalRows = config.additionalRequests.map((item) => [
+      String(item.sn),
+      safe(item.title),
+      safe(item.comment, ''),
+      formatNumber(item.amount, ''),
+      safe(item.status),
+      safe(item.requestedAt, ''),
+      safe(item.approvedAt, ''),
+    ]);
+    const additionalTotal = config.additionalRequests.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    additionalRows.push(['', 'TOTAL', '', formatNumber(additionalTotal), '', '', '']);
+
+    autoTable(doc, {
+      startY: y,
+      head: [['S. No.', 'Title', 'Comment', 'Amount', 'Status', 'Requested', 'Approved']],
+      body: additionalRows,
+      theme: 'grid',
+      styles: {
+        fontSize: 6.8,
+        cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
+        lineWidth: 0.2,
+        lineColor: [160, 160, 160],
+      },
+      headStyles: {
+        fillColor: [255, 255, 255],
+        textColor: 0,
+        fontStyle: 'bold',
+        fontSize: 6.8,
+        lineColor: [0, 0, 0],
+        lineWidth: 0.3,
+      },
+      columnStyles: {
+        0: { cellWidth: 34, halign: 'center' },
+        1: { cellWidth: 150 },
+        2: { cellWidth: 200 },
+        3: { cellWidth: 72, halign: 'right' },
+        4: { cellWidth: 90 },
+        5: { cellWidth: 80 },
+        6: { cellWidth: 'auto' },
+      },
+      didParseCell: (data: any) => {
+        if (data.row.index === additionalRows.length - 1) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [244, 244, 244];
+        }
+      },
+      margin: { left: margin, right: margin },
+      tableLineWidth: 0.4,
+      tableLineColor: [0, 0, 0],
+    });
+
+    y = (doc as any).lastAutoTable.finalY + 14;
+  }
+
   if (y > pageHeight - 78) {
     doc.addPage();
     y = margin;

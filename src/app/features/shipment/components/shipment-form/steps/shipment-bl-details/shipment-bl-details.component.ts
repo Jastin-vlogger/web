@@ -3125,6 +3125,15 @@ export class ShipmentBlDetailsComponent {
         paymentTerm: entry.get('paymentTerm')?.value ?? '',
         paymentReference: entry.get('remarks')?.value ?? '',
       })),
+      additionalRequests: this.getAdditionalClearingRequests(index).map((request, requestIndex) => ({
+        sn: requestIndex + 1,
+        title: request.title || 'Additional Request',
+        comment: request.comment || '',
+        amount: Number(request.requestAmount) || 0,
+        status: this.getAdditionalRequestStatusLabel(request),
+        requestedAt: this.formatDateTimeForDisplay(request.submittedAt),
+        approvedAt: request.approvedAt ? this.formatDateTimeForDisplay(request.approvedAt) : '',
+      })),
     });
   }
 

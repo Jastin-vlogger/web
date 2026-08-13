@@ -519,12 +519,12 @@
                               </div>
                               <div class="flex items-center gap-2 shrink-0">
                                 @if (request.attachmentDocumentUrl) {
-                                  <button type="button" (click)="openRemoteDocumentPreview(request.attachmentDocumentUrl, request.attachmentDocumentName || 'Additional Request Attachment')" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600">
+                                  <button type="button" (click)="openRemoteDocumentPreview(request.attachmentDocumentUrl, request.attachmentDocumentName || 'Additional Request Attachment')" class="rbac-allow-interaction inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600">
                                     <i class="pi pi-eye"></i>
                                   </button>
                                 }
                                 @if (canApproveAdditionalClearingRequest(request)) {
-                                  <button type="button" (click)="approveAdditionalClearingRequest(i, request)" [disabled]="isSaving(i, 'cost')" class="inline-flex h-9 items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 text-[10px] font-black uppercase text-violet-700 hover:bg-violet-100 disabled:opacity-50">
+                                  <button type="button" (click)="approveAdditionalClearingRequest(i, request)" [disabled]="isSaving(i, 'cost')" class="rbac-allow-interaction inline-flex h-9 items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 text-[10px] font-black uppercase text-violet-700 hover:bg-violet-100 disabled:opacity-50">
                                     <i class="pi pi-check-circle text-[10px]"></i>
                                     Approve
                                   </button>
