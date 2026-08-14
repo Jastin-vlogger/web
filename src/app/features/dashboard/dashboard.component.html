@@ -85,37 +85,13 @@
                 </article>
             }
 
-            <!-- FAS right rail: Documents by Receiver Type, Provider Wise, Pending cards -->
+            <!-- FAS right rail: Shipment Movement Tracker only (Documents Received By / Provider moved above FAS Dashboard) -->
             @if (canViewDashboardSection('dashboard.section.fas_chart.view')) {
             <div class="flex flex-col gap-6"
                 [ngClass]="canViewDashboardSection('dashboard.section.status_snapshot.view') ? 'xl:col-span-2' : 'xl:col-span-4'">
-                <!-- Documents by Receiver Type -->
-                <article class="sl-panel flex flex-col gap-4 p-5 bg-white border border-slate-200 rounded-xl shadow-sm">
-                    <div class="flex items-center justify-between">
-                        <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Documents Received By</h4>
-                        <ng-container *ngTemplateOutlet="exportMenu; context: {key: 'documentsReceived'}"></ng-container>
-                    </div>
-                    <div class="relative h-36 flex items-center justify-center">
-                        <canvas id="chart-documentsReceived" baseChart [data]="fasReceiverTypeChartConfig()" [options]="doughnutChartOptions" [type]="'doughnut'"></canvas>
-                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span class="text-xl font-black text-slate-800">{{ dashboard()?.fasDashboard?.receiverType?.total ?? 0 }}</span>
-                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total</span>
-                        </div>
-                    </div>
-                    <div class="flex flex-col gap-1.5 mt-2">
-                        <div class="flex items-center justify-between text-xs text-slate-600">
-                            <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>Bank</span>
-                            <span class="font-bold text-slate-800">{{ dashboard()?.fasDashboard?.receiverType?.bank ?? 0 }}</span>
-                        </div>
-                        <div class="flex items-center justify-between text-xs text-slate-600">
-                            <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-blue-500"></span>Direct</span>
-                            <span class="font-bold text-slate-800">{{ dashboard()?.fasDashboard?.receiverType?.direct ?? 0 }}</span>
-                        </div>
-                    </div>
-                </article>
                 <!-- Shipment Movement Tracker: real shipment-level list (shipment no + commercial
-                     invoice no) for containers currently at the port or on transit — from
-                     dashboard()?.shipmentMovement, not the Status Snapshot aggregate counts. -->
+                     invoice no + supplier + FCL) for containers currently at the port or on transit —
+                     from dashboard()?.shipmentMovement, not the Status Snapshot aggregate counts. -->
                 @let movement = shipmentMovement();
                 @if (movement.atPort.length > 0 || movement.onTransit.length > 0) {
                 <article class="sl-panel flex flex-col gap-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
@@ -128,9 +104,15 @@
                             <div class="flex flex-col gap-1.5">
                                 <span class="text-[9px] font-black uppercase tracking-widest text-amber-600">At the Port ({{ movement.atPort.length }})</span>
                                 @for (s of movement.atPort; track s.containerId) {
-                                    <div class="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2">
-                                        <span class="text-[11px] font-bold text-slate-700 font-mono truncate">{{ s.shipmentNo }}</span>
-                                        <span class="text-[10px] font-semibold text-slate-500 truncate ml-2">{{ s.commercialInvoiceNo || '—' }}</span>
+                                    <div class="flex flex-col gap-0.5 rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[11px] font-bold text-slate-700 font-mono truncate">{{ s.shipmentNo }}</span>
+                                            <span class="text-[10px] font-semibold text-slate-500 truncate ml-2">{{ s.commercialInvoiceNo || '—' }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[10px] text-slate-500 truncate">{{ s.supplier || '—' }}</span>
+                                            <span class="text-[10px] font-semibold text-blue-600 truncate ml-2">{{ formatPivotNumber(s.fcl) }} FCL</span>
+                                        </div>
                                     </div>
                                 }
                             </div>
@@ -139,9 +121,15 @@
                             <div class="flex flex-col gap-1.5">
                                 <span class="text-[9px] font-black uppercase tracking-widest text-blue-600">On Transit ({{ movement.onTransit.length }})</span>
                                 @for (s of movement.onTransit; track s.containerId) {
-                                    <div class="flex items-center justify-between rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2">
-                                        <span class="text-[11px] font-bold text-slate-700 font-mono truncate">{{ s.shipmentNo }}</span>
-                                        <span class="text-[10px] font-semibold text-slate-500 truncate ml-2">{{ s.commercialInvoiceNo || '—' }}</span>
+                                    <div class="flex flex-col gap-0.5 rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2">
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[11px] font-bold text-slate-700 font-mono truncate">{{ s.shipmentNo }}</span>
+                                            <span class="text-[10px] font-semibold text-slate-500 truncate ml-2">{{ s.commercialInvoiceNo || '—' }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <span class="text-[10px] text-slate-500 truncate">{{ s.supplier || '—' }}</span>
+                                            <span class="text-[10px] font-semibold text-blue-600 truncate ml-2">{{ formatPivotNumber(s.fcl) }} FCL</span>
+                                        </div>
                                     </div>
                                 }
                             </div>
@@ -149,16 +137,6 @@
                     </div>
                 </article>
                 }
-                <!-- Provider Wise Documents -->
-                <article class="sl-panel flex flex-col gap-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
-                    <div class="flex items-center justify-between">
-                        <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Provider</h4>
-                        <ng-container *ngTemplateOutlet="exportMenu; context: {key: 'provider'}"></ng-container>
-                    </div>
-                    <div class="relative w-full" [style.height.px]="providerChartHeight()">
-                        <canvas id="chart-provider" baseChart [data]="fasProviderWiseChartConfig()" [options]="horizontalBarChartOptions" [type]="'bar'"></canvas>
-                    </div>
-                </article>
             </div>
             }
         </section>
@@ -353,6 +331,46 @@
                             }
                         </span>
                     </div>
+                </div>
+            </article>
+        </section>
+        }
+
+        <!-- Documents Received By + Provider — relocated here, directly above FAS Dashboard -->
+        @if (canViewDashboardSection('dashboard.section.fas_chart.view')) {
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- Documents by Receiver Type -->
+            <article class="sl-panel flex flex-col gap-4 p-5 bg-white border border-slate-200 rounded-xl shadow-sm">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Documents Received By</h4>
+                    <ng-container *ngTemplateOutlet="exportMenu; context: {key: 'documentsReceived'}"></ng-container>
+                </div>
+                <div class="relative h-36 flex items-center justify-center">
+                    <canvas id="chart-documentsReceived" baseChart [data]="fasReceiverTypeChartConfig()" [options]="doughnutChartOptions" [type]="'doughnut'"></canvas>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span class="text-xl font-black text-slate-800">{{ dashboard()?.fasDashboard?.receiverType?.total ?? 0 }}</span>
+                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total</span>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-1.5 mt-2">
+                    <div class="flex items-center justify-between text-xs text-slate-600">
+                        <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-emerald-500"></span>Bank</span>
+                        <span class="font-bold text-slate-800">{{ dashboard()?.fasDashboard?.receiverType?.bank ?? 0 }}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs text-slate-600">
+                        <span class="flex items-center gap-1.5"><span class="h-2 w-2 rounded-full bg-blue-500"></span>Direct</span>
+                        <span class="font-bold text-slate-800">{{ dashboard()?.fasDashboard?.receiverType?.direct ?? 0 }}</span>
+                    </div>
+                </div>
+            </article>
+            <!-- Provider Wise Documents -->
+            <article class="sl-panel flex flex-col gap-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Provider</h4>
+                    <ng-container *ngTemplateOutlet="exportMenu; context: {key: 'provider'}"></ng-container>
+                </div>
+                <div class="relative w-full" [style.height.px]="providerChartHeight()">
+                    <canvas id="chart-provider" baseChart [data]="fasProviderWiseChartConfig()" [options]="horizontalBarChartOptions" [type]="'bar'"></canvas>
                 </div>
             </article>
         </section>

@@ -333,6 +333,8 @@ export interface DashboardShipmentMovementEntry {
   shipmentNo: string;
   shipmentIndex: number | null;
   commercialInvoiceNo: string | null;
+  supplier: string | null;
+  fcl: number;
 }
 
 export interface DashboardShipmentMovement {
