@@ -94,25 +94,32 @@
                      from dashboard()?.shipmentMovement, not the Status Snapshot aggregate counts. -->
                 @let movement = shipmentMovement();
                 @if (movement.atPort.length > 0 || movement.onTransit.length > 0) {
-                <article class="sl-panel flex flex-col gap-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
+                <article class="sl-panel flex flex-1 min-h-0 flex-col gap-3 p-4 bg-white border border-slate-200 rounded-xl shadow-sm">
                     <div class="flex items-center justify-between">
                         <h4 class="text-xs font-black uppercase tracking-wider text-slate-500">Shipment Movement Tracker</h4>
                         <ng-container *ngTemplateOutlet="exportMenu; context: {key: 'shipmentMovement'}"></ng-container>
                     </div>
-                    <div class="flex flex-col gap-3 max-h-80 overflow-y-auto pr-1">
+                    <div class="flex flex-1 min-h-0 flex-col gap-3 overflow-y-auto pr-1">
                         @if (movement.atPort.length > 0) {
                             <div class="flex flex-col gap-1.5">
                                 <span class="text-[9px] font-black uppercase tracking-widest text-amber-600">At the Port ({{ movement.atPort.length }})</span>
                                 @for (s of movement.atPort; track s.containerId) {
-                                    <div class="flex flex-col gap-0.5 rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2">
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-[11px] font-bold text-slate-700 font-mono truncate">{{ s.shipmentNo }}</span>
-                                            <span class="text-[10px] font-semibold text-slate-500 truncate ml-2">{{ s.commercialInvoiceNo || '—' }}</span>
+                                    <div class="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2">
+                                        <div class="flex flex-1 min-w-0 flex-col gap-0.5">
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-[11px] font-bold text-slate-700 font-mono truncate">{{ s.shipmentNo }}</span>
+                                                <span class="text-[10px] font-semibold text-slate-500 truncate ml-2">{{ s.commercialInvoiceNo || '—' }}</span>
+                                            </div>
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-[10px] text-slate-500 truncate">{{ s.supplier || '—' }}</span>
+                                                <span class="text-[10px] font-semibold text-blue-600 truncate ml-2">{{ formatPivotNumber(s.fcl) }} FCL</span>
+                                            </div>
                                         </div>
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-[10px] text-slate-500 truncate">{{ s.supplier || '—' }}</span>
-                                            <span class="text-[10px] font-semibold text-blue-600 truncate ml-2">{{ formatPivotNumber(s.fcl) }} FCL</span>
-                                        </div>
+                                        <a [routerLink]="['/shipments/track', s._id]"
+                                            [queryParams]="{ tab: 'bl_details', shipmentIndex: s.shipmentIndex }"
+                                            class="shrink-0 inline-flex h-5 w-5 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600">
+                                            <i class="pi pi-arrow-right text-[9px]"></i>
+                                        </a>
                                     </div>
                                 }
                             </div>
@@ -121,15 +128,22 @@
                             <div class="flex flex-col gap-1.5">
                                 <span class="text-[9px] font-black uppercase tracking-widest text-blue-600">On Transit ({{ movement.onTransit.length }})</span>
                                 @for (s of movement.onTransit; track s.containerId) {
-                                    <div class="flex flex-col gap-0.5 rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2">
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-[11px] font-bold text-slate-700 font-mono truncate">{{ s.shipmentNo }}</span>
-                                            <span class="text-[10px] font-semibold text-slate-500 truncate ml-2">{{ s.commercialInvoiceNo || '—' }}</span>
+                                    <div class="flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2">
+                                        <div class="flex flex-1 min-w-0 flex-col gap-0.5">
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-[11px] font-bold text-slate-700 font-mono truncate">{{ s.shipmentNo }}</span>
+                                                <span class="text-[10px] font-semibold text-slate-500 truncate ml-2">{{ s.commercialInvoiceNo || '—' }}</span>
+                                            </div>
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-[10px] text-slate-500 truncate">{{ s.supplier || '—' }}</span>
+                                                <span class="text-[10px] font-semibold text-blue-600 truncate ml-2">{{ formatPivotNumber(s.fcl) }} FCL</span>
+                                            </div>
                                         </div>
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-[10px] text-slate-500 truncate">{{ s.supplier || '—' }}</span>
-                                            <span class="text-[10px] font-semibold text-blue-600 truncate ml-2">{{ formatPivotNumber(s.fcl) }} FCL</span>
-                                        </div>
+                                        <a [routerLink]="['/shipments/track', s._id]"
+                                            [queryParams]="{ tab: 'bl_details', shipmentIndex: s.shipmentIndex }"
+                                            class="shrink-0 inline-flex h-5 w-5 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600">
+                                            <i class="pi pi-arrow-right text-[9px]"></i>
+                                        </a>
                                     </div>
                                 }
                             </div>
