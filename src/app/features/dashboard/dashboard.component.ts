@@ -751,7 +751,7 @@ export class DashboardComponent implements OnInit {
   readonly EXPORTABLE_CHARTS: { key: string; label: string }[] = [
     { key: 'statusSnapshot', label: 'Status Snapshot' },
     { key: 'documentsReceived', label: 'Documents Received By' },
-    { key: 'shipmentMovement', label: 'Shipment Movement Tracker' },
+    { key: 'shipmentMovement', label: 'New Shipments' },
     { key: 'provider', label: 'Provider' },
     { key: 'statusPivotSupplier', label: 'Shipment Status as of the date' },
     { key: 'statusPivotItem', label: 'Shipment Status as of the date - By Item' },
@@ -840,7 +840,7 @@ export class DashboardComponent implements OnInit {
         ];
         if (!rows.length) return null;
         return {
-          title: 'Shipment Movement Tracker',
+          title: 'New Shipments',
           columns: ['Status', 'Shipment No.', 'Commercial Invoice No.'],
           rows,
         };
