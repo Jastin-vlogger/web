@@ -642,8 +642,12 @@ export class CreateShipmentComponent implements OnInit, OnDestroy {
     patch['pallet'] = sumNumeric((item) => item.pallet);
     patch['bags'] = sumNumeric((item) => item.bags);
     patch['buyingUnit'] = uniqueOrMixed((item) => item.buyingUnit, primaryItem.buyingUnit || '');
+    // Full precision here, not rounded to cents — the reactive valueChanges subscriber below
+    // recomputes totalUSD as plannedContainers * fcPerUnit, so a rounded rate re-multiplied by a
+    // large qty drifts the total away from the correct extracted sum (e.g. 300 * round(x/300, 2)
+    // != x). Rounding is a display concern (p-inputNumber formats to 2dp), not a storage one.
     patch['fcPerUnit'] = patch['plannedContainers']
-      ? Number((sumNumeric((item) => item.totalUSD) / Number(patch['plannedContainers'] || 0)).toFixed(2))
+      ? sumNumeric((item) => item.totalUSD) / Number(patch['plannedContainers'] || 0)
       : (primaryItem.fcPerUnit || 0);
     patch['totalUSD'] = sumNumeric((item) => item.totalUSD);
     patch['totalAED'] = sumNumeric((item) => item.totalAED);
