@@ -1,6 +1,6 @@
 import { Component, Input, computed, inject, signal, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, AbstractControl } from '@angular/forms';
+import { FormArray, FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, AbstractControl } from '@angular/forms';
 import { DomSanitizer } from '@angular/platform-browser';
 import { Store } from '@ngrx/store';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -16,6 +16,7 @@ import * as ShipmentActions from '../../../../../../store/shipment/shipment.acti
 import { ShipmentService } from '../../../../../../core/services/shipment.service';
 import { NotificationService } from '../../../../../../core/services/notification.service';
 import { ConfirmDialogService } from '../../../../../../core/services/confirm-dialog.service';
+import { RbacService } from '../../../../../../core/services/rbac.service';
 import { toLocalDateString } from '../../shared/date.util';
 
 type QualityDocKind = 'inhouse' | 'strategic' | 'thirdParty' | 'attachment' | 'report';
@@ -25,6 +26,7 @@ type QualityDocKind = 'inhouse' | 'strategic' | 'thirdParty' | 'attachment' | 'r
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     ReactiveFormsModule,
     AccordionModule,
     DatePickerModule,
@@ -49,8 +51,20 @@ export class ShipmentQualityComponent {
   private shipmentService = inject(ShipmentService);
   private notificationService = inject(NotificationService);
   private confirmDialog = inject(ConfirmDialogService);
+  private rbacService = inject(RbacService);
 
   readonly shipmentData = toSignal(this.store.select(selectShipmentData));
+  readonly canEditQ1Report = computed(() => this.rbacService.hasPermission('shipment.tab.quality.edit'));
+
+  // ── Q1 report card / Quality Parameters inline field edit ──────────────────
+  // `editingQ1Field` holds the dot-path into q1Report currently being edited (e.g.
+  // "sample_details.commodity" or "quality_parameters.2.actual"), or null when nothing is
+  // being edited. One generic path-based editor serves both the summary card and every cell
+  // of the Quality Parameters table.
+  readonly editingQ1Field = signal<string | null>(null);
+  readonly q1FieldDraft = signal('');
+  readonly q1FieldSaving = signal(false);
+  readonly q1FieldError = signal<string | null>(null);
   readonly phaseOptions = [
     { label: 'S1', value: 'S1' },
     { label: 'S2', value: 'S2' },
@@ -64,6 +78,11 @@ export class ShipmentQualityComponent {
   readonly uploadedFiles = signal<Record<string, File | null>>({});
   readonly savingRowIndex = signal<number | null>(null);
   readonly actualOverrides = signal<Record<number, any>>({});
+
+  // Strategic Report columns hidden per current requirements — flip to re-enable. Underlying
+  // form controls (strategicReportNo/Date/DocumentUrl/Name) are untouched, no validator ever
+  // depended on them, so this is a pure visibility toggle.
+  readonly showStrategicColumns = false;
 
   hasVisibleShipments(): boolean {
     return this.visibleShipmentIndices.length > 0;
@@ -243,12 +262,16 @@ export class ShipmentQualityComponent {
     return [];
   }
 
-  /** Returns quality_parameters as structured rows (array of objects with criteria etc.) */
-  getQ1QualityParameterRows(): Array<{ sNo: number; criteria: string; preferredStandard: string; actual: string; remark: string }> {
+  /** Returns quality_parameters as structured rows (array of objects with criteria etc.).
+   *  `index` is the row's real position in the underlying array — used to build the
+   *  "quality_parameters.<index>.<key>" edit path; do not use `sNo` for that (it's just the
+   *  printed S.No, which need not match the array index). */
+  getQ1QualityParameterRows(): Array<{ index: number; sNo: number; criteria: string; preferredStandard: string; actual: string; remark: string }> {
     const q1 = this.getQ1ReportData();
     const params = q1?.quality_parameters;
     if (!Array.isArray(params)) return [];
     return params.map((p: any, i: number) => ({
+      index: i,
       sNo: p.s_no ?? i + 1,
       criteria: p.criteria || '—',
       preferredStandard: p.preferred_standard || '—',
@@ -298,6 +321,46 @@ export class ShipmentQualityComponent {
     const time = q1?.analysis_details?.time || '';
     if (!date) return '';
     return time ? `${date}, ${time}` : date;
+  }
+
+  /** Generic dot-path reader into q1Report — supports numeric segments for array indices
+   *  (e.g. "quality_parameters.2.actual"). Used by the inline field editor below. */
+  getQ1FieldValue(path: string): string {
+    const q1 = this.getQ1ReportData();
+    if (!q1) return '';
+    const value = path.split('.').reduce<any>((acc, seg) => (acc == null ? acc : acc[seg]), q1);
+    return value != null ? String(value) : '';
+  }
+
+  startQ1FieldEdit(path: string): void {
+    if (!this.canEditQ1Report()) return;
+    this.q1FieldDraft.set(this.getQ1FieldValue(path));
+    this.q1FieldError.set(null);
+    this.editingQ1Field.set(path);
+  }
+
+  cancelQ1FieldEdit(): void {
+    this.editingQ1Field.set(null);
+    this.q1FieldError.set(null);
+  }
+
+  saveQ1FieldEdit(path: string): void {
+    const shipmentId = this.shipmentData()?.shipment?._id;
+    if (!shipmentId) return;
+
+    this.q1FieldSaving.set(true);
+    this.q1FieldError.set(null);
+    this.shipmentService.updateQualityReportField(shipmentId, path, this.q1FieldDraft().trim()).subscribe({
+      next: () => {
+        this.q1FieldSaving.set(false);
+        this.editingQ1Field.set(null);
+        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+      },
+      error: (err) => {
+        this.q1FieldSaving.set(false);
+        this.q1FieldError.set(err?.error?.message || 'Failed to update field. Please try again.');
+      },
+    });
   }
 
   openS1Report(): void {
@@ -423,20 +486,19 @@ export class ShipmentQualityComponent {
     });
     if (!confirmed) return;
 
-    // Validate required quality fields
+    // Validate required quality fields — Attachment is optional (no validator, no server-side
+    // enforcement either; only Phase and Date are actually required for a quality row).
     const qualityRowControls = this.getQualityRows(group).controls;
     const invalidQualityRows: number[] = [];
     qualityRowControls.forEach((rowCtrl, rowIdx) => {
       const phase = String(rowCtrl.get('phase')?.value || '').trim();
       const date = rowCtrl.get('date')?.value;
-      const attachmentUrl = rowCtrl.get('attachmentDocumentUrl')?.value;
-      const attachmentFile = this.getFile(index, rowIdx, 'attachment', 'qualityRows');
-      if (!phase || !date || (!attachmentUrl && !attachmentFile)) {
+      if (!phase || !date) {
         invalidQualityRows.push(rowIdx + 1);
       }
     });
     if (invalidQualityRows.length > 0) {
-      this.notificationService.error('Required Fields Missing', `Rows ${invalidQualityRows.join(', ')}: Phase, Date, and Attachment are required.`);
+      this.notificationService.error('Required Fields Missing', `Rows ${invalidQualityRows.join(', ')}: Phase and Date are required.`);
       return;
     }
 

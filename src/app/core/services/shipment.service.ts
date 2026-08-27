@@ -564,6 +564,20 @@ export class ShipmentService {
   }
 
   /**
+   * PATCH /shipment/:id/quality-report-field
+   * Updates a single whitelisted field inside shipment.q1Report (a Mixed blob populated once
+   * from Python OCR extraction) — path is a dot-path such as "sample_details.commodity" or
+   * "quality_parameters.2.actual". Server-side whitelists the path shape; see
+   * shipment-misc.controller.js updateQualityReportField.
+   */
+  updateQualityReportField(shipmentId: string, path: string, value: string): Observable<{ message: string; q1Report: any }> {
+    return this.http.patch<{ message: string; q1Report: any }>(
+      `${this.apiUrl}/${shipmentId}/quality-report-field`,
+      { path, value }
+    );
+  }
+
+  /**
    * PATCH /shipment/:id/line-item/:index/refresh-from-catalog
    * Backfills a single line item's blank Brand/Barcode/DM Barcode/Variant/H.S Code/
    * Country of Origin/Packing from the Item Master catalog.

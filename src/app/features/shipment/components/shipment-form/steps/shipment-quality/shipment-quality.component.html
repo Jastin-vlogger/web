@@ -50,51 +50,68 @@
         </div>
       </div>
 
+      <!-- Reusable inline field editor — path-based, drives both the card fields below and
+           every cell of the Quality Parameters table. -->
+      <ng-template #q1FieldEditor let-path="path" let-label="label" let-display="display">
+        <div class="flex flex-col">
+          @if (label) {
+            <span class="text-slate-400 font-medium">{{ label }}</span>
+          }
+          @if (editingQ1Field() !== path) {
+            <div class="flex items-center gap-1.5">
+              <span class="text-slate-700 font-bold">{{ display || '—' }}</span>
+              @if (canEditQ1Report()) {
+                <button type="button" (click)="startQ1FieldEdit(path)"
+                  class="rbac-allow-interaction w-5 h-5 shrink-0 rounded-md border border-slate-200 bg-white text-slate-400 hover:text-blue-600 hover:border-blue-200 flex items-center justify-center transition-colors"
+                  title="Edit">
+                  <i class="pi pi-pencil text-[9px]"></i>
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="flex flex-col gap-1 mt-0.5">
+              <div class="flex items-center gap-1.5">
+                <input type="text"
+                  [ngModel]="q1FieldDraft()"
+                  (ngModelChange)="q1FieldDraft.set($event)"
+                  class="rbac-allow-interaction flex-1 min-w-0 rounded-md border border-slate-300 px-2 py-1 text-[11px] text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  [disabled]="q1FieldSaving()"
+                  (keydown.enter)="saveQ1FieldEdit(path)"
+                  (keydown.escape)="cancelQ1FieldEdit()"
+                  autofocus />
+                <button type="button" (click)="saveQ1FieldEdit(path)" [disabled]="q1FieldSaving()"
+                  class="rbac-allow-interaction h-6 w-6 shrink-0 rounded-md bg-blue-600 text-white flex items-center justify-center hover:bg-blue-500 disabled:opacity-50">
+                  @if (q1FieldSaving()) { <i class="pi pi-spin pi-spinner text-[9px]"></i> } @else { <i class="pi pi-check text-[9px]"></i> }
+                </button>
+                <button type="button" (click)="cancelQ1FieldEdit()" [disabled]="q1FieldSaving()"
+                  class="rbac-allow-interaction h-6 w-6 shrink-0 rounded-md border border-slate-200 text-slate-500 flex items-center justify-center hover:bg-slate-50 disabled:opacity-50">
+                  <i class="pi pi-times text-[9px]"></i>
+                </button>
+              </div>
+              @if (q1FieldError()) {
+                <p class="text-[10px] text-red-600 font-medium">{{ q1FieldError() }}</p>
+              }
+            </div>
+          }
+        </div>
+      </ng-template>
+
       <!-- Original info card (restored) -->
       <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-[11px]">
-          <div class="flex flex-col">
-            <span class="text-slate-400 font-medium">Shipment No / Batch No</span>
-            <span class="text-slate-700 font-bold">{{ q1.sample_details?.shipment_no_batch_no || '—' }}</span>
+          <ng-container *ngTemplateOutlet="q1FieldEditor; context: { path: 'sample_details.shipment_no_batch_no', label: 'Shipment No / Batch No', display: q1.sample_details?.shipment_no_batch_no }"></ng-container>
+          <ng-container *ngTemplateOutlet="q1FieldEditor; context: { path: 'report_details.report_date', label: 'Report Date', display: q1.report_details?.report_date }"></ng-container>
+          <ng-container *ngTemplateOutlet="q1FieldEditor; context: { path: 'report_details.report_no', label: 'Report No', display: q1.report_details?.report_no }"></ng-container>
+          <ng-container *ngTemplateOutlet="q1FieldEditor; context: { path: 'sample_details.commodity', label: 'Commodity', display: q1.sample_details?.commodity }"></ng-container>
+          <ng-container *ngTemplateOutlet="q1FieldEditor; context: { path: 'sample_details.variety_of_grains', label: 'Variety of Grains', display: q1.sample_details?.variety_of_grains }"></ng-container>
+          <ng-container *ngTemplateOutlet="q1FieldEditor; context: { path: 'sample_details.vendor', label: 'Vendor', display: q1.sample_details?.vendor }"></ng-container>
+          <ng-container *ngTemplateOutlet="q1FieldEditor; context: { path: 'sample_details.country_of_origin', label: 'Country of Origin', display: q1.sample_details?.country_of_origin }"></ng-container>
+          <ng-container *ngTemplateOutlet="q1FieldEditor; context: { path: 'analysis_details.analyzed_by', label: 'Analyzed By', display: q1.analysis_details?.analyzed_by }"></ng-container>
+          <ng-container *ngTemplateOutlet="q1FieldEditor; context: { path: 'analysis_details.date', label: 'Analysis Date', display: q1.analysis_details?.date }"></ng-container>
+          <ng-container *ngTemplateOutlet="q1FieldEditor; context: { path: 'analysis_details.time', label: 'Analysis Time', display: q1.analysis_details?.time }"></ng-container>
+          <div class="sm:col-span-2 lg:col-span-3">
+            <ng-container *ngTemplateOutlet="q1FieldEditor; context: { path: 'sample_details.purpose', label: 'Purpose', display: getQ1Purpose() }"></ng-container>
           </div>
-          <div class="flex flex-col">
-            <span class="text-slate-400 font-medium">Report Date</span>
-            <span class="text-slate-700 font-bold">{{ q1.report_details?.report_date || '—' }}</span>
-          </div>
-          <div class="flex flex-col">
-            <span class="text-slate-400 font-medium">Report No</span>
-            <span class="text-slate-700 font-bold">{{ q1.report_details?.report_no || '—' }}</span>
-          </div>
-          <div class="flex flex-col">
-            <span class="text-slate-400 font-medium">Commodity</span>
-            <span class="text-slate-700 font-bold">{{ q1.sample_details?.commodity || '—' }}</span>
-          </div>
-          <div class="flex flex-col">
-            <span class="text-slate-400 font-medium">Variety of Grains</span>
-            <span class="text-slate-700 font-bold">{{ q1.sample_details?.variety_of_grains || '—' }}</span>
-          </div>
-          <div class="flex flex-col">
-            <span class="text-slate-400 font-medium">Vendor</span>
-            <span class="text-slate-700 font-bold">{{ q1.sample_details?.vendor || '—' }}</span>
-          </div>
-          <div class="flex flex-col">
-            <span class="text-slate-400 font-medium">Country of Origin</span>
-            <span class="text-slate-700 font-bold">{{ q1.sample_details?.country_of_origin || '—' }}</span>
-          </div>
-          <div class="flex flex-col">
-            <span class="text-slate-400 font-medium">Analyzed By</span>
-            <span class="text-slate-700 font-bold">{{ q1.analysis_details?.analyzed_by || '—' }}</span>
-          </div>
-          <div class="flex flex-col">
-            <span class="text-slate-400 font-medium">Analysis Date &amp; Time</span>
-            <span class="text-slate-700 font-bold">{{ getQ1AnalysisDateTime() || '—' }}</span>
-          </div>
-          @if (getQ1Purpose()) {
-            <div class="flex flex-col sm:col-span-2 lg:col-span-3">
-              <span class="text-slate-400 font-medium">Purpose</span>
-              <span class="text-slate-700 font-bold">{{ getQ1Purpose() }}</span>
-            </div>
-          }
         </div>
       </div>
 
@@ -118,17 +135,23 @@
                 </tr>
               </thead>
               <tbody>
-                @for (row of getQ1QualityParameterRows(); track row.sNo) {
+                @for (row of getQ1QualityParameterRows(); track row.index) {
                   <tr class="border-b border-slate-50 last:border-b-0 hover:bg-slate-50/40 transition-colors">
                     <td class="px-4 py-2.5 text-[11px] font-bold text-slate-400">{{ row.sNo }}</td>
-                    <td class="px-4 py-2.5 text-[11px] font-semibold text-slate-700">{{ row.criteria }}</td>
-                    <td class="px-4 py-2.5 text-[11px] text-slate-600">{{ row.preferredStandard }}</td>
+                    <td class="px-4 py-2.5 text-[11px] font-semibold text-slate-700">
+                      <ng-container *ngTemplateOutlet="q1FieldEditor; context: { path: 'quality_parameters.' + row.index + '.criteria', display: row.criteria }"></ng-container>
+                    </td>
+                    <td class="px-4 py-2.5 text-[11px] text-slate-600">
+                      <ng-container *ngTemplateOutlet="q1FieldEditor; context: { path: 'quality_parameters.' + row.index + '.preferred_standard', display: row.preferredStandard }"></ng-container>
+                    </td>
                     <td class="px-4 py-2.5 text-[11px] font-semibold"
                       [class.text-emerald-600]="row.actual !== '—'"
                       [class.text-slate-400]="row.actual === '—'">
-                      {{ row.actual }}
+                      <ng-container *ngTemplateOutlet="q1FieldEditor; context: { path: 'quality_parameters.' + row.index + '.actual', display: row.actual }"></ng-container>
                     </td>
-                    <td class="px-4 py-2.5 text-[11px] text-slate-500">{{ row.remark }}</td>
+                    <td class="px-4 py-2.5 text-[11px] text-slate-500">
+                      <ng-container *ngTemplateOutlet="q1FieldEditor; context: { path: 'quality_parameters.' + row.index + '.remark', display: row.remark }"></ng-container>
+                    </td>
                   </tr>
                 }
               </tbody>
@@ -189,28 +212,28 @@
                   <ng-template pTemplate="header">
                     <tr>
                       <th class="min-w-[80px]">SN</th>
-                      <th class="min-w-[180px]">SHIPMENT NO</th>
                       <th class="min-w-[140px]">PHASE<span class="text-red-500 ml-0.5">*</span></th>
                       <th class="min-w-[200px]">PURPOSE</th>
                       <th class="min-w-[150px]">DATE<span class="text-red-500 ml-0.5">*</span></th>
                       <th class="min-w-[180px]">IN-HOUSE REPORT NO</th>
                       <th class="min-w-[150px]">IN-HOUSE REPORT DATE</th>
                       <th class="min-w-[120px] text-center">IN-HOUSE DOC</th>
-                      <th class="min-w-[190px]">STRATEGIC REPORT NO</th>
-                      <th class="min-w-[150px]">STRATEGIC REPORT DATE</th>
-                      <th class="min-w-[120px] text-center">STRATEGIC DOC</th>
+                      @if (showStrategicColumns) {
+                        <th class="min-w-[190px]">STRATEGIC REPORT NO</th>
+                        <th class="min-w-[150px]">STRATEGIC REPORT DATE</th>
+                        <th class="min-w-[120px] text-center">STRATEGIC DOC</th>
+                      }
                       <th class="min-w-[190px]">THIRD PARTY REPORT NO</th>
                       <th class="min-w-[150px]">THIRD PARTY REPORT DATE</th>
                       <th class="min-w-[120px] text-center">THIRD PARTY DOC</th>
                       <th class="min-w-[220px]">REMARKS</th>
-                      <th class="min-w-[120px] text-center">ATTACHMENT<span class="text-red-500 ml-0.5">*</span></th>
+                      <th class="min-w-[120px] text-center">ATTACHMENT</th>
                       <th class="min-w-[100px] text-center">ACTION</th>
                     </tr>
                   </ng-template>
                   <ng-template pTemplate="body" let-row let-r="rowIndex">
                     <tr [formGroup]="row">
                       <td class="text-slate-700 font-semibold text-xs">{{ row.get('sn')?.value }}</td>
-                      <td><input pInputText formControlName="sampleNo" class="table-input-text w-full" placeholder="Shipment No" /></td>
                       <td><p-select [options]="phaseOptions" formControlName="phase" optionLabel="label" optionValue="value" styleClass="w-full" appendTo="body"></p-select></td>
                       <td><input pInputText formControlName="purpose" class="table-input-text w-full" placeholder="Purpose" /></td>
                       <td><p-datepicker formControlName="date" appendTo="body" inputStyleClass="table-input w-full" styleClass="w-full" placeholder="Date" dateFormat="dd/mm/yy"></p-datepicker></td>
@@ -232,24 +255,26 @@
                           }
                         </div>
                       </td>
-                      <td><input pInputText formControlName="strategicReportNo" class="table-input-text w-full" placeholder="Report no" /></td>
-                      <td>
-                        @if (row.get('strategicReportNo')?.value) {
-                          <p-datepicker formControlName="strategicReportDate" appendTo="body" inputStyleClass="table-input w-full" styleClass="w-full" placeholder="Date" dateFormat="dd/mm/yy"></p-datepicker>
-                        } @else {
-                          <div class="table-input-text w-full bg-slate-50 text-slate-400">Awaiting report no</div>
-                        }
-                      </td>
-                      <td class="text-center">
-                        <div class="flex justify-center gap-2">
-                          <button type="button" (click)="clickFileInput(i, r, 'strategic', 'qualityRows')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-upload"></i></button>
-                          @if (getFile(i, r, 'strategic', 'qualityRows')) {
-                            <button type="button" (click)="openDocumentPreview(getFile(i, r, 'strategic', 'qualityRows')!, 'Strategic Stock Report')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
-                          } @else if (getSavedUrl(row, 'strategic', 'qualityRows')) {
-                            <button type="button" (click)="openRemoteDocumentPreview(getSavedUrl(row, 'strategic', 'qualityRows'), getSavedName(row, 'strategic', 'qualityRows') || 'Strategic Stock Report')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
+                      @if (showStrategicColumns) {
+                        <td><input pInputText formControlName="strategicReportNo" class="table-input-text w-full" placeholder="Report no" /></td>
+                        <td>
+                          @if (row.get('strategicReportNo')?.value) {
+                            <p-datepicker formControlName="strategicReportDate" appendTo="body" inputStyleClass="table-input w-full" styleClass="w-full" placeholder="Date" dateFormat="dd/mm/yy"></p-datepicker>
+                          } @else {
+                            <div class="table-input-text w-full bg-slate-50 text-slate-400">Awaiting report no</div>
                           }
-                        </div>
-                      </td>
+                        </td>
+                        <td class="text-center">
+                          <div class="flex justify-center gap-2">
+                            <button type="button" (click)="clickFileInput(i, r, 'strategic', 'qualityRows')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-upload"></i></button>
+                            @if (getFile(i, r, 'strategic', 'qualityRows')) {
+                              <button type="button" (click)="openDocumentPreview(getFile(i, r, 'strategic', 'qualityRows')!, 'Strategic Stock Report')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
+                            } @else if (getSavedUrl(row, 'strategic', 'qualityRows')) {
+                              <button type="button" (click)="openRemoteDocumentPreview(getSavedUrl(row, 'strategic', 'qualityRows'), getSavedName(row, 'strategic', 'qualityRows') || 'Strategic Stock Report')" class="w-9 h-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600"><i class="pi pi-eye"></i></button>
+                            }
+                          </div>
+                        </td>
+                      }
                       <td><input pInputText formControlName="thirdPartyReportNo" class="table-input-text w-full" placeholder="Report no" /></td>
                       <td>
                         @if (row.get('thirdPartyReportNo')?.value) {
