@@ -10,7 +10,7 @@ import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { LocalPurchaseService } from '../../services/local-purchase.service';
 
-// Simplified creation form — no PI/BL/proforma, but DOES upload an S1 Quality Report alongside
+// Simplified creation form — no PI/BL, but DOES upload an S1 Quality Report alongside
 // the LPO (same document pair as the regular Shipment flow) so Extract can reuse the Python
 // service's real /shipment-form endpoint unmodified. Independent of create-shipment.component.ts
 // (no shared code), same overall shape/UX language.
@@ -26,9 +26,9 @@ export class CreateLocalPurchaseComponent {
   form: FormGroup;
   lpoFile = signal<File | null>(null);
   s1QualityReportFile = signal<File | null>(null);
-  // Optional — not sent to extract-lpo, only to /create. Same role as Shipment's proforma
-  // invoice: stored/attached, no extraction dependency on it.
-  proformaFile = signal<File | null>(null);
+  // Optional — not sent to extract-lpo, only to /create. Stored/attached, no extraction
+  // dependency on it.
+  commercialFile = signal<File | null>(null);
   extracting = signal(false);
   submitting = signal(false);
   // Gates the red-border state on the LPO/S1 dropzones (they aren't FormControls, so there's
@@ -96,10 +96,10 @@ export class CreateLocalPurchaseComponent {
     this.s1QualityReportFile.set(file);
   }
 
-  onProformaFileSelected(event: Event): void {
+  onCommercialFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0] || null;
-    this.proformaFile.set(file);
+    this.commercialFile.set(file);
   }
 
   extractLpo(): void {
@@ -192,8 +192,8 @@ export class CreateLocalPurchaseComponent {
     Object.entries(payload).forEach(([key, val]) => formData.append(key, val));
     formData.append('lpoDocument', this.lpoFile()!, this.lpoFile()!.name);
     formData.append('s1QualityReport', this.s1QualityReportFile()!, this.s1QualityReportFile()!.name);
-    if (this.proformaFile()) {
-      formData.append('proformaDocument', this.proformaFile()!, this.proformaFile()!.name);
+    if (this.commercialFile()) {
+      formData.append('commercialDocument', this.commercialFile()!, this.commercialFile()!.name);
     }
 
     this.localPurchaseService.create(formData).subscribe({

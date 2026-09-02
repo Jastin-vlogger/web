@@ -45,8 +45,8 @@
               <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50">
                 <i class="pi pi-file-pdf text-lg text-blue-500"></i>
               </div>
-              <span class="max-w-full truncate px-2 text-center text-xs font-semibold text-slate-600">{{ proformaFile()?.name ?? 'Click to upload Proforma Invoice' }}</span>
-              <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp" (change)="onProformaFileSelected($event)" />
+              <span class="max-w-full truncate px-2 text-center text-xs font-semibold text-slate-600">{{ commercialFile()?.name ?? 'Click to upload Commercial Document' }}</span>
+              <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp" (change)="onCommercialFileSelected($event)" />
             </label>
           </div>
         </div>

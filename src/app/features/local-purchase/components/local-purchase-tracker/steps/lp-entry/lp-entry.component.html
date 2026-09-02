@@ -10,22 +10,22 @@
       @if (localPurchase.lpoDocumentUrl) {
         <a [href]="localPurchase.lpoDocumentUrl" target="_blank" rel="noopener"
           class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
-          <i class="pi pi-eye"></i>{{ localPurchase.lpoDocumentName || 'View LPO Document' }}
+          <i class="pi pi-eye"></i>LPO Document
         </a>
       }
       @if (localPurchase.s1QualityReportUrl) {
         <a [href]="localPurchase.s1QualityReportUrl" target="_blank" rel="noopener"
           class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
-          <i class="pi pi-eye"></i>{{ localPurchase.s1QualityReportName || 'View S1 Quality Report' }}
+          <i class="pi pi-eye"></i>S1 Quality Report
         </a>
       }
-      @if (localPurchase.proformaDocumentUrl) {
-        <a [href]="localPurchase.proformaDocumentUrl" target="_blank" rel="noopener"
+      @if (localPurchase.commercialDocumentUrl) {
+        <a [href]="localPurchase.commercialDocumentUrl" target="_blank" rel="noopener"
           class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
-          <i class="pi pi-eye"></i>{{ localPurchase.proformaDocumentName || 'View Proforma Invoice' }}
+          <i class="pi pi-eye"></i>Commercial Document
         </a>
       }
-      @if (!localPurchase.lpoDocumentUrl && !localPurchase.s1QualityReportUrl && !localPurchase.proformaDocumentUrl) {
+      @if (!localPurchase.lpoDocumentUrl && !localPurchase.s1QualityReportUrl && !localPurchase.commercialDocumentUrl) {
         <p class="text-xs text-slate-400">No documents uploaded.</p>
       }
     </div>

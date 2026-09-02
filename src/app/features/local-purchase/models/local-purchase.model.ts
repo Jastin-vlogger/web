@@ -106,8 +106,8 @@ export interface LocalPurchase {
   lpoDocumentUrl?: string;
   s1QualityReportName?: string;
   s1QualityReportUrl?: string;
-  proformaDocumentName?: string;
-  proformaDocumentUrl?: string;
+  commercialDocumentName?: string;
+  commercialDocumentUrl?: string;
   payment: LocalPurchasePayment;
   currentStage: LocalPurchaseStage;
   storageAllocationDecision?: LocalPurchaseStorageAllocationDecision;
