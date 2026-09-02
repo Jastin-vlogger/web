@@ -1,0 +1,73 @@
+<p-dialog
+  header="Storage Allocation — Audit Trail"
+  [visible]="visible"
+  (visibleChange)="!$event && close()"
+  (onHide)="close()"
+  [modal]="true"
+  [dismissableMask]="true"
+  [closable]="false"
+  [style]="{ width: '480px' }"
+  [draggable]="false"
+  [resizable]="false"
+  styleClass="audit-trail-dialog">
+  <button
+    type="button"
+    (click)="close()"
+    class="absolute top-4 right-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-700 z-10"
+    aria-label="Close">
+    <i class="pi pi-times text-xs"></i>
+  </button>
+
+  <div class="flex flex-col gap-0 divide-y divide-slate-100">
+    <!-- Submitted -->
+    <div class="flex items-start gap-4 py-4 px-1">
+      <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-blue-100 bg-blue-50">
+        <i class="pi pi-send text-[11px] text-blue-600"></i>
+      </div>
+      <div class="flex flex-col gap-0.5 min-w-0">
+        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Submitted</span>
+        <span class="text-sm font-semibold text-slate-800">{{ getApprovalUserName(approval?.submittedBy) }}</span>
+        <span class="text-[11px] text-slate-500">{{ formatApprovalDate(approval?.submittedAt) }}</span>
+      </div>
+    </div>
+
+    <!-- Last Updated -->
+    <div class="flex items-start gap-4 py-4 px-1">
+      <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-violet-100 bg-violet-50">
+        <i class="pi pi-pencil text-[11px] text-violet-600"></i>
+      </div>
+      <div class="flex flex-col gap-0.5 min-w-0">
+        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Last Updated</span>
+        @if (approval?.lastUpdatedAt) {
+          <span class="text-sm font-semibold text-slate-800">{{ getApprovalUserName(approval?.lastUpdatedBy) }}</span>
+          <span class="text-[11px] text-slate-500">{{ formatApprovalDate(approval?.lastUpdatedAt) }}</span>
+        } @else {
+          <span class="text-sm text-slate-400 italic">No edits recorded</span>
+        }
+      </div>
+    </div>
+
+    <!-- Approved -->
+    <div class="flex items-start gap-4 py-4 px-1">
+      <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+        [class.border-emerald-100]="approval?.warehouseManagerApprovedAt"
+        [class.bg-emerald-50]="approval?.warehouseManagerApprovedAt"
+        [class.border-slate-100]="!approval?.warehouseManagerApprovedAt"
+        [class.bg-slate-50]="!approval?.warehouseManagerApprovedAt"
+        [class.border]="true">
+        <i class="pi pi-check-circle text-[11px]"
+          [class.text-emerald-600]="approval?.warehouseManagerApprovedAt"
+          [class.text-slate-300]="!approval?.warehouseManagerApprovedAt"></i>
+      </div>
+      <div class="flex flex-col gap-0.5 min-w-0">
+        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Warehouse Manager Approval</span>
+        @if (approval?.warehouseManagerApprovedAt) {
+          <span class="text-sm font-semibold text-slate-800">{{ getApprovalUserName(approval?.warehouseManagerApprovedBy) }}</span>
+          <span class="text-[11px] text-slate-500">{{ formatApprovalDate(approval?.warehouseManagerApprovedAt) }}</span>
+        } @else {
+          <span class="text-sm text-slate-400 italic">Pending approval</span>
+        }
+      </div>
+    </div>
+  </div>
+</p-dialog>

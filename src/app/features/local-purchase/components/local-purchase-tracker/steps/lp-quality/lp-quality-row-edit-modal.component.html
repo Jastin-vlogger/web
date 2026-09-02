@@ -1,0 +1,64 @@
+<p-dialog [visible]="true" [modal]="true" [style]="{ width: '680px' }" (onHide)="close.emit()" header="Quality Row Reports">
+  <div [formGroup]="row" class="flex flex-col gap-5 text-xs">
+
+    <div class="flex flex-col gap-2">
+      <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">In-house Report</span>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+        <input pInputText formControlName="inhouseReportNo" class="w-full" placeholder="Report no" />
+        <p-datepicker formControlName="inhouseReportDate" appendTo="body" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="Date"></p-datepicker>
+        <div class="flex items-center gap-2">
+          <label class="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-[10px] font-semibold text-slate-600 hover:bg-slate-50">
+            <i class="pi pi-upload text-[9px]"></i>Upload
+            <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png" (change)="onFileChange($event, 'inhouse')" />
+          </label>
+          <span class="text-[10px] text-slate-500 truncate">{{ selectedFileNames()['inhouse'] || row.get('inhouseReportDocumentName')?.value || '—' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">Strategic Report</span>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+        <input pInputText formControlName="strategicReportNo" class="w-full" placeholder="Report no" />
+        <p-datepicker formControlName="strategicReportDate" appendTo="body" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="Date"></p-datepicker>
+        <div class="flex items-center gap-2">
+          <label class="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-[10px] font-semibold text-slate-600 hover:bg-slate-50">
+            <i class="pi pi-upload text-[9px]"></i>Upload
+            <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png" (change)="onFileChange($event, 'strategic')" />
+          </label>
+          <span class="text-[10px] text-slate-500 truncate">{{ selectedFileNames()['strategic'] || row.get('strategicReportDocumentName')?.value || '—' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">Third Party Report</span>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+        <input pInputText formControlName="thirdPartyReportNo" class="w-full" placeholder="Report no" />
+        <p-datepicker formControlName="thirdPartyReportDate" appendTo="body" dateFormat="dd/mm/yy" styleClass="w-full" placeholder="Date"></p-datepicker>
+        <div class="flex items-center gap-2">
+          <label class="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-[10px] font-semibold text-slate-600 hover:bg-slate-50">
+            <i class="pi pi-upload text-[9px]"></i>Upload
+            <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png" (change)="onFileChange($event, 'thirdParty')" />
+          </label>
+          <span class="text-[10px] text-slate-500 truncate">{{ selectedFileNames()['thirdParty'] || row.get('thirdPartyReportDocumentName')?.value || '—' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">Attachment (optional)</span>
+      <div class="flex items-center gap-2">
+        <label class="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-[10px] font-semibold text-slate-600 hover:bg-slate-50">
+          <i class="pi pi-upload text-[9px]"></i>Upload
+          <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png" (change)="onFileChange($event, 'attachment')" />
+        </label>
+        <span class="text-[10px] text-slate-500 truncate">{{ selectedFileNames()['attachment'] || row.get('attachmentDocumentName')?.value || '—' }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex justify-end mt-5">
+    <button type="button" (click)="close.emit()" class="inline-flex h-9 items-center rounded-lg bg-blue-600 px-5 text-xs font-bold text-white hover:bg-blue-500">Done</button>
+  </div>
+</p-dialog>

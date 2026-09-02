@@ -1,0 +1,163 @@
+<p-toast></p-toast>
+<div class="flex flex-col gap-5 pb-14">
+  <header class="flex items-center gap-3">
+    <a routerLink="/local-purchase" class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50">
+      <i class="pi pi-arrow-left text-xs"></i>
+    </a>
+    <div>
+      <h1 class="font-bold text-xl text-slate-900 tracking-tight">New Local Purchase</h1>
+      <p class="text-slate-500 text-xs">Nearby-store purchase — no PO/BL/packing list required</p>
+    </div>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="onSubmit()" class="flex flex-col gap-5">
+    <section class="sl-card">
+      <div class="sl-card-header">
+        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+          <i class="pi pi-file-pdf"></i>
+        </div>
+        <h2>Documents</h2>
+      </div>
+      <div class="sl-card-body flex flex-col gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="group relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed bg-slate-50/50 p-6 hover:border-blue-300"
+            [class.border-red-400]="submitAttempted() && !lpoFile()" [class.border-slate-200]="!(submitAttempted() && !lpoFile())">
+            <label class="flex w-full cursor-pointer flex-col items-center justify-center gap-2">
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50">
+                <i class="pi pi-file-pdf text-lg text-blue-500"></i>
+              </div>
+              <span class="max-w-full truncate px-2 text-center text-xs font-semibold text-slate-600">{{ lpoFile()?.name ?? 'Click to upload LPO document *' }}</span>
+              <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp" (change)="onLpoFileSelected($event)" />
+            </label>
+          </div>
+          <div class="group relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed bg-slate-50/50 p-6 hover:border-blue-300"
+            [class.border-red-400]="submitAttempted() && !s1QualityReportFile()" [class.border-slate-200]="!(submitAttempted() && !s1QualityReportFile())">
+            <label class="flex w-full cursor-pointer flex-col items-center justify-center gap-2">
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50">
+                <i class="pi pi-file-pdf text-lg text-blue-500"></i>
+              </div>
+              <span class="max-w-full truncate px-2 text-center text-xs font-semibold text-slate-600">{{ s1QualityReportFile()?.name ?? 'Click to upload S1 Quality Report *' }}</span>
+              <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp" (change)="onS1QualityReportFileSelected($event)" />
+            </label>
+          </div>
+          <div class="group relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 p-6 hover:border-blue-300">
+            <label class="flex w-full cursor-pointer flex-col items-center justify-center gap-2">
+              <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-50">
+                <i class="pi pi-file-pdf text-lg text-blue-500"></i>
+              </div>
+              <span class="max-w-full truncate px-2 text-center text-xs font-semibold text-slate-600">{{ proformaFile()?.name ?? 'Click to upload Proforma Invoice' }}</span>
+              <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp" (change)="onProformaFileSelected($event)" />
+            </label>
+          </div>
+        </div>
+        <button type="button" (click)="extractLpo()" [disabled]="extracting() || !lpoFile() || !s1QualityReportFile()"
+          class="self-start inline-flex h-10 items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 text-xs font-bold uppercase text-blue-700 hover:bg-blue-100 disabled:opacity-50">
+          @if (extracting()) { <i class="pi pi-spin pi-spinner text-xs"></i> } @else { <i class="pi pi-bolt text-xs"></i> }
+          <span>Extract &amp; Autofill</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="sl-card">
+      <div class="sl-card-header">
+        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+          <i class="pi pi-info-circle"></i>
+        </div>
+        <h2>Purchase Details</h2>
+      </div>
+      <div class="sl-card-body grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div class="flex flex-col gap-2">
+          <label class="sl-label">Order Date *</label>
+          <p-datepicker formControlName="orderDate" dateFormat="dd/mm/yy" [showIcon]="true" [invalid]="isFieldInvalid('orderDate')" styleClass="w-full"></p-datepicker>
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="sl-label">Supplier Name *</label>
+          <input pInputText formControlName="supplierName" [invalid]="isFieldInvalid('supplierName')" placeholder="Enter supplier name" class="w-full" />
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="sl-label">Supplier Email *</label>
+          <input pInputText formControlName="supplierEmail" [invalid]="isFieldInvalid('supplierEmail')" placeholder="supplier@example.com" class="w-full" />
+          @if (form.get('supplierEmail')?.hasError('email') && form.get('supplierEmail')?.touched) {
+            <span class="text-xs font-semibold text-rose-600">Must be a valid email address.</span>
+          }
+        </div>
+        <div class="flex flex-col gap-2 md:col-span-2">
+          <label class="sl-label">Item Description</label>
+          <input pInputText formControlName="itemDescription" placeholder="Item description" class="w-full" />
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="sl-label">Commodity</label>
+          <input pInputText formControlName="commodity" class="w-full" />
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="sl-label">Country of Origin</label>
+          <input pInputText formControlName="countryOfOrigin" class="w-full" />
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="sl-label">Brand</label>
+          <input pInputText formControlName="brandName" class="w-full" />
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="sl-label">H.S Code</label>
+          <input pInputText formControlName="hsCode" class="w-full" />
+        </div>
+      </div>
+    </section>
+
+    <section class="sl-card">
+      <div class="sl-card-header">
+        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+          <i class="pi pi-dollar"></i>
+        </div>
+        <h2>Quantity &amp; Payment</h2>
+      </div>
+      <div class="sl-card-body grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div class="flex flex-col gap-2">
+          <label class="sl-label">Planned Qty *</label>
+          <p-inputNumber formControlName="plannedQtyMT" [invalid]="isFieldInvalid('plannedQtyMT')" styleClass="w-full" inputStyleClass="w-full"></p-inputNumber>
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="sl-label">Buying Unit *</label>
+          <p-select [options]="buyunitOptions" formControlName="buyunit" optionLabel="label" optionValue="value" [invalid]="isFieldInvalid('buyunit')" styleClass="w-full"></p-select>
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="sl-label">Rate (FC per Unit)</label>
+          <p-inputNumber formControlName="fcPerUnit" mode="currency" currency="USD" locale="en-US" styleClass="w-full" inputStyleClass="w-full"></p-inputNumber>
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="sl-label">Total FC</label>
+          <p-inputNumber formControlName="totalFC" mode="currency" currency="USD" locale="en-US" styleClass="w-full" inputStyleClass="w-full"></p-inputNumber>
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="sl-label">Amount AED</label>
+          <p-inputNumber formControlName="amountAED" mode="currency" currency="AED" locale="en-US" styleClass="w-full" inputStyleClass="w-full"></p-inputNumber>
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="sl-label">Payment Terms *</label>
+          <input pInputText formControlName="paymentTerms" [invalid]="isFieldInvalid('paymentTerms')" placeholder="e.g. CAD 100%" class="w-full" />
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="sl-label">Inco Terms</label>
+          <input pInputText formControlName="incoterms" class="w-full" />
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="sl-label">Advance Amount</label>
+          <p-inputNumber formControlName="advanceAmount" styleClass="w-full" inputStyleClass="w-full"></p-inputNumber>
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="sl-label">Bank Name</label>
+          <input pInputText formControlName="bankName" class="w-full" />
+        </div>
+      </div>
+    </section>
+
+    <div class="flex justify-end gap-3">
+      <a routerLink="/local-purchase" class="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 px-5 text-sm font-bold text-slate-600 hover:bg-slate-50">Cancel</a>
+      <button type="submit" [disabled]="submitting()"
+        class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 text-sm font-bold text-white hover:bg-blue-500 disabled:opacity-50">
+        @if (submitting()) { <i class="pi pi-spin pi-spinner text-xs"></i> }
+        <span>Create Local Purchase</span>
+      </button>
+    </div>
+  </form>
+</div>

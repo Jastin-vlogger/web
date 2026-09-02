@@ -563,6 +563,7 @@ export interface CreateShipmentPayload {
   itemsJson?: string;
   splitContainers?: string;      // Split Containers
   totalSplitQtyMT?: string;      // Total Split Quantity MT (from Split Containers)
+  isLocal?: string;              // 'true'/'false' — nearby-store local purchase reporting flag
 }
 
 // Create Shipment Response

@@ -250,13 +250,15 @@ export class ShipmentService {
     page: number = 1,
     limit: number = 20,
     search: string = '',
-    statuses: string[] = []
+    statuses: string[] = [],
+    isLocal: boolean = false
   ): Observable<FlatShipmentListResponse> {
     let params = new HttpParams()
       .set('page', page.toString())
       .set('limit', limit.toString());
     if (search) params = params.set('search', search);
     if (statuses.length) params = params.set('statuses', statuses.join(','));
+    if (isLocal) params = params.set('isLocal', 'true');
 
     return this.http.get<FlatShipmentListResponse>(`${this.apiUrl}/all-shipments`, { params });
   }

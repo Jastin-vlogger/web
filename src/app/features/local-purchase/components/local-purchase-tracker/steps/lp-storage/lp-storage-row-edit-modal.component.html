@@ -1,0 +1,49 @@
+<p-dialog [visible]="true" [modal]="true" [style]="{ width: '640px' }" (onHide)="close.emit()" header="Storage Row Details">
+  <div [formGroup]="row" class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+    <div class="flex flex-col gap-1.5">
+      <label class="text-[10px] font-bold uppercase text-slate-500">GRN #</label>
+      <input pInputText formControlName="grn" class="w-full" placeholder="GRN number" />
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-[10px] font-bold uppercase text-slate-500">Batch #</label>
+      <input pInputText formControlName="batch" class="w-full" placeholder="Batch number" />
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-[10px] font-bold uppercase text-slate-500">Production Date</label>
+      <p-datepicker formControlName="productionDate" appendTo="body" dateFormat="dd/mm/yy" styleClass="w-full"></p-datepicker>
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-[10px] font-bold uppercase text-slate-500">Expiry Date</label>
+      <p-datepicker formControlName="expiryDate" appendTo="body" dateFormat="dd/mm/yy" styleClass="w-full"></p-datepicker>
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-[10px] font-bold uppercase text-slate-500">Received On Time</label>
+      <input pInputText formControlName="receivedOnTime" class="w-full" placeholder="e.g. 2.00 PM" />
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-[10px] font-bold uppercase text-slate-500">Gross Weight</label>
+      <input pInputText formControlName="grossWeight" class="w-full" />
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label class="text-[10px] font-bold uppercase text-slate-500">Net Weight</label>
+      <input pInputText formControlName="netWeight" class="w-full" />
+    </div>
+    <div class="flex flex-col gap-1.5 sm:col-span-2">
+      <label class="text-[10px] font-bold uppercase text-slate-500">Remarks</label>
+      <textarea pTextarea formControlName="remarks" rows="2" class="w-full"></textarea>
+    </div>
+    <div class="flex flex-col gap-1.5 sm:col-span-2">
+      <label class="text-[10px] font-bold uppercase text-slate-500">Supporting Document</label>
+      <div class="flex items-center gap-3">
+        <label class="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 text-[11px] font-semibold text-slate-600 hover:bg-slate-50">
+          <i class="pi pi-upload text-[10px]"></i>Upload
+          <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp" (change)="onFileChange($event)" />
+        </label>
+        <span class="text-[11px] text-slate-500 truncate">{{ selectedFileName() || row.get('documentName')?.value || 'No file selected' }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="flex justify-end mt-5">
+    <button type="button" (click)="close.emit()" class="inline-flex h-9 items-center rounded-lg bg-blue-600 px-5 text-xs font-bold text-white hover:bg-blue-500">Done</button>
+  </div>
+</p-dialog>

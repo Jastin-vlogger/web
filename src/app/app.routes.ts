@@ -22,6 +22,7 @@ export const routes: Routes = [
             { path: 'dashboard', loadChildren: () => import('./features/dashboard/dashboard.routes').then(m => m.DASHBOARD_ROUTES) },
             { path: 'shipments', loadChildren: () => import('./features/shipment/shipment.routes').then(m => m.SHIPMENT_ROUTES) },
             { path: 'all-shipments', loadChildren: () => import('./features/all-shipments/all-shipments.routes').then(m => m.ALL_SHIPMENTS_ROUTES) },
+            { path: 'local-purchase', loadChildren: () => import('./features/local-purchase/local-purchase.routes').then(m => m.LOCAL_PURCHASE_ROUTES) },
             { path: 'suppliers', loadChildren: () => import('./features/suppliers/suppliers.routes').then(m => m.SUPPLIERS_ROUTES) },
             { path: 'supplier-schedules', loadChildren: () => import('./features/supplier-schedules/supplier-schedules.routes').then(m => m.SUPPLIER_SCHEDULES_ROUTES) },
             { path: 'reports', loadChildren: () => import('./features/reports/reports.routes').then(m => m.REPORTS_ROUTES) },

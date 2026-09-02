@@ -15,6 +15,7 @@ import { ButtonModule } from 'primeng/button';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { DialogModule } from 'primeng/dialog';
+import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
 import { PrimaryButtonDirective } from '../../../../shared/directives/button.directive';
 import { ShipmentService } from '../../../../core/services/shipment.service';
@@ -39,6 +40,7 @@ import { toLocalDateString } from '../shipment-form/shared/date.util';
     ButtonModule,
     ToastModule,
     DialogModule,
+    ToggleSwitchModule,
     PrimaryButtonDirective
   ],
   providers: [MessageService],
@@ -183,6 +185,11 @@ export class CreateShipmentComponent implements OnInit, OnDestroy {
 
   private initForm(): void {
     this.shipmentForm = this.fb.group({
+      // Reporting flag only — a local/nearby-store purchase entered through this regular flow.
+      // Does not change validation; just tags the shipment for the All-Shipments "Local
+      // Purchases" filter.
+      isLocal: [false],
+
       // Shipment Info
       commodity: [''],
       piNo: ['', Validators.required],
@@ -894,7 +901,8 @@ export class CreateShipmentComponent implements OnInit, OnDestroy {
       q1Report: JSON.stringify(this.extractedQ1Report() || {}),
       itemsJson: JSON.stringify(this.extractedItems()),
       splitContainers: formValue.noOfShipments?.toString() || '0',
-      totalSplitQtyMT: formValue.noOfShipments?.toString() || '0'
+      totalSplitQtyMT: formValue.noOfShipments?.toString() || '0',
+      isLocal: formValue.isLocal ? 'true' : 'false'
     };
 
     const createFormData = new FormData();

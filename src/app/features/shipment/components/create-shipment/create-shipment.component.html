@@ -59,11 +59,19 @@
   <form [formGroup]="shipmentForm" class="pb-14">
     <div class="flex flex-col gap-5">
       <section class="sl-card">
-        <div class="sl-card-header">
-          <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-            <i class="pi pi-info-circle"></i>
+        <div class="sl-card-header flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+              <i class="pi pi-info-circle"></i>
+            </div>
+            <h2>Shipment Header</h2>
           </div>
-          <h2>Shipment Header</h2>
+          <!-- Reporting flag only — tags this shipment for the All-Shipments "Local Purchases"
+               filter; does not change any validation or the tracker flow below. -->
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Mark as Local Purchase</span>
+            <p-toggleswitch formControlName="isLocal"></p-toggleswitch>
+          </label>
         </div>
         <div class="sl-card-body grid grid-cols-1 gap-4 md:grid-cols-2">
           <div class="flex flex-col gap-3 md:col-span-2">

@@ -38,6 +38,10 @@ export class AllShipmentsComponent implements OnInit {
   searchQuery = signal('');
   selectedStatuses = signal<string[]>([]);
   exporting = signal(false);
+  // "All Shipments" / "Local Purchases" tab — filters regular shipments explicitly tagged
+  // isLocal at creation (Feature B). Reuses this same table/columns underneath, just a
+  // server-side filter toggle — no separate view.
+  showLocalOnly = signal(false);
 
   // Point 6: status filter options (values match the backend per-container status strings).
   readonly statusOptions = [
@@ -64,7 +68,7 @@ export class AllShipmentsComponent implements OnInit {
   fetchShipments(): void {
     this.loading.set(true);
     this.shipmentService
-      .getAllShipmentsFlat(this.currentPage(), this.pageSize(), this.searchQuery(), this.selectedStatuses())
+      .getAllShipmentsFlat(this.currentPage(), this.pageSize(), this.searchQuery(), this.selectedStatuses(), this.showLocalOnly())
       .subscribe({
         next: (response) => {
           this.rows.set(response.shipments);
@@ -93,6 +97,13 @@ export class AllShipmentsComponent implements OnInit {
 
   onStatusFilterChange(statuses: string[]): void {
     this.selectedStatuses.set(statuses ?? []);
+    this.currentPage.set(1);
+    this.fetchShipments();
+  }
+
+  setShowLocalOnly(showLocal: boolean): void {
+    if (this.showLocalOnly() === showLocal) return;
+    this.showLocalOnly.set(showLocal);
     this.currentPage.set(1);
     this.fetchShipments();
   }
@@ -208,7 +219,7 @@ export class AllShipmentsComponent implements OnInit {
     this.exporting.set(true);
     // limit high enough to pull every matching row for the export.
     this.shipmentService
-      .getAllShipmentsFlat(1, 100000, this.searchQuery(), this.selectedStatuses())
+      .getAllShipmentsFlat(1, 100000, this.searchQuery(), this.selectedStatuses(), this.showLocalOnly())
       .subscribe({
         next: (response) => {
           const columns = this.buildExportColumns();

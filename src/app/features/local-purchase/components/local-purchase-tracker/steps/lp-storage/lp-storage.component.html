@@ -1,0 +1,30 @@
+<div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+  <div class="flex items-center justify-between px-5 py-3 border-b border-slate-100 bg-slate-50/60 flex-wrap gap-2">
+    <h2 class="text-sm font-bold text-slate-800">Storage Arrival</h2>
+    <div class="flex items-center gap-2">
+      <span class="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 whitespace-nowrap">
+        <span class="font-black text-slate-800">{{ getRemainingQty() }}</span>&nbsp;{{ localPurchase.buyunit || 'MT' }} remaining
+      </span>
+      @if (canEdit) {
+        <button type="button" (click)="addRow()" class="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-100">
+          <i class="pi pi-plus text-[10px]"></i>Add Row
+        </button>
+        <button type="button" (click)="saveAll()" [disabled]="saving()" class="inline-flex h-8 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-[10px] font-bold uppercase text-white hover:bg-blue-500 disabled:opacity-50">
+          @if (saving()) { <i class="pi pi-spin pi-spinner text-[10px]"></i> }
+          Save All
+        </button>
+      }
+    </div>
+  </div>
+
+  <app-lp-storage-rows-table [rows]="rows" [canEdit]="canEdit" [warehouseOptions]="warehouseOptions()" (editRow)="openRowEditModal($event)" (removeRowIndex)="removeRow($event)"></app-lp-storage-rows-table>
+</div>
+
+@if (editingRowIndex() !== null) {
+  <app-lp-storage-row-edit-modal
+    [row]="asGroup(rows.at(editingRowIndex()!))"
+    [rowIndex]="editingRowIndex()!"
+    (close)="closeRowEditModal()"
+    (fileSelected)="onRowFileSelected($event.index, $event.file)">
+  </app-lp-storage-row-edit-modal>
+}
