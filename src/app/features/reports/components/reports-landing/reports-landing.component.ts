@@ -167,6 +167,8 @@ export class ReportsLandingComponent implements OnInit {
     { header: 'Rice Name', key: 'riceName', width: 18 },
     { header: 'Packing', key: 'packing', width: 12 },
     { header: 'PI No.', key: 'piNo', width: 20 },
+    { header: 'LPO Number', key: 'poNumber', width: 20 },
+    { header: 'Foreign / Local', key: 'foreignLocal', width: 14 },
     { header: 'FCL', key: 'fcl', width: 10 },
     { header: 'Cont. Size', key: 'containerSize', width: 12 },
     { header: 'Buying Unit', key: 'buyingUnit', width: 14 },
@@ -185,6 +187,13 @@ export class ReportsLandingComponent implements OnInit {
     { header: 'Bags', key: 'bags', width: 12 },
     { header: 'Pallet', key: 'pallet', width: 12 },
     { header: 'Report Status', key: 'reportStatus', width: 26 },
+    { header: 'Batch No', key: 'qualityBatchNo', width: 18 },
+    { header: 'Inhouse Report No', key: 'qualityInhouseReportNo', width: 20 },
+    { header: 'Inhouse Document', key: 'qualityInhouseDocument', width: 24 },
+    { header: 'Inhouse Remarks', key: 'qualityInhouseRemarks', width: 24 },
+    { header: 'Third Party report No', key: 'qualityThirdPartyReportNo', width: 20 },
+    { header: 'Third Party Document', key: 'qualityThirdPartyDocument', width: 24 },
+    { header: 'Third Party Remarks', key: 'qualityThirdPartyRemarks', width: 24 },
   ];
 
   readonly childColumns: ChildReportColumn[] = [
@@ -251,29 +260,6 @@ export class ReportsLandingComponent implements OnInit {
     };
   });
 
-  readonly reportCards = computed(() => [
-    {
-      title: 'Shipment Master Export',
-      description: 'Export filtered shipment records to Excel or PDF in the reporting format.',
-      icon: 'pi pi-file-export',
-      value: this.rows().length,
-      tone: 'blue',
-    },
-    {
-      title: 'Downloaded By',
-      description: this.getDownloadedBy(),
-      icon: 'pi pi-user',
-      value: this.rows().length ? 'Ready' : 'No Data',
-      tone: 'emerald',
-    },
-    {
-      title: 'Generated At',
-      description: this.generatedAt() ? this.formatDateTime(this.generatedAt()) : 'Waiting for data',
-      icon: 'pi pi-clock',
-      value: this.rows().length ? `${this.rows().length} rows` : '0 rows',
-      tone: 'slate',
-    },
-  ]);
 
   ngOnInit(): void {
     // Point 23: keep availableReports reactive to permission loads, and ensure the
@@ -421,7 +407,7 @@ export class ReportsLandingComponent implements OnInit {
 
   private buildFilename(ext: 'xlsx' | 'pdf'): string {
     const date = new Date().toISOString().slice(0, 10);
-    return `royal-horizon-shipment-report-${date}.${ext}`;
+    return `royal-horizon-shipment-master-data-${date}.${ext}`;
   }
 
   private downloadBlob(blob: Blob, filename: string): void {

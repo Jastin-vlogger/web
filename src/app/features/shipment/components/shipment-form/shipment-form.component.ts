@@ -1654,6 +1654,18 @@ export class ShipmentFormComponent implements OnDestroy {
       portOfDischarge: [actualData?.portOfDischarge || ''],
       shipmentArrived: [actualData?.shipmentArrived || 'No'],
       noOfContainers: [noOfContainers],
+      // Read-only: the container total taken from the B/L document itself (shared across every
+      // item on the same B/L). Distinct from the writable per-item packing count above.
+      noOfContainersBl: [
+        {
+          value:
+            actualData?.mergedTotalContainers ??
+            actualData?.billExtractionData?.number_of_containers ??
+            actualData?.billExtractionData?.containers?.length ??
+            null,
+          disabled: true,
+        },
+      ],
       noOfBags: [actualData?.noOfBags ?? actualData?.bags ?? null],
       quantityByMt: [actualData?.quantityByMt ?? actualData?.qtyMT ?? plannedContainer?.qtyMT ?? null],
       shippingLine: [actualData?.shippingLine || ''],
@@ -1869,12 +1881,12 @@ export class ShipmentFormComponent implements OnDestroy {
           sn: [row?.sn ?? index + 1],
           sampleNo: [row?.sampleNo || row?.shipment_no_batch_no || fallbackReport?.shipment_no_batch_no || ''],
           phase: [row?.phase || 'S1'],
-          purpose: [row?.purpose || ''],
           date: [row?.date ? new Date(row.date) : (row?.report_date ? new Date(row.report_date) : defaultDate)],
           inhouseReportNo: [row?.inhouseReportNo || ''],
           inhouseReportDate: [row?.inhouseReportDate ? new Date(row.inhouseReportDate) : defaultDate],
           inhouseReportDocumentUrl: [row?.inhouseReportDocumentUrl || ''],
           inhouseReportDocumentName: [row?.inhouseReportDocumentName || ''],
+          inhouseRemarks: [row?.inhouseRemarks || ''],
           strategicReportNo: [row?.strategicReportNo || ''],
           strategicReportDate: [row?.strategicReportDate ? new Date(row.strategicReportDate) : defaultDate],
           strategicReportDocumentUrl: [row?.strategicReportDocumentUrl || ''],

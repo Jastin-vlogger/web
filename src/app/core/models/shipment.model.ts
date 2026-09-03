@@ -192,6 +192,16 @@ export interface ShipmentReportExportRow {
   pallet: number | string;
   actualShipmentNo?: string;
   weekWiseShipment?: string;
+  /** 'Local' when the shipment was tagged isLocal at creation, otherwise 'Foreign'. */
+  foreignLocal?: string;
+  /** Quality column group — aggregated from every container's actual.qualityRows. */
+  qualityBatchNo?: string;
+  qualityInhouseReportNo?: string;
+  qualityInhouseDocument?: string;
+  qualityInhouseRemarks?: string;
+  qualityThirdPartyReportNo?: string;
+  qualityThirdPartyDocument?: string;
+  qualityThirdPartyRemarks?: string;
   children?: ShipmentReportExportChildRow[];
 }
 

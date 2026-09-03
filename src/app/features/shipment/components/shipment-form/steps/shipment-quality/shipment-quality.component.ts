@@ -56,15 +56,30 @@ export class ShipmentQualityComponent {
   readonly shipmentData = toSignal(this.store.select(selectShipmentData));
   readonly canEditQ1Report = computed(() => this.rbacService.hasPermission('shipment.tab.quality.edit'));
 
-  // ── Q1 report card / Quality Parameters inline field edit ──────────────────
-  // `editingQ1Field` holds the dot-path into q1Report currently being edited (e.g.
-  // "sample_details.commodity" or "quality_parameters.2.actual"), or null when nothing is
-  // being edited. One generic path-based editor serves both the summary card and every cell
-  // of the Quality Parameters table.
-  readonly editingQ1Field = signal<string | null>(null);
-  readonly q1FieldDraft = signal('');
-  readonly q1FieldSaving = signal(false);
-  readonly q1FieldError = signal<string | null>(null);
+  // ── Q1 report card / Quality Parameters edit modal ────────────────────────
+  // A single "Edit" button on the S1 Report Highlights section opens one modal that edits
+  // every S1 card field plus every Quality Parameters row. Saved in one bulk request
+  // (ShipmentService.updateQualityReport) against whitelisted q1Report dot-paths.
+  readonly q1EditOpen = signal(false);
+  readonly q1EditSaving = signal(false);
+  readonly q1EditError = signal<string | null>(null);
+  q1EditForm: FormGroup | null = null;
+
+  // S1 card fields — control name → q1Report dot-path (must match the server whitelist).
+  readonly q1CardFields: Array<{ control: string; path: string; label: string; full?: boolean }> = [
+    { control: 'shipment_no_batch_no', path: 'sample_details.shipment_no_batch_no', label: 'Shipment No / Batch No' },
+    { control: 'report_date', path: 'report_details.report_date', label: 'Report Date' },
+    { control: 'report_no', path: 'report_details.report_no', label: 'Report No' },
+    { control: 'commodity', path: 'sample_details.commodity', label: 'Commodity' },
+    { control: 'variety_of_grains', path: 'sample_details.variety_of_grains', label: 'Variety of Grains' },
+    { control: 'vendor', path: 'sample_details.vendor', label: 'Vendor' },
+    { control: 'country_of_origin', path: 'sample_details.country_of_origin', label: 'Country of Origin' },
+    { control: 'analyzed_by', path: 'analysis_details.analyzed_by', label: 'Analyzed By' },
+    { control: 'analysis_date', path: 'analysis_details.date', label: 'Analysis Date' },
+    { control: 'analysis_time', path: 'analysis_details.time', label: 'Analysis Time' },
+    { control: 'purpose', path: 'sample_details.purpose', label: 'Purpose', full: true },
+  ];
+
   readonly phaseOptions = [
     { label: 'S1', value: 'S1' },
     { label: 'S2', value: 'S2' },
@@ -128,12 +143,12 @@ export class ShipmentQualityComponent {
         sn: [rows.length + 1],
         sampleNo: [''],
         phase: ['S1'],
-        purpose: [''],
         date: [null],
         inhouseReportNo: [''],
         inhouseReportDate: [null],
         inhouseReportDocumentUrl: [''],
         inhouseReportDocumentName: [''],
+        inhouseRemarks: [''],
         strategicReportNo: [''],
         strategicReportDate: [null],
         strategicReportDocumentUrl: [''],
@@ -332,33 +347,97 @@ export class ShipmentQualityComponent {
     return value != null ? String(value) : '';
   }
 
-  startQ1FieldEdit(path: string): void {
+  /** Batch No captured in the warehouse-arrival (Storage Allocation & Arrival) step — first
+   *  non-empty `batch` across every container's storageSplits. Used to fill the S1 card's
+   *  "Shipment No / Batch No" when the OCR report left it blank. */
+  getWarehouseBatchNo(): string {
+    const actual = this.shipmentData()?.actual;
+    if (!Array.isArray(actual)) return '';
+    for (const container of actual) {
+      const splits = Array.isArray(container?.storageSplits) ? container.storageSplits : [];
+      for (const split of splits) {
+        const batch = String(split?.batch || '').trim();
+        if (batch) return batch;
+      }
+    }
+    return '';
+  }
+
+  /** S1 card "Shipment No / Batch No" for display — OCR value, else the warehouse batch. */
+  getQ1BatchNo(): string {
+    const q1 = this.getQ1ReportData();
+    return String(q1?.sample_details?.shipment_no_batch_no || '').trim() || this.getWarehouseBatchNo();
+  }
+
+  get q1EditParamRows(): FormArray {
+    return (this.q1EditForm?.get('quality_parameters') as FormArray) ?? this.fb.array([]);
+  }
+
+  openQ1Edit(): void {
     if (!this.canEditQ1Report()) return;
-    this.q1FieldDraft.set(this.getQ1FieldValue(path));
-    this.q1FieldError.set(null);
-    this.editingQ1Field.set(path);
+    const q1 = this.getQ1ReportData() || {};
+
+    const group: Record<string, any> = {};
+    for (const f of this.q1CardFields) {
+      let value = this.getQ1FieldValue(f.path);
+      if (f.control === 'shipment_no_batch_no' && !value) value = this.getWarehouseBatchNo();
+      group[f.control] = [value];
+    }
+
+    const params = Array.isArray(q1.quality_parameters) ? q1.quality_parameters : [];
+    group['quality_parameters'] = this.fb.array(
+      params.map((p: any) =>
+        this.fb.group({
+          criteria: [p?.criteria != null ? String(p.criteria) : ''],
+          preferred_standard: [p?.preferred_standard != null ? String(p.preferred_standard) : ''],
+          actual: [p?.actual != null ? String(p.actual) : ''],
+          remark: [p?.remark != null ? String(p.remark) : ''],
+        })
+      )
+    );
+
+    this.q1EditForm = this.fb.group(group);
+    this.q1EditError.set(null);
+    this.q1EditOpen.set(true);
   }
 
-  cancelQ1FieldEdit(): void {
-    this.editingQ1Field.set(null);
-    this.q1FieldError.set(null);
+  closeQ1Edit(): void {
+    if (this.q1EditSaving()) return;
+    this.q1EditOpen.set(false);
+    this.q1EditForm = null;
   }
 
-  saveQ1FieldEdit(path: string): void {
+  onQ1EditVisibleChange(visible: boolean): void {
+    if (!visible) this.closeQ1Edit();
+  }
+
+  saveQ1Edit(): void {
     const shipmentId = this.shipmentData()?.shipment?._id;
-    if (!shipmentId) return;
+    if (!shipmentId || !this.q1EditForm) return;
 
-    this.q1FieldSaving.set(true);
-    this.q1FieldError.set(null);
-    this.shipmentService.updateQualityReportField(shipmentId, path, this.q1FieldDraft().trim()).subscribe({
+    const fields: Array<{ path: string; value: string }> = [];
+    for (const f of this.q1CardFields) {
+      fields.push({ path: f.path, value: String(this.q1EditForm.get(f.control)?.value ?? '').trim() });
+    }
+    this.q1EditParamRows.controls.forEach((row, i) => {
+      (['criteria', 'preferred_standard', 'actual', 'remark'] as const).forEach((key) => {
+        fields.push({ path: `quality_parameters.${i}.${key}`, value: String(row.get(key)?.value ?? '').trim() });
+      });
+    });
+
+    this.q1EditSaving.set(true);
+    this.q1EditError.set(null);
+    this.shipmentService.updateQualityReport(shipmentId, fields).subscribe({
       next: () => {
-        this.q1FieldSaving.set(false);
-        this.editingQ1Field.set(null);
+        this.q1EditSaving.set(false);
+        this.q1EditOpen.set(false);
+        this.q1EditForm = null;
+        this.notificationService.success('Saved', 'Quality report updated.');
         this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
       },
       error: (err) => {
-        this.q1FieldSaving.set(false);
-        this.q1FieldError.set(err?.error?.message || 'Failed to update field. Please try again.');
+        this.q1EditSaving.set(false);
+        this.q1EditError.set(err?.error?.message || 'Failed to update. Please try again.');
       },
     });
   }
@@ -422,12 +501,12 @@ export class ShipmentQualityComponent {
           sn: Number(saved.sn) || rowIndex + 1,
           sampleNo: saved.sampleNo || '',
           phase: saved.phase || 'S1',
-          purpose: saved.purpose || '',
           date: saved.date ? new Date(saved.date) : null,
           inhouseReportNo: saved.inhouseReportNo || '',
           inhouseReportDate: saved.inhouseReportDate ? new Date(saved.inhouseReportDate) : null,
           inhouseReportDocumentUrl: saved.inhouseReportDocumentUrl || '',
           inhouseReportDocumentName: saved.inhouseReportDocumentName || '',
+          inhouseRemarks: saved.inhouseRemarks || '',
           strategicReportNo: saved.strategicReportNo || '',
           strategicReportDate: saved.strategicReportDate ? new Date(saved.strategicReportDate) : null,
           strategicReportDocumentUrl: saved.strategicReportDocumentUrl || '',
@@ -514,6 +593,7 @@ export class ShipmentQualityComponent {
       inhouseReportDate: toDate(row.get('inhouseReportDate')?.value),
       inhouseReportDocumentUrl: row.get('inhouseReportDocumentUrl')?.value || '',
       inhouseReportDocumentName: row.get('inhouseReportDocumentName')?.value || '',
+      inhouseRemarks: row.get('inhouseRemarks')?.value || '',
       strategicReportNo: row.get('strategicReportNo')?.value || '',
       strategicReportDate: toDate(row.get('strategicReportDate')?.value),
       strategicReportDocumentUrl: row.get('strategicReportDocumentUrl')?.value || '',

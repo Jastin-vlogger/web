@@ -580,6 +580,21 @@ export class ShipmentService {
   }
 
   /**
+   * PATCH /shipment/:id/quality-report
+   * Bulk variant of updateQualityReportField — applies every whitelisted { path, value } change
+   * to shipment.q1Report in one save. Backs the single "Edit" modal on the Quality step.
+   */
+  updateQualityReport(
+    shipmentId: string,
+    fields: Array<{ path: string; value: string }>
+  ): Observable<{ message: string; q1Report: any }> {
+    return this.http.patch<{ message: string; q1Report: any }>(
+      `${this.apiUrl}/${shipmentId}/quality-report`,
+      { fields }
+    );
+  }
+
+  /**
    * PATCH /shipment/:id/line-item/:index/refresh-from-catalog
    * Backfills a single line item's blank Brand/Barcode/DM Barcode/Variant/H.S Code/
    * Country of Origin/Packing from the Item Master catalog.

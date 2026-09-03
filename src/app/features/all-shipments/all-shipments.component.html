@@ -1,4 +1,4 @@
-<div class="flex flex-col gap-4 md:h-[calc(100dvh-9rem)] md:min-h-[620px] md:overflow-hidden md:gap-6">
+<div class="flex flex-col gap-3 md:h-[calc(100dvh-9rem)] md:min-h-[620px] md:overflow-hidden md:gap-4">
   <!-- Header -->
   <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
     <div class="w-full sm:w-auto">
@@ -53,22 +53,6 @@
     </div>
   </header>
 
-  <!-- Local Purchases filter: same table/columns below, just a server-side isLocal toggle -->
-  <div class="flex items-center gap-1 shrink-0 w-fit rounded-xl border border-slate-200 bg-slate-50 p-1">
-    <button type="button" (click)="setShowLocalOnly(false)"
-      class="rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors"
-      [class.bg-white]="!showLocalOnly()" [class.text-slate-900]="!showLocalOnly()" [class.shadow-sm]="!showLocalOnly()"
-      [class.text-slate-500]="showLocalOnly()">
-      All Shipments
-    </button>
-    <button type="button" (click)="setShowLocalOnly(true)"
-      class="rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors"
-      [class.bg-white]="showLocalOnly()" [class.text-slate-900]="showLocalOnly()" [class.shadow-sm]="showLocalOnly()"
-      [class.text-slate-500]="!showLocalOnly()">
-      Local Purchases
-    </button>
-  </div>
-
   <!-- Table -->
   <div class="grow min-h-0 border border-slate-200 rounded-xl md:rounded-2xl bg-white shadow-sm flex flex-col overflow-hidden">
     <!-- Mobile cards -->
@@ -119,16 +103,16 @@
       <table class="w-full min-w-[1100px] border-separate border-spacing-0">
         <thead class="sticky top-0 z-10 bg-slate-50">
           <tr>
-            <th class="p-4 border-b border-slate-200 text-left font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">S No.</th>
-            <th class="p-4 border-b border-slate-200 text-left font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">Shipment ID</th>
-            <th class="p-4 border-b border-slate-200 text-left font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">BL No</th>
-            <th class="p-4 border-b border-slate-200 text-left font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">Order Date</th>
-            <th class="p-4 border-b border-slate-200 text-left font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">Supplier</th>
-            <th class="p-4 border-b border-slate-200 text-left font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">Description</th>
-            <th class="p-4 border-b border-slate-200 text-left font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">Buying Qty</th>
-            <th class="p-4 border-b border-slate-200 text-left font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">FCL</th>
-            <th class="p-4 border-b border-slate-200 text-left font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">Status</th>
-            <th class="p-4 border-b border-slate-200 text-center font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">Action</th>
+            <th class="px-4 py-2.5 border-b border-slate-200 text-left font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">S No.</th>
+            <th class="px-4 py-2.5 border-b border-slate-200 text-left font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">Shipment ID</th>
+            <th class="px-4 py-2.5 border-b border-slate-200 text-left font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">BL No</th>
+            <th class="px-4 py-2.5 border-b border-slate-200 text-left font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">Order Date</th>
+            <th class="px-4 py-2.5 border-b border-slate-200 text-left font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">Supplier</th>
+            <th class="px-4 py-2.5 border-b border-slate-200 text-left font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">Description</th>
+            <th class="px-4 py-2.5 border-b border-slate-200 text-left font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">Buying Qty</th>
+            <th class="px-4 py-2.5 border-b border-slate-200 text-left font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">FCL</th>
+            <th class="px-4 py-2.5 border-b border-slate-200 text-left font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">Status</th>
+            <th class="px-4 py-2.5 border-b border-slate-200 text-center font-semibold text-slate-400 uppercase text-[10px] tracking-widest whitespace-nowrap bg-slate-50">Action</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
@@ -143,22 +127,22 @@
           } @else {
             @for (row of rows(); track row.shipmentId + row.parentId; let idx = $index) {
               <tr class="hover:bg-slate-50/70 transition-colors">
-                <td class="p-4 text-sm text-slate-500">{{ getDisplaySerial(idx) }}</td>
+                <td class="px-4 py-2.5 text-sm text-slate-500">{{ getDisplaySerial(idx) }}</td>
                 <td class="p-4">
                   <button (click)="track(row)" class="text-sm font-black text-slate-900 hover:text-blue-600 hover:underline">{{ row.shipmentId }}</button>
                 </td>
-                <td class="p-4 text-sm text-slate-600">{{ row.blNo || '-' }}</td>
-                <td class="p-4 text-sm text-slate-600 whitespace-nowrap">{{ row.orderDate | date:'dd/MM/yyyy' }}</td>
-                <td class="p-4 text-sm text-slate-600">{{ row.supplier || '-' }}</td>
-                <td class="p-4 text-sm text-slate-600">{{ row.description || '-' }}</td>
-                <td class="p-4 text-sm text-slate-600">{{ row.buyingQty | number }}</td>
-                <td class="p-4 text-sm text-slate-600">{{ row.fcl | number }}</td>
+                <td class="px-4 py-2.5 text-sm text-slate-600">{{ row.blNo || '-' }}</td>
+                <td class="px-4 py-2.5 text-sm text-slate-600 whitespace-nowrap">{{ row.orderDate | date:'dd/MM/yyyy' }}</td>
+                <td class="px-4 py-2.5 text-sm text-slate-600">{{ row.supplier || '-' }}</td>
+                <td class="px-4 py-2.5 text-sm text-slate-600">{{ row.description || '-' }}</td>
+                <td class="px-4 py-2.5 text-sm text-slate-600">{{ row.buyingQty | number }}</td>
+                <td class="px-4 py-2.5 text-sm text-slate-600">{{ row.fcl | number }}</td>
                 <td class="p-4">
                   <span [class]="'inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ' + getStatusClasses(row.status)">
                     {{ getDisplayStageName(row.status) }}
                   </span>
                 </td>
-                <td class="p-4 text-center">
+                <td class="px-4 py-2.5 text-center">
                   <button (click)="track(row)" class="inline-flex items-center justify-center h-9 px-4 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all text-[10px] font-bold uppercase tracking-wider border border-blue-100">
                     <i class="pi pi-directions mr-1.5"></i><span>Track</span>
                   </button>
