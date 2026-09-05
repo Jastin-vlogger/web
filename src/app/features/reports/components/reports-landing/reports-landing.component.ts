@@ -167,7 +167,7 @@ export class ReportsLandingComponent implements OnInit {
     { header: 'Rice Name', key: 'riceName', width: 18 },
     { header: 'Packing', key: 'packing', width: 12 },
     { header: 'PI No.', key: 'piNo', width: 20 },
-    { header: 'LPO Number', key: 'poNumber', width: 20 },
+    { header: 'LPO Number', key: 'fpoNo', width: 20 },
     { header: 'Foreign / Local', key: 'foreignLocal', width: 14 },
     { header: 'FCL', key: 'fcl', width: 10 },
     { header: 'Cont. Size', key: 'containerSize', width: 12 },

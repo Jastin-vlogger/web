@@ -76,6 +76,21 @@ export interface FlatShipmentRow {
   receiver?: string;
   expectedDocDate?: string | null;
   arrivalDocumentReceived?: string;
+  /** Internal PO reference code — NOT the LPO number shown on screen. See fpoNo. */
+  poNumber?: string;
+  /** LPO Number — shipment.fpoNo (fallback poNumber/orderNumber), the value shown as
+   *  "PO No." on the Shipment Summary step. */
+  fpoNo?: string;
+  /** 'Local' when the shipment was tagged isLocal at creation, otherwise 'Foreign'. */
+  foreignLocal?: string;
+  // Quality — from this row's own container.actual.qualityRows / storageSplits.
+  qualityBatchNo?: string;
+  qualityInhouseReportNo?: string;
+  qualityInhouseDocument?: string;
+  qualityInhouseRemarks?: string;
+  qualityThirdPartyReportNo?: string;
+  qualityThirdPartyDocument?: string;
+  qualityThirdPartyRemarks?: string;
   // Logistics Department (Clearing Advance request)
   clearingAdvanceRequestDate?: string | null;
   clearingAdvanceAmount?: number;

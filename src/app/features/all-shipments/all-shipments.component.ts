@@ -108,12 +108,15 @@ export class AllShipmentsComponent implements OnInit {
     const FAS = 'FAS Department';
     const WH_MANAGER = 'Warehouse Department (Warehouse Manager)';
     const WH_STOREKEEPER = 'Warehouse Department (Storekeepers)';
+    const QUALITY = 'Quality';
     const fmt = (v: string | null | undefined) => this.fmtDate(v);
 
     return [
       // Purchase Department
       { group: PURCHASE, header: 'S No.', value: (_r, idx) => idx + 1 },
       { group: PURCHASE, header: 'Shipment ID', value: (r) => r.shipmentId },
+      { group: PURCHASE, header: 'LPO Number', value: (r) => r.fpoNo || '' },
+      { group: PURCHASE, header: 'Foreign / Local', value: (r) => r.foreignLocal || '' },
       { group: PURCHASE, header: 'Order Date', value: (r) => fmt(r.orderDate) },
       { group: PURCHASE, header: 'Supplier', value: (r) => r.supplier || '' },
       { group: PURCHASE, header: 'Item Code', value: (r) => r.itemCode || '' },
@@ -197,6 +200,14 @@ export class AllShipmentsComponent implements OnInit {
       { group: WH_STOREKEEPER, header: 'Containers Received', value: (r) => r.containersReceived ?? '' },
       { group: WH_STOREKEEPER, header: 'Containers Remaining', value: (r) => r.containersRemaining ?? '' },
       { group: WH_STOREKEEPER, header: 'Shortage Bags', value: (r) => r.shortageBags ?? '' },
+      // Quality
+      { group: QUALITY, header: 'Batch No', value: (r) => r.qualityBatchNo || '' },
+      { group: QUALITY, header: 'Inhouse Report No', value: (r) => r.qualityInhouseReportNo || '' },
+      { group: QUALITY, header: 'Inhouse Document', value: (r) => r.qualityInhouseDocument || '' },
+      { group: QUALITY, header: 'Inhouse Remarks', value: (r) => r.qualityInhouseRemarks || '' },
+      { group: QUALITY, header: 'Third Party report No', value: (r) => r.qualityThirdPartyReportNo || '' },
+      { group: QUALITY, header: 'Third Party Document', value: (r) => r.qualityThirdPartyDocument || '' },
+      { group: QUALITY, header: 'Third Party Remarks', value: (r) => r.qualityThirdPartyRemarks || '' },
       // Ungrouped
       { group: '', header: 'Status', value: (r) => this.getDisplayStageName(r.status) },
     ];
@@ -269,6 +280,7 @@ export class AllShipmentsComponent implements OnInit {
     const FAS = 'FAS Department';
     const WH_MANAGER = 'Warehouse Department (Warehouse Manager)';
     const WH_STOREKEEPER = 'Warehouse Department (Storekeepers)';
+    const QUALITY = 'Quality';
 
     const GROUP_FILL: Record<string, string> = {
       [PURCHASE]: '385724',
@@ -276,11 +288,16 @@ export class AllShipmentsComponent implements OnInit {
       [FAS]: 'ADB9CA',
       [WH_MANAGER]: '92D050',
       [WH_STOREKEEPER]: '92D050',
+      [QUALITY]: 'FFFF00',
     };
 
     const thinBorder = { style: 'thin', color: { rgb: 'FF000000' } };
     const borders = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder };
     const whiteBold = { bold: true, color: { rgb: 'FFFFFFFF' } };
+    const blackBold = { bold: true, color: { rgb: 'FF000000' } };
+    // The Quality band uses a light yellow fill (matching the client's reference sheet) —
+    // white text would be unreadable on it, so it gets dark text instead.
+    const LIGHT_FILLS = new Set([QUALITY]);
 
     const cellRef = (r: number, c: number) => XLSX.utils.encode_cell({ r, c });
 
@@ -292,7 +309,7 @@ export class AllShipmentsComponent implements OnInit {
       const groupCell = worksheet[groupCellRef] || (worksheet[groupCellRef] = { t: 's', v: '' });
       groupCell.s = {
         fill: fillGroup ? { patternType: 'solid', fgColor: { rgb: GROUP_FILL[fillGroup] || 'FFFFFF' } } : undefined,
-        font: whiteBold,
+        font: fillGroup && LIGHT_FILLS.has(fillGroup) ? blackBold : whiteBold,
         alignment: { horizontal: 'center', vertical: 'center' },
         border: borders,
       };
