@@ -449,6 +449,9 @@ export class ReportsLandingComponent implements OnInit {
 
   formatCellValue(value: unknown, key?: keyof ShipmentReportExportRow): string | number {
     if (key === 'noOfShipments' && (value == null || value === '')) return 0;
+    if ((value == null || value === '') && (key === 'qualityInhouseDocument' || key === 'qualityThirdPartyDocument')) {
+      return 'Not Available';
+    }
     if (value == null || value === '') return '';
     if (typeof value === 'number') {
       if (['fcPerUnit', 'totalFC', 'advanceAmount'].includes(String(key))) {

@@ -21,6 +21,12 @@ export class LocalPurchaseService {
     return this.http.get<LocalPurchaseListResponse>(`${this.apiUrl}`, { params });
   }
 
+  /** Every matching local purchase (for the list-page Excel export). The list endpoint already
+   *  returns full documents; a large limit pulls them all in one page. */
+  getAll(search: string = ''): Observable<LocalPurchaseListResponse> {
+    return this.getList(1, 100000, search);
+  }
+
   getById(id: string): Observable<{ data: LocalPurchase }> {
     return this.http.get<{ data: LocalPurchase }>(`${this.apiUrl}/${id}`);
   }

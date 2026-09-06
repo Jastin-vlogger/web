@@ -1673,6 +1673,14 @@ export class ShipmentFormComponent implements OnDestroy {
       maximumDetentionDays: [actualData?.maximumDetentionDays ?? null],
       freightPrepared: [actualData?.freightPrepared || 'No'],
       actualBags: [actualData?.actualBags ?? actualData?.packagingList?.totalBags ?? null],
+      // Canonical per-container figures — B/L Details is the single manual source of truth.
+      // These write straight to container.actual.{bags,pallet,qtyMT}; the Actual tab and the
+      // reports read the same fields back. FCL is a read-only mirror of the container's FCL
+      // (editing FCL still lives in the Scheduled/split tab where the split logic runs).
+      bags: [actualData?.bags ?? actualData?.actualBags ?? actualData?.packagingList?.totalBags ?? null],
+      pallet: [actualData?.pallet ?? null],
+      buyingQty: [actualData?.qtyMT ?? plannedContainer?.qtyMT ?? null],
+      fclDisplay: [{ value: actualData?.FCL ?? plannedContainer?.FCL ?? null, disabled: true }],
       expiryDate: [this.parseExpiryDate(actualData?.expiryDate || actualData?.packagingList?.expiryDate)],
       hsCode: [
         actualData?.hsCode ||

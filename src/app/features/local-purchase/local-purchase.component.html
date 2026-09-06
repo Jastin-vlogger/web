@@ -10,6 +10,15 @@
         <input type="text" (input)="onSearchInput($event)" placeholder="Search LP no., supplier, item..."
           class="w-full h-11 rounded-xl border border-slate-200 bg-white pl-9 pr-4 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all" />
       </div>
+      <button type="button" (click)="exportExcel()" [disabled]="exporting()"
+        class="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-bold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50 whitespace-nowrap"
+        aria-label="Export local purchases to Excel">
+        @if (exporting()) {
+          <i class="pi pi-spin pi-spinner text-[13px]"></i><span>Exporting...</span>
+        } @else {
+          <i class="pi pi-file-export text-[13px]"></i><span>Export</span>
+        }
+      </button>
       <a routerLink="/local-purchase/create"
         class="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-bold text-white hover:bg-blue-500 whitespace-nowrap">
         <i class="pi pi-plus text-[13px]"></i><span>New Local Purchase</span>

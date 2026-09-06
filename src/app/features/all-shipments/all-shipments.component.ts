@@ -203,10 +203,10 @@ export class AllShipmentsComponent implements OnInit {
       // Quality
       { group: QUALITY, header: 'Batch No', value: (r) => r.qualityBatchNo || '' },
       { group: QUALITY, header: 'Inhouse Report No', value: (r) => r.qualityInhouseReportNo || '' },
-      { group: QUALITY, header: 'Inhouse Document', value: (r) => r.qualityInhouseDocument || '' },
+      { group: QUALITY, header: 'Inhouse Document', value: (r) => r.qualityInhouseDocument || 'Not Available' },
       { group: QUALITY, header: 'Inhouse Remarks', value: (r) => r.qualityInhouseRemarks || '' },
       { group: QUALITY, header: 'Third Party report No', value: (r) => r.qualityThirdPartyReportNo || '' },
-      { group: QUALITY, header: 'Third Party Document', value: (r) => r.qualityThirdPartyDocument || '' },
+      { group: QUALITY, header: 'Third Party Document', value: (r) => r.qualityThirdPartyDocument || 'Not Available' },
       { group: QUALITY, header: 'Third Party Remarks', value: (r) => r.qualityThirdPartyRemarks || '' },
       // Ungrouped
       { group: '', header: 'Status', value: (r) => this.getDisplayStageName(r.status) },

@@ -378,76 +378,12 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     return Number(shipment?.bags) || 0;
   }
 
-  private getAutoCalculatedBagDistribution(): number[] {
-    if (!this.actualSplits?.length) return [];
-
-    const totalBagCapacity = this.getShipmentBagCapacity();
-    if (totalBagCapacity <= 0) {
-      return this.actualSplits.controls.map(() => 0);
-    }
-
-    const submitted = new Set(this.submittedActualIndices());
-    const manualRows = this.manualActualBagRows();
-
-    const fixedBagTotal = this.actualSplits.controls.reduce((sum, row, index) => {
-      if (!submitted.has(index) && !manualRows[index]) return sum;
-      const bags = Number(row.get('bags')?.value) || 0;
-      return sum + Math.max(0, Math.round(bags));
-    }, 0);
-
-    const autoRows = this.actualSplits.controls
-      .map((row, index) => ({ row, index, qtyMT: Number(row.get('qtyMT')?.value) || 0 }))
-      .filter(({ index }) => !submitted.has(index) && !manualRows[index]);
-
-    const distribution = this.actualSplits.controls.map((row) => Math.max(0, Math.round(Number(row.get('bags')?.value) || 0)));
-    if (!autoRows.length) {
-      return distribution;
-    }
-
-    const remainingBagCapacity = Math.max(0, totalBagCapacity - fixedBagTotal);
-    const totalAutoQty = autoRows.reduce((sum, entry) => sum + Math.max(0, entry.qtyMT), 0);
-    let allocated = 0;
-
-    autoRows.forEach((entry, autoIndex) => {
-      let nextBags = 0;
-      if (remainingBagCapacity > 0 && totalAutoQty > 0 && entry.qtyMT > 0) {
-        if (autoIndex === autoRows.length - 1) {
-          nextBags = Math.max(0, remainingBagCapacity - allocated);
-        } else {
-          nextBags = Math.max(0, Math.round((remainingBagCapacity * entry.qtyMT) / totalAutoQty));
-          allocated += nextBags;
-        }
-      }
-      distribution[entry.index] = nextBags;
-    });
-
-    return distribution;
-  }
-
   private syncActualAutoBagValues(): void {
-    if (!this.actualSplits?.length) return;
-
-    const submitted = new Set(this.submittedActualIndices());
-    const manualRows = this.manualActualBagRows();
-    const nextDistribution = this.getAutoCalculatedBagDistribution();
-
-    this.actualSplits.controls.forEach((row, index) => {
-      if (submitted.has(index) || manualRows[index]) {
-        return;
-      }
-
-      const nextBags = nextDistribution[index] ?? 0;
-      const currentBags = Math.max(0, Math.round(Number(row.get('bags')?.value) || 0));
-      const nextPallet = nextBags > 0 ? Math.round(nextBags / 50) : 0;
-      const currentPallet = Math.max(0, Math.round(Number(row.get('pallet')?.value) || 0));
-
-      if (currentBags !== nextBags || currentPallet !== nextPallet) {
-        row.patchValue(
-          { bags: nextBags, pallet: nextPallet },
-          { emitEvent: false }
-        );
-      }
-    });
+    // DISABLED. Actual qtyMT / bags / pallet are now entered by hand on the B/L Details tab
+    // (step 3) and read straight back here — nothing auto-distributes them any more. The old
+    // capacity-proportional split coupled every un-arrived row to its siblings and skewed the
+    // whole shipment off one outlier entry. Capacity validation still runs; see the callers.
+    return;
   }
 
   private getActualAssignedBagsTotal(): number {
@@ -842,7 +778,6 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
     }
 
     const totalFcl = Number(this.shipmentData()?.shipment?.fcl) || 0;
-    const totalQtyMT = Number(this.shipmentData()?.shipment?.plannedQtyMT ?? this.totalQtyMT) || 0;
     if (rowIndex < 0 || rowIndex >= this.plannedSplits.length) {
       return;
     }
@@ -865,33 +800,25 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
       });
     }
 
-    // Recompute qtyMT for every non-remainder, non-actualized row from its FCL using a whole-number
-    // rate (Total MT ÷ Total FCL, floored) — the last editable row absorbs whatever's left over so
-    // the scheduled total always reconciles to Total MT exactly, with zero decimals on any row.
-    // Rows that already have real actual/BL data are left untouched, never recomputed here.
+    // Recompute qtyMT for every non-remainder, non-actualized row as FCL × a FIXED per-container
+    // rate (Total MT ÷ Total FCL). The rate must NOT depend on what sibling rows contain — the
+    // old "leftover ÷ remaining FCL" model coupled every un-arrived row to whatever had been
+    // entered elsewhere, so one outlier entry dragged all the empty rows onto the same wrong
+    // figure. Submitted (real actual/BL) rows and the remainder row are never touched here.
     const submittedActual = new Set(this.submittedActualIndices());
     const editableRows: Array<{ index: number; fcl: number }> = [];
-    let lockedMT = 0;
     this.plannedSplits.controls.forEach((ctrl, i) => {
       if (ctrl.get('isRemainderRow')?.value) return;
-      if (submittedActual.has(i)) {
-        lockedMT += Number(ctrl.get('qtyMT')?.value) || 0;
-        return;
-      }
+      if (submittedActual.has(i)) return;
       editableRows.push({ index: i, fcl: Number(ctrl.get('FCL')?.value) || 0 });
     });
 
-    const remainingQtyMT = Math.max(0, Math.round(totalQtyMT - lockedMT));
-    const totalEditableFcl = editableRows.reduce((sum, r) => sum + r.fcl, 0);
-    const ratePerFcl = totalEditableFcl > 0 ? Math.floor(remainingQtyMT / totalEditableFcl) : 0;
+    const qtyPerContainer = this.getQtyPerContainer();
 
     this.isRebalancingPlannedRows = true;
-    let allocated = 0;
-    editableRows.forEach(({ index, fcl }, i) => {
-      const isLast = i === editableRows.length - 1;
-      const value = isLast ? remainingQtyMT - allocated : fcl * ratePerFcl;
+    editableRows.forEach(({ index, fcl }) => {
+      const value = qtyPerContainer > 0 ? this.roundQty(fcl * qtyPerContainer) : 0;
       this.plannedSplits.at(index).get('qtyMT')?.setValue(value, { emitEvent: false });
-      allocated += value;
     });
     this.isRebalancingPlannedRows = false;
 
@@ -1186,7 +1113,9 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
             containerId: container?._id ?? actual.get('containerId')?.value,
             FCL: container?.planned?.FCL ?? actual.get('FCL')?.value,
             size: container?.planned?.size ?? actual.get('size')?.value,
-            qtyMT: container?.planned?.qtyMT ?? actual.get('qtyMT')?.value,
+            // Actual qtyMT is a real recorded figure (entered on B/L Details / here) — never
+            // seed it from the planned estimate, or a planning change silently rewrites actuals.
+            qtyMT: actualData?.qtyMT ?? actual.get('qtyMT')?.value,
             updatedETD: actualData?.updatedETD
               ? new Date(actualData.updatedETD)
               : container?.planned?.etd

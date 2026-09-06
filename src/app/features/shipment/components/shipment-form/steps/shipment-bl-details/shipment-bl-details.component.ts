@@ -701,6 +701,12 @@ export class ShipmentBlDetailsComponent {
     return this.rbacService.hasPermission('shipment.field.bl_details.blNo.edit');
   }
 
+  /** "No of Containers (Packing)" drives the storage-allocation row count and cascades into
+   * downstream splits, so only admin-level roles may change it after entry. */
+  canEditNoOfContainers(): boolean {
+    return this.authService.isAdminLevelRole();
+  }
+
   canViewBlTab(tab: 'cost' | 'storage' | 'packaging' | 'payment_allocation' | 'payment_costing'): boolean {
     switch (tab) {
       case 'cost':
@@ -2542,7 +2548,10 @@ export class ShipmentBlDetailsComponent {
     formData.append('portOfLoading', row.get('portOfLoading')?.value || '');
     formData.append('portOfDischarge', row.get('portOfDischarge')?.value || '');
     formData.append('shipmentArrived', row.get('shipmentArrived')?.value || 'No');
-    formData.append('noOfContainers', String(Number(row.get('noOfContainers')?.value) || 0));
+    // Admin-only field — never re-send it as a non-admin (the input is read-only for them).
+    if (this.canEditNoOfContainers()) {
+      formData.append('noOfContainers', String(Number(row.get('noOfContainers')?.value) || 0));
+    }
     formData.append('noOfBags', String(Number(row.get('noOfBags')?.value) || 0));
     formData.append('quantityByMt', String(Number(row.get('quantityByMt')?.value) || 0));
     formData.append('shippingLine', row.get('shippingLine')?.value || '');
@@ -2556,6 +2565,11 @@ export class ShipmentBlDetailsComponent {
     formData.append('packagingDate', toDate(row.get('packagingDate')?.value));
     formData.append('grossWeight', row.get('grossWeight')?.value || '');
     formData.append('netWeight', row.get('netWeight')?.value || '');
+    // Canonical per-container figures — written straight to container.actual.{bags,pallet,qtyMT},
+    // the same fields the Actual tab and the reports read. FCL is read-only here, not sent.
+    formData.append('bags', String(Number(row.get('bags')?.value) || 0));
+    formData.append('pallet', String(Number(row.get('pallet')?.value) || 0));
+    formData.append('qtyMT', String(Number(row.get('buyingQty')?.value) || 0));
     const commercialInvoiceDocument = this.getCommercialInvoiceFile(index);
     if (commercialInvoiceDocument) {
       formData.append('commercialInvoiceDocument', commercialInvoiceDocument, commercialInvoiceDocument.name);
@@ -2568,6 +2582,10 @@ export class ShipmentBlDetailsComponent {
         this.clearCommercialInvoiceFile(index);
         this.notificationService.success('Saved', 'B/L details saved successfully.');
         this.ensureAccordionOpen(index); // POINT 8: keep accordion open
+        // Refresh the store so the Actual tab and every report immediately reflect the
+        // canonical figures just edited here.
+        const shipmentId = this.shipmentData()?.shipment?._id;
+        if (shipmentId) this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
       },
       error: (error) => {
         this.savingKey.set(null);
