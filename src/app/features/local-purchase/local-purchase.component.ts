@@ -73,6 +73,13 @@ export class LocalPurchaseListComponent implements OnInit {
     return item.supplierName || '—';
   }
 
+  /** FCL: stored value, else derived from qty (20ft container = 25 MT) for older records. */
+  fclDisplay(item: LocalPurchase): number {
+    if (Number(item.fcl) > 0) return Number(item.fcl);
+    const qty = Number(item.plannedQtyMT) || 0;
+    return qty > 0 ? Math.ceil(qty / 25) : 0;
+  }
+
   // ── Excel export ────────────────────────────────────────────────────────────
   private fmtDate(value: string | null | undefined): string {
     if (!value) return '';
@@ -96,7 +103,8 @@ export class LocalPurchaseListComponent implements OnInit {
     const quality = (r: LocalPurchase): LocalPurchaseQualityRow[] => r.qualityRows || [];
 
     return [
-      { header: 'LP No.', value: (r) => r.lpNumber || '' },
+      { header: 'LPO Number', value: (r) => r.lpoNumber || r.lpNumber || '' },
+      { header: 'LP No. (internal)', value: (r) => r.lpNumber || '' },
       { header: 'Year', value: (r) => r.year ?? '' },
       { header: 'Order Date', value: (r) => this.fmtDate(r.orderDate) },
       { header: 'Stage', value: (r) => r.currentStage || '' },
@@ -112,6 +120,7 @@ export class LocalPurchaseListComponent implements OnInit {
       { header: 'HS Code', value: (r) => r.hsCode || '' },
       { header: 'Packing', value: (r) => r.packing || '' },
       { header: 'Planned Qty (MT)', value: (r) => r.plannedQtyMT ?? '' },
+      { header: 'FCL', value: (r) => this.fclDisplay(r) },
       { header: 'Buy Unit', value: (r) => r.buyunit || '' },
       { header: 'FC per Unit', value: (r) => r.fcPerUnit ?? '' },
       { header: 'Total FC', value: (r) => r.totalFC ?? '' },

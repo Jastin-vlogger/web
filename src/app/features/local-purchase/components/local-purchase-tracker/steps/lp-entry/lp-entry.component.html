@@ -8,22 +8,22 @@
     </div>
     <div class="flex flex-wrap gap-3">
       @if (localPurchase.lpoDocumentUrl) {
-        <a [href]="localPurchase.lpoDocumentUrl" target="_blank" rel="noopener"
+        <button type="button" (click)="preview(localPurchase.lpoDocumentUrl, localPurchase.lpoDocumentName || 'LPO Document')"
           class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
           <i class="pi pi-eye"></i>LPO Document
-        </a>
+        </button>
       }
       @if (localPurchase.s1QualityReportUrl) {
-        <a [href]="localPurchase.s1QualityReportUrl" target="_blank" rel="noopener"
+        <button type="button" (click)="preview(localPurchase.s1QualityReportUrl, localPurchase.s1QualityReportName || 'S1 Quality Report')"
           class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
           <i class="pi pi-eye"></i>S1 Quality Report
-        </a>
+        </button>
       }
       @if (localPurchase.commercialDocumentUrl) {
-        <a [href]="localPurchase.commercialDocumentUrl" target="_blank" rel="noopener"
+        <button type="button" (click)="preview(localPurchase.commercialDocumentUrl, localPurchase.commercialDocumentName || 'Commercial Document')"
           class="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100">
           <i class="pi pi-eye"></i>Commercial Document
-        </a>
+        </button>
       }
       @if (!localPurchase.lpoDocumentUrl && !localPurchase.s1QualityReportUrl && !localPurchase.commercialDocumentUrl) {
         <p class="text-xs text-slate-400">No documents uploaded.</p>
@@ -31,11 +31,14 @@
     </div>
   </div>
 
+  <app-document-preview #docPreview />
+
+
   <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-[11px]">
       <div class="flex flex-col">
-        <span class="text-slate-400 font-medium">LP Number</span>
-        <span class="text-slate-700 font-bold">{{ localPurchase.lpNumber }}</span>
+        <span class="text-slate-400 font-medium">LPO Number</span>
+        <span class="text-slate-700 font-bold">{{ localPurchase.lpoNumber || localPurchase.lpNumber }}</span>
       </div>
       <div class="flex flex-col">
         <span class="text-slate-400 font-medium">Order Date</span>
@@ -72,6 +75,10 @@
       <div class="flex flex-col">
         <span class="text-slate-400 font-medium">Planned Qty</span>
         <span class="text-slate-700 font-bold">{{ localPurchase.plannedQtyMT }} {{ localPurchase.buyunit }}</span>
+      </div>
+      <div class="flex flex-col">
+        <span class="text-slate-400 font-medium">FCL</span>
+        <span class="text-slate-700 font-bold">{{ fclDisplay() }}</span>
       </div>
       <div class="flex flex-col">
         <span class="text-slate-400 font-medium">Rate (FC per Unit)</span>

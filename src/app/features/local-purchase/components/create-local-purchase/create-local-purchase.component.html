@@ -101,6 +101,10 @@
           <label class="sl-label">H.S Code</label>
           <input pInputText formControlName="hsCode" class="w-full" />
         </div>
+        <div class="flex flex-col gap-2">
+          <label class="sl-label">LPO Number</label>
+          <input pInputText formControlName="lpoNumber" placeholder="e.g. PO01/26/00385" class="w-full" />
+        </div>
       </div>
     </section>
 
@@ -115,6 +119,10 @@
         <div class="flex flex-col gap-2">
           <label class="sl-label">Planned Qty *</label>
           <p-inputNumber formControlName="plannedQtyMT" [invalid]="isFieldInvalid('plannedQtyMT')" styleClass="w-full" inputStyleClass="w-full"></p-inputNumber>
+        </div>
+        <div class="flex flex-col gap-2">
+          <label class="sl-label">FCL</label>
+          <p-inputNumber formControlName="fcl" [useGrouping]="false" styleClass="w-full" inputStyleClass="w-full" placeholder="Auto from qty if blank"></p-inputNumber>
         </div>
         <div class="flex flex-col gap-2">
           <label class="sl-label">Buying Unit *</label>

@@ -91,8 +91,12 @@ export interface LocalPurchase {
   variant?: string;
   hsCode?: string;
   packing?: string;
+  /** PO number printed on the LPO document ("PO01/26/00385"). Shown instead of lpNumber. */
+  lpoNumber?: string;
   orderDate: string;
   plannedQtyMT: number;
+  /** Full-container-load count (extracted, or ceil(plannedQtyMT / 25)). */
+  fcl?: number;
   buyunit?: string;
   fcPerUnit?: number;
   totalFC?: number;
@@ -140,7 +144,9 @@ export interface CreateLocalPurchasePayload {
   variant?: string;
   hsCode?: string;
   packing?: string;
+  lpoNumber?: string;
   plannedQtyMT: string;
+  fcl?: string;
   buyunit: string;
   fcPerUnit?: string;
   totalFC?: string;
@@ -163,4 +169,6 @@ export interface ExtractedLocalPurchaseData {
   plannedQtyMT?: string | number;
   fcPerUnit?: string | number;
   totalFC?: string | number;
+  lpoNumber?: string;
+  fcl?: string | number;
 }

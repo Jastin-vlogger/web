@@ -10,7 +10,7 @@
           <i class="pi pi-arrow-left text-xs"></i>
         </button>
         <div>
-          <h1 class="font-bold text-xl text-slate-900 tracking-tight">Tracker: {{ localPurchase()!.lpNumber }}</h1>
+          <h1 class="font-bold text-xl text-slate-900 tracking-tight">Tracker: {{ localPurchase()!.lpoNumber || localPurchase()!.lpNumber }}</h1>
           <p class="text-slate-500 text-xs">Stage: <span class="font-bold text-blue-600">{{ localPurchase()!.currentStage }}</span></p>
         </div>
       </div>
