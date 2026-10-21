@@ -10,6 +10,7 @@
                 @case ('storage-arrival') { Warehouse Activity Status }
                 @case ('fas-document-tracking') { FAS Activity Status }
                 @case ('rh-status-summary') { Shipment Status Summary RH }
+                @case ('shipment-cost') { Shipment Cost Report }
                 @default { Shipment Master Data }
               }
             </h1>
@@ -18,6 +19,7 @@
                 @case ('storage-arrival') { All shipment storage arrival and receipt records. }
                 @case ('fas-document-tracking') { FAS department document tracking — courier, DA, Murabaha and final contract status. }
                 @case ('rh-status-summary') { GRN-level receiving status for every container across all shipments. }
+                @case ('shipment-cost') { BL No., description and actual paid for every cost line across all shipments. }
                 @default { The shipment master dataset — filter records, preview, and export selected columns to Excel or PDF. }
               }
             </p>
@@ -32,6 +34,7 @@
                   @if (canViewReport('default')) { <option value="default">Shipment Master Data</option> }
                   @if (canViewReport('fas-document-tracking')) { <option value="fas-document-tracking">Reports</option> }
                   @if (canViewReport('rh-status-summary')) { <option value="rh-status-summary">Shipment Status Summary RH</option> }
+                  @if (canViewReport('shipment-cost')) { <option value="shipment-cost">Shipment Cost Report</option> }
                 } @else if (isStorekeeper()) {
                   @if (canViewReport('storage-arrival')) { <option value="storage-arrival">Warehouse Activity Status</option> }
                 } @else {
@@ -39,6 +42,7 @@
                   @if (canViewReport('storage-arrival')) { <option value="storage-arrival">Warehouse Activity Status</option> }
                   @if (canViewReport('fas-document-tracking')) { <option value="fas-document-tracking">FAS Activity Status</option> }
                   @if (canViewReport('rh-status-summary')) { <option value="rh-status-summary">Shipment Status Summary RH</option> }
+                  @if (canViewReport('shipment-cost')) { <option value="shipment-cost">Shipment Cost Report</option> }
                 }
               </select>
             </div>
@@ -296,6 +300,8 @@
     </section>
   } @else if (activeReport() === 'rh-status-summary') {
     <app-shipment-status-summary-rh />
+  } @else if (activeReport() === 'shipment-cost') {
+    <app-shipment-cost-report />
   }
 </div>
 

@@ -7,6 +7,7 @@ import { ShipmentReportFilters, ShipmentService } from '../../../../core/service
 import { AuthService } from '../../../../core/services/auth.service';
 import { RbacService } from '../../../../core/services/rbac.service';
 import { ShipmentStatusSummaryRhComponent } from '../shipment-status-summary-rh/shipment-status-summary-rh.component';
+import { ShipmentCostReportComponent } from '../shipment-cost-report/shipment-cost-report.component';
 
 type ReportColumn = {
   header: string;
@@ -32,12 +33,12 @@ type FasDocumentTrackingColumn = {
 };
 
 type ExportType = 'excel' | 'pdf';
-type ActiveReport = 'default' | 'storage-arrival' | 'fas-document-tracking' | 'rh-status-summary';
+type ActiveReport = 'default' | 'storage-arrival' | 'fas-document-tracking' | 'rh-status-summary' | 'shipment-cost';
 
 @Component({
   selector: 'app-reports-landing',
   standalone: true,
-  imports: [CommonModule, FormsModule, ShipmentStatusSummaryRhComponent],
+  imports: [CommonModule, FormsModule, ShipmentStatusSummaryRhComponent, ShipmentCostReportComponent],
   templateUrl: './reports-landing.component.html',
   styleUrl: './reports-landing.component.scss',
 })
@@ -52,6 +53,7 @@ export class ReportsLandingComponent implements OnInit {
     'storage-arrival': 'report.warehouse_activity.view',
     'fas-document-tracking': 'report.fas_activity.view',
     'rh-status-summary': 'report.rh_status_summary.view',
+    'shipment-cost': 'report.shipment_cost.view',
   };
 
   canViewReport(report: ActiveReport): boolean {
@@ -62,7 +64,7 @@ export class ReportsLandingComponent implements OnInit {
   /** Reports the current user is allowed to see, in dropdown order. */
   readonly availableReports = computed<ActiveReport[]>(() => {
     void this.permissionsVersion();
-    return (['default', 'storage-arrival', 'fas-document-tracking', 'rh-status-summary'] as ActiveReport[])
+    return (['default', 'storage-arrival', 'fas-document-tracking', 'rh-status-summary', 'shipment-cost'] as ActiveReport[])
       .filter((report) => this.canViewReport(report));
   });
 
