@@ -171,6 +171,10 @@
             <input pInputText formControlName="fpoNo" placeholder="Purchase Order #" class="w-full" />
           </div>
           <div class="flex flex-col">
+            <label class="sl-label">Additional Qty Against PO <span class="text-slate-400">(optional)</span></label>
+            <input pInputText formControlName="additionalAgainstFpoNo" placeholder="Base PO #, if extra quantity" class="w-full" />
+          </div>
+          <div class="flex flex-col">
             <label class="sl-label">PO Date</label>
             <p-datepicker formControlName="purchaseDate" [showIcon]="true" iconDisplay="button" placeholder="Select Date" styleClass="w-full" inputStyleClass="w-full" appendTo="body" [dateFormat]="appDateFormat"></p-datepicker>
           </div>

@@ -318,6 +318,54 @@
           <span class="sl-label text-[10px] uppercase tracking-wider text-slate-500">PO No.</span>
           <span class="text-sm font-semibold text-slate-900">{{ shipmentData()?.shipment?.fpoNo || shipmentData()?.shipment?.poNumber || shipmentData()?.shipment?.orderNumber || '–' }}</span>
         </div>
+        <div class="flex flex-col gap-1 md:col-span-2">
+          <span class="sl-label text-[10px] uppercase tracking-wider text-slate-500">Additional Qty Against PO</span>
+          @if (!editingAdditional()) {
+            <div class="flex flex-wrap items-center gap-2 min-w-0">
+              <span class="text-sm font-semibold text-slate-900 break-words">
+                {{ shipmentData()?.shipment?.additionalAgainstFpoNo || '–' }}
+                @if (shipmentData()?.shipment?.additionalBaseShipment; as base) {
+                  <span class="font-normal text-slate-500">({{ base.shipmentNo }})</span>
+                }
+              </span>
+              @if (canEditSupplierEmail()) {
+                <button type="button" (click)="startAdditionalEdit()" title="Link to the PO this extra quantity belongs to"
+                  class="w-7 h-7 rounded-lg border border-slate-200 bg-white text-slate-400 hover:text-blue-600 hover:border-blue-200 flex items-center justify-center transition-colors">
+                  <i class="pi pi-pencil text-[10px]"></i>
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="flex flex-col gap-1.5">
+              <div class="flex flex-wrap items-center gap-2">
+                <input pInputText [ngModel]="additionalDraft()" (ngModelChange)="additionalDraft.set($event)"
+                  [disabled]="additionalSaving()" placeholder="Base PO number, e.g. PO01/26/00124" class="w-72" />
+                <button type="button" (click)="saveAdditional()" [disabled]="additionalSaving()"
+                  class="h-9 px-4 rounded-lg bg-blue-600 text-white text-[10px] font-bold uppercase hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                  Save
+                </button>
+                <button type="button" (click)="cancelAdditionalEdit()" [disabled]="additionalSaving()"
+                  class="h-9 px-4 rounded-lg border border-slate-200 text-slate-500 text-[10px] font-bold uppercase hover:bg-slate-50 disabled:opacity-50">
+                  Cancel
+                </button>
+              </div>
+              <p class="text-[11px] text-slate-400">Leave empty to remove the link.</p>
+              @if (additionalError()) {
+                <p class="text-[11px] text-red-600 font-medium">{{ additionalError() }}</p>
+              }
+            </div>
+          }
+        </div>
+        @if (shipmentData()?.shipment?.additionalShipments?.length) {
+          <div class="flex flex-col gap-1 md:col-span-2">
+            <span class="sl-label text-[10px] uppercase tracking-wider text-slate-500">Additional Quantity Added By</span>
+            @for (extra of shipmentData()!.shipment.additionalShipments!; track extra._id) {
+              <span class="text-sm font-semibold text-slate-900">
+                {{ extra.fpoNo }} <span class="font-normal text-slate-500">({{ extra.shipmentNo }}) · {{ extra.plannedQtyMT }} MT{{ extra.supplierName ? ' · ' + extra.supplierName : '' }}</span>
+              </span>
+            }
+          </div>
+        }
         <div class="flex flex-col gap-1">
           <span class="sl-label text-[10px] uppercase tracking-wider text-slate-500">PO Date</span>
           <span class="text-sm font-semibold text-slate-900">{{ (shipmentData()?.shipment?.orderDate | date: 'dd/MM/yyyy') || '–' }}</span>

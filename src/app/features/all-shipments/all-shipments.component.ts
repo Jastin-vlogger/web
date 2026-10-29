@@ -116,6 +116,7 @@ export class AllShipmentsComponent implements OnInit {
       { group: PURCHASE, header: 'S No.', value: (_r, idx) => idx + 1 },
       { group: PURCHASE, header: 'Shipment ID', value: (r) => r.shipmentId },
       { group: PURCHASE, header: 'LPO Number', value: (r) => r.fpoNo || '' },
+      { group: PURCHASE, header: 'Additional Against PO', value: (r) => r.additionalAgainstFpoNo || '' },
       { group: PURCHASE, header: 'Foreign / Local', value: (r) => r.foreignLocal || '' },
       { group: PURCHASE, header: 'Order Date', value: (r) => fmt(r.orderDate) },
       { group: PURCHASE, header: 'Supplier', value: (r) => r.supplier || '' },

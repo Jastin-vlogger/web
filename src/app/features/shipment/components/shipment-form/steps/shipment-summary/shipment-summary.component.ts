@@ -59,6 +59,10 @@ export class ShipmentSummaryComponent {
   readonly emailDraft = signal('');
   readonly emailSaving = signal(false);
   readonly emailError = signal<string | null>(null);
+  readonly editingAdditional = signal(false);
+  readonly additionalDraft = signal('');
+  readonly additionalSaving = signal(false);
+  readonly additionalError = signal<string | null>(null);
   readonly editingBankName = signal(false);
   readonly bankNameDraft = signal('');
   readonly bankNameSaving = signal(false);
@@ -112,6 +116,37 @@ export class ShipmentSummaryComponent {
       error: (err) => {
         this.emailSaving.set(false);
         this.emailError.set(err?.error?.message || 'Failed to update email. Please try again.');
+      },
+    });
+  }
+
+  startAdditionalEdit(): void {
+    if (!this.canEditSupplierEmail()) return;
+    this.additionalDraft.set(this.shipmentData()?.shipment?.additionalAgainstFpoNo || '');
+    this.additionalError.set(null);
+    this.editingAdditional.set(true);
+  }
+
+  cancelAdditionalEdit(): void {
+    this.editingAdditional.set(false);
+    this.additionalError.set(null);
+  }
+
+  saveAdditional(): void {
+    const shipmentId = this.shipmentData()?.shipment?._id;
+    if (!shipmentId) return;
+
+    this.additionalSaving.set(true);
+    this.additionalError.set(null);
+    this.shipmentService.updateAdditionalAgainst(shipmentId, this.additionalDraft().trim()).subscribe({
+      next: () => {
+        this.additionalSaving.set(false);
+        this.editingAdditional.set(false);
+        this.store.dispatch(ShipmentActions.loadShipmentDetail({ id: shipmentId }));
+      },
+      error: (err) => {
+        this.additionalSaving.set(false);
+        this.additionalError.set(err?.error?.message || 'Failed to update the link. Please try again.');
       },
     });
   }

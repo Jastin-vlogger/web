@@ -81,6 +81,7 @@ export interface FlatShipmentRow {
   /** LPO Number — shipment.fpoNo (fallback poNumber/orderNumber), the value shown as
    *  "PO No." on the Shipment Summary step. */
   fpoNo?: string;
+  additionalAgainstFpoNo?: string;
   /** 'Local' when the shipment was tagged isLocal at creation, otherwise 'Foreign'. */
   foreignLocal?: string;
   // Quality — from this row's own container.actual.qualityRows / storageSplits.
@@ -572,6 +573,7 @@ export interface CreateShipmentPayload {
   piNo: string;                  // PI No.
   piDate?: string;
   fpoNo?: string;
+  additionalAgainstFpoNo?: string;
   fcl?: string;
   pallet?: string;
   bags?: string;
@@ -846,6 +848,11 @@ export interface ShipmentInfo {
   orderNumber?: string;
   poNumber?: string;
   fpoNo?: string;
+  /** Base PO this shipment is "additional quantity against" (informational link). */
+  additionalAgainstFpoNo?: string;
+  additionalBaseShipment?: { _id: string; shipmentNo: string; fpoNo: string } | null;
+  /** Shipments that are additional quantity against THIS shipment's PO. */
+  additionalShipments?: Array<{ _id: string; shipmentNo: string; fpoNo: string; plannedQtyMT?: number; fcl?: number; supplierName?: string }>;
   supplier: string;
   supplierEmail?: string;
   item: string;

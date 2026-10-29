@@ -558,6 +558,16 @@ export class ShipmentService {
     );
   }
 
+  updateAdditionalAgainst(
+    shipmentId: string,
+    additionalAgainstFpoNo: string
+  ): Observable<{ message: string; additionalAgainstFpoNo: string }> {
+    return this.http.patch<{ message: string; additionalAgainstFpoNo: string }>(
+      `${this.apiUrl}/${shipmentId}/additional-against`,
+      { additionalAgainstFpoNo }
+    );
+  }
+
   updateBankName(shipmentId: string, bankName: string): Observable<{ message: string; bankName: string }> {
     return this.http.patch<{ message: string; bankName: string }>(
       `${this.apiUrl}/${shipmentId}/bank-name`,
