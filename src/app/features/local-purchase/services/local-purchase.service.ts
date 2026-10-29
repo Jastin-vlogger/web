@@ -39,6 +39,10 @@ export class LocalPurchaseService {
     return this.http.post<{ message: string; data: LocalPurchase }>(`${this.apiUrl}/create`, formData);
   }
 
+  updateEntry(id: string, body: { orderDate: string }): Observable<{ message: string; data: LocalPurchase }> {
+    return this.http.patch<{ message: string; data: LocalPurchase }>(`${this.apiUrl}/${id}`, body);
+  }
+
   updateAllocation(id: string, warehouse: string): Observable<{ message: string; data: LocalPurchase }> {
     return this.http.patch<{ message: string; data: LocalPurchase }>(`${this.apiUrl}/${id}/storage-allocation`, { warehouse });
   }

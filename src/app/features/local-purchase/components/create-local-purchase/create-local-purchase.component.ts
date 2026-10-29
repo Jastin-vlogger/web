@@ -128,6 +128,7 @@ export class CreateLocalPurchaseComponent {
           brandName: data.brandName || this.form.value.brandName,
           hsCode: data.hsCode || this.form.value.hsCode,
           lpoNumber: data.lpoNumber || this.form.value.lpoNumber,
+          orderDate: this.parseExtractedDate(data.orderDate) || this.form.value.orderDate,
           plannedQtyMT: data.plannedQtyMT || this.form.value.plannedQtyMT,
           fcl: data.fcl || this.form.value.fcl,
           fcPerUnit: data.fcPerUnit || this.form.value.fcPerUnit,
@@ -142,6 +143,14 @@ export class CreateLocalPurchaseComponent {
         this.messageService.add({ severity: 'warn', summary: 'Extraction failed', detail: err?.error?.message || 'Please fill the form manually.' });
       },
     });
+  }
+
+  /** Extracted PO Date arrives as YYYY-MM-DD; returns null when missing/unparseable so the form keeps its value. */
+  private parseExtractedDate(value: unknown): Date | null {
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value ?? ''));
+    if (!match) return null;
+    const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    return Number.isNaN(date.getTime()) ? null : date;
   }
 
   onSubmit(): void {

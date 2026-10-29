@@ -44,7 +44,7 @@
 
     <!-- Step content -->
     @if (currentStepIndex() === 0) {
-      <app-lp-entry [localPurchase]="localPurchase()!"></app-lp-entry>
+      <app-lp-entry [localPurchase]="localPurchase()!" (saved)="onDataChanged()"></app-lp-entry>
     } @else if (currentStepIndex() === 1) {
       <app-lp-allocation
         [localPurchase]="localPurchase()!"
