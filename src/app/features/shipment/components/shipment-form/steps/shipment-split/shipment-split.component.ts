@@ -31,6 +31,7 @@ import {
 import * as ShipmentActions from '../../../../../../store/shipment/shipment.actions';
 import { ShipmentService } from '../../../../../../core/services/shipment.service';
 import { ScheduledHistoryEntry, ExtractBillNoResponse } from '../../../../../../core/models/shipment.model';
+import { planRemainderRow } from '../../shared/planned-remainder.util';
 
 type SplitTab = 'planned' | 'actual' | 'history' | 'report';
 
@@ -723,29 +724,34 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
 
     // Sum all non-remainder rows (rows that are not auto-remainder rows)
     let allocatedMT = 0;
+    let allocatedFcl = 0;
     let remainderRowIndex = -1;
     this.plannedSplits.controls.forEach((ctrl, i) => {
       if (ctrl.get('isRemainderRow')?.value) {
         remainderRowIndex = i;
       } else {
         allocatedMT += Number(ctrl.get('qtyMT')?.value) || 0;
+        allocatedFcl += Number(ctrl.get('FCL')?.value) || 0;
       }
     });
 
-    const remainderMT = Math.round(totalQtyMT - allocatedMT);
-    // Derive remainder FCL from the same ratio used everywhere (Total MT ÷ Total FCL).
-    const qtyPerContainer = this.getQtyPerContainer();
-    const remainderFcl = qtyPerContainer > 0 ? Math.round(remainderMT / qtyPerContainer) : 0;
+    // The remainder row exists only while FCL is left to schedule (see planRemainderRow) — a few
+    // MT left over after every FCL is allocated must not create an extra shipment row.
+    const plan = planRemainderRow({
+      totalFcl: Number(this.shipmentData()?.shipment?.fcl) || 0,
+      totalQtyMT,
+      allocatedFcl,
+      allocatedQtyMT: allocatedMT,
+      hasRemainderRow: remainderRowIndex >= 0,
+    });
 
-    if (remainderMT > 0) {
-      // Need a remainder row
+    if (plan.action === 'upsert') {
       if (remainderRowIndex >= 0) {
         // Update existing remainder row
         const remainderRow = this.plannedSplits.at(remainderRowIndex);
-        const newFcl = remainderFcl;
         this.isRebalancingPlannedRows = true;
-        remainderRow.get('qtyMT')?.setValue(remainderMT, { emitEvent: false });
-        remainderRow.get('FCL')?.setValue(newFcl, { emitEvent: false });
+        remainderRow.get('qtyMT')?.setValue(plan.qtyMT, { emitEvent: false });
+        remainderRow.get('FCL')?.setValue(plan.fcl, { emitEvent: false });
         this.isRebalancingPlannedRows = false;
       } else {
         // Add a new remainder row — copy most fields from last non-remainder row
@@ -753,14 +759,13 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
           .filter(c => !c.get('isRemainderRow')?.value)
           .slice(-1)[0];
         const lastVal = lastRow?.getRawValue() || {};
-        const newFcl = remainderFcl;
         this.isRebalancingPlannedRows = true;
         // We emit via parent — use @Output to add row
-        this.addRemainderRow.emit({ qtyMT: remainderMT, fcl: newFcl, copyFrom: lastVal });
+        this.addRemainderRow.emit({ qtyMT: plan.qtyMT, fcl: plan.fcl, copyFrom: lastVal });
         this.isRebalancingPlannedRows = false;
       }
-    } else if (remainderMT <= 0 && remainderRowIndex >= 0) {
-      // Remainder is 0 or negative — remove the remainder row if not submitted as actual
+    } else if (plan.action === 'remove' && remainderRowIndex >= 0) {
+      // Nothing left to schedule — remove the remainder row if not submitted as actual
       if (!submittedActual.has(remainderRowIndex)) {
         this.removeRemainderRow.emit(remainderRowIndex);
       }
