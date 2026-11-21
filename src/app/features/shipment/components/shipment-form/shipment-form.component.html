@@ -112,6 +112,10 @@
         </div>
       </div>
 
+      <div class="sm:self-center">
+        <app-import-history [shipmentId]="shipmentData()?.shipment?._id" />
+      </div>
+
       <!-- Supplier info in top right -->
       @if (getSupplierName() || getSupplierEmail()) {
         <div class="flex items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm sm:self-center">

@@ -8,6 +8,7 @@ import {
   FlatShipmentListResponse,
   ShipmentDetail,
   CreateShipmentPayload,
+  ShipmentImportLogItem,
   CreateShipmentResponse,
   ShipmentDetailsResponse,
   ExtractShipmentFromDocumentsResponse,
@@ -556,6 +557,11 @@ export class ShipmentService {
       `${this.apiUrl}/${shipmentId}/supplier-email`,
       { supplierEmail }
     );
+  }
+
+  /** GET /shipment/:id/import-history: when each document was imported, by whom and from which file. */
+  getImportHistory(shipmentId: string): Observable<{ items: ShipmentImportLogItem[] }> {
+    return this.http.get<{ items: ShipmentImportLogItem[] }>(`${this.apiUrl}/${shipmentId}/import-history`);
   }
 
   updateAdditionalAgainst(
