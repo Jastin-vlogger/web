@@ -1084,39 +1084,13 @@
                   }
                 </div>
               }
-              <!-- POINT 7: Payment Costing tab (moved from Step 8) -->
-              @if (getActiveTab(i) === 'payment_costing' && paymentFormArray) {
-                <div class="rounded-2xl border border-slate-200 overflow-hidden" [class.rbac-readonly-shell]="!canEditPaymentCosting(i)">
-                  <div class="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-2">
-                      <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Payment Costing</span>
-                      <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wider"
-                        [ngClass]="getApprovalBadgeClasses(getPaymentCostingApprovalLabel(i))">
-                        {{ getPaymentCostingApprovalLabel(i) }}
-                      </span>
-                    </div>
-                    @if (canApprovePaymentCosting(i)) {
-                      <button
-                        type="button"
-                        (click)="approvePaymentCosting(i)"
-                        [disabled]="isSaving(i, 'cost')"
-                        class="rbac-allow-interaction inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-violet-700 hover:bg-violet-100 disabled:opacity-50"
-                      >
-                        @if (isSaving(i, 'cost')) {
-                          <i class="pi pi-spin pi-spinner text-[10px]"></i>
-                        } @else {
-                          <i class="pi pi-check-circle text-[10px]"></i>
-                        }
-                        Approve
-                      </button>
-                    }
-                  </div>
-                  <app-shipment-payment-costing
-                    [formArray]="paymentFormArray"
-                    [initialTab]="'costing'"
-                    [singleShipmentIndex]="i"
-                    [costingApproved]="isPaymentCostingApproved(i)"
-                  ></app-shipment-payment-costing>
+              <!-- Payment Costing: Excel cost-sheet import, import log, submit-lock (Admin-only unlock) -->
+              @if (getActiveTab(i) === 'payment_costing') {
+                <div class="rounded-2xl border border-slate-200 overflow-hidden">
+                  <app-payment-cost-sheet
+                    [containerId]="getContainerId(i)"
+                    [shipmentLabel]="getShipmentNoLabel(i)"
+                  ></app-payment-cost-sheet>
                 </div>
               }
             </div>

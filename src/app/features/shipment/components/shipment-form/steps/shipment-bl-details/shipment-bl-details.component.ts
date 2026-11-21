@@ -22,6 +22,7 @@ import { TabsModule } from 'primeng/tabs';
 import { DialogModule } from 'primeng/dialog';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { ShipmentPaymentCostingComponent } from '../shipment-payment-costing/shipment-payment-costing.component';
+import { PaymentCostSheetComponent } from '../payment-cost-sheet/payment-cost-sheet.component';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { normalizeBlRole, normalizeBlVisibleTo, type BlVisibleRole } from '../../shared/bl-row-definitions';
@@ -57,6 +58,7 @@ import {
     TabsModule,
     DialogModule,
     ShipmentPaymentCostingComponent,
+    PaymentCostSheetComponent,
   ],
   templateUrl: './shipment-bl-details.component.html',
   styleUrl: './shipment-bl-details.component.scss',
@@ -720,6 +722,11 @@ export class ShipmentBlDetailsComponent {
       case 'payment_costing':
         return this.canViewPaymentCosting();
     }
+  }
+
+  /** Mongo id of the container behind row `index` (the cost sheet is looked up through it). */
+  getContainerId(index: number): string {
+    return String((this.formArray.at(index) as FormGroup | null)?.get('containerId')?.value || '');
   }
 
   private getActualShipment(index: number): any {
