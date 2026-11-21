@@ -25,7 +25,7 @@ import { ShipmentPaymentCostingComponent } from '../shipment-payment-costing/shi
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { normalizeBlRole, normalizeBlVisibleTo, type BlVisibleRole } from '../../shared/bl-row-definitions';
-import { downloadAdvanceRequestReportPdf } from '../../shared/advance-request-report';
+import { downloadAdvanceRequestReportPdf, printAdvanceRequestReportPdf } from '../../shared/advance-request-report';
 import { getComputedShipmentStatus, getShipmentStatusSeverity, type ShipmentStatusSeverity } from '../../shared/shipment-status';
 import { toLocalDateString } from '../../shared/date.util';
 import {
@@ -3070,7 +3070,8 @@ export class ShipmentBlDetailsComponent {
     });
   }
 
-  generateCostSheetReport(index: number): void {
+  /** Clearing Advance report: download as PDF, or print. */
+  generateCostSheetReport(index: number, mode: 'download' | 'print' = 'download'): void {
     const row = this.formArray.at(index);
     if (!row) return;
 
@@ -3109,7 +3110,7 @@ export class ShipmentBlDetailsComponent {
       )
     ).join(', ');
 
-    downloadAdvanceRequestReportPdf({
+    (mode === 'print' ? printAdvanceRequestReportPdf : downloadAdvanceRequestReportPdf)({
       fileStem: `${this.getShipmentNoLabel(index)}-clearing-advance-report`,
       sourceLabel: 'Clearing Advance',
       reportDate: this.formatDateForReport(new Date()),
@@ -3143,7 +3144,7 @@ export class ShipmentBlDetailsComponent {
         amount: Number(entry.get('requestAmount')?.value) || 0,
         paymentTo: entry.get('paymentTo')?.value ?? '',
         paymentTerm: entry.get('paymentTerm')?.value ?? '',
-        paymentReference: entry.get('remarks')?.value ?? '',
+        remarks: entry.get('remarks')?.value ?? '',
       })),
       additionalRequests: this.getAdditionalClearingRequests(index).map((request, requestIndex) => ({
         sn: requestIndex + 1,

@@ -48,6 +48,14 @@
               <i class="pi pi-file-export"></i>
               Generate Report
             </button>
+            <button
+              type="button"
+              (click)="generateAllocationReport(singleShipmentIndex!, 'print')"
+              class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-100"
+            >
+              <i class="pi pi-print"></i>
+              Print
+            </button>
             }
             @if (canApproveAllocation(singleShipmentIndex!)) {
               <button
@@ -376,6 +384,14 @@
                     >
                       <i class="pi pi-file-export"></i>
                       Generate Report
+                    </button>
+                    <button
+                      type="button"
+                      (click)="generateAllocationReport(i, 'print')"
+                      class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-100"
+                    >
+                      <i class="pi pi-print"></i>
+                      Print
                     </button>
                     }
                     @if (canApproveAllocation(i)) {

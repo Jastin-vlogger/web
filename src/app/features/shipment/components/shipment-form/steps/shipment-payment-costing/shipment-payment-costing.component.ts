@@ -31,7 +31,7 @@ import { AuthService } from '../../../../../../core/services/auth.service';
 import { RbacService } from '../../../../../../core/services/rbac.service';
 import * as ShipmentActions from '../../../../../../store/shipment/shipment.actions';
 import { normalizeBlRole, normalizeBlVisibleTo, type BlVisibleRole } from '../../shared/bl-row-definitions';
-import { downloadAdvanceRequestReportPdf } from '../../shared/advance-request-report';
+import { downloadAdvanceRequestReportPdf, printAdvanceRequestReportPdf } from '../../shared/advance-request-report';
 import { getComputedShipmentStatus, getShipmentStatusSeverity, type ShipmentStatusSeverity } from '../../shared/shipment-status';
 import { canApprovePendingStep } from '../../shared/approval-gate.util';
 import { toLocalDateString } from '../../shared/date.util';
@@ -806,7 +806,8 @@ export class ShipmentPaymentCostingComponent {
     }));
   }
 
-  generateAllocationReport(index: number): void {
+  /** Clearing Advance Process report ("Source: Payment Allocation"): download as PDF, or print. */
+  generateAllocationReport(index: number, mode: 'download' | 'print' = 'download'): void {
     const group = this.formArray.at(index) as FormGroup | null;
     if (!group) return;
     const meta = this.getAdvanceRequestReportMeta(index);
@@ -827,7 +828,7 @@ export class ShipmentPaymentCostingComponent {
       };
     });
 
-    downloadAdvanceRequestReportPdf({
+    (mode === 'print' ? printAdvanceRequestReportPdf : downloadAdvanceRequestReportPdf)({
       fileStem: `${this.getShipmentNoLabel(index)}-payment-allocation-report`,
       sourceLabel: 'Payment Allocation',
       reportDate: this.formatDateForReport(new Date()),

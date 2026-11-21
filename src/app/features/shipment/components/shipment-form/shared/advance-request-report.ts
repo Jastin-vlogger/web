@@ -12,6 +12,7 @@ export interface AdvanceRequestReportLineItem {
   paymentTo?: string;
   paymentTerm?: string;
   paymentReference?: string;
+  remarks?: string;
 }
 
 export interface AdvanceRequestReportAdditionalItem {
@@ -69,25 +70,34 @@ function safe(value: unknown, fallback = '—'): string {
   return normalized || fallback;
 }
 
-export function downloadAdvanceRequestReportPdf(config: AdvanceRequestReportConfig): void {
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 28;
-  const contentWidth = pageWidth - margin * 2;
+/** Column set of the main cost table (exported so the layout can be unit-tested). */
+export const ADVANCE_REQUEST_REPORT_COLUMNS = [
+  'S. No.',
+  'Description',
+  'Qty',
+  'Rate',
+  'Amount',
+  'Actual Paid',
+  'Different',
+  'Payment To',
+  'Payment Term',
+  'Payment Reference',
+  'Remarks',
+] as const;
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text('ROYAL HORIZON GENERAL TRADING LLC', margin, 24);
-  doc.setFontSize(8);
-  doc.text('IMPORT SHIPPING CLEARING ADVANCE & REIMBURSEMENT', margin, 35);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(80);
-  doc.text(`Source: ${safe(config.sourceLabel)}`, pageWidth - margin, 24, { align: 'right' });
-  doc.text(`Generated: ${safe(config.reportDate)}`, pageWidth - margin, 35, { align: 'right' });
-  doc.setTextColor(0);
+export function formatPageNumberLabel(page: number, total: number): string {
+  return `Page ${page} of ${total}`;
+}
 
-  const infoRows: string[][] = [
+const PAGE_MARGIN = 28;
+const TITLE_BLOCK_HEIGHT = 44;
+const INFO_FONT = 7;
+const INFO_LINE_HEIGHT = 8.4;
+const INFO_PAD_Y = 2;
+const INFO_PAD_X = 4;
+
+function buildInfoRows(config: AdvanceRequestReportConfig): string[][] {
+  return [
     ['BOE Date', safe(config.boeDate), 'Vendor / Supplier', safe(config.vendor), 'Country', safe(config.country)],
     ['Shipment No.', safe(config.shipmentNo), 'Shipping Line', safe(config.shippingLine), 'BL No.', safe(config.blNo)],
     ['Invoice Amount FC', safe(config.invoiceAmountFC), 'Exchange Rate', safe(config.exchangeRate), 'No of Containers', safe(config.noOfContainers)],
@@ -96,29 +106,106 @@ export function downloadAdvanceRequestReportPdf(config: AdvanceRequestReportConf
     ['Item', safe(config.item), 'Planning to Release Dt', safe(config.planningToReleaseDate), 'No of Days at Port', safe(config.noOfDaysAtPort)],
     ['Storage (WH)', safe(config.storage), '', '', '', ''],
   ];
+}
 
-  autoTable(doc, {
-    startY: 44,
-    body: infoRows,
-    theme: 'grid',
-    styles: {
-      fontSize: 7,
-      cellPadding: { top: 2, bottom: 2, left: 4, right: 4 },
-      lineWidth: 0.2,
-      lineColor: [160, 160, 160],
-    },
-    columnStyles: {
-      0: { fontStyle: 'bold', fillColor: [247, 248, 250], cellWidth: contentWidth * 0.12 },
-      1: { cellWidth: contentWidth * 0.22 },
-      2: { fontStyle: 'bold', fillColor: [247, 248, 250], cellWidth: contentWidth * 0.12 },
-      3: { cellWidth: contentWidth * 0.22 },
-      4: { fontStyle: 'bold', fillColor: [247, 248, 250], cellWidth: contentWidth * 0.12 },
-      5: { cellWidth: contentWidth * 0.20 },
-    },
-    margin: { left: margin, right: margin },
-    tableLineWidth: 0.4,
-    tableLineColor: [0, 0, 0],
+interface HeaderLayout {
+  rows: string[][];
+  colWidths: number[];
+  rowHeights: number[];
+  /** y where page content (tables) may start, below the repeating header. */
+  contentTop: number;
+}
+
+/** Measures the repeating page header (title block + shipment info grid) once. */
+function measureHeader(doc: jsPDF, config: AdvanceRequestReportConfig, contentWidth: number): HeaderLayout {
+  const rows = buildInfoRows(config);
+  const fractions = [0.12, 0.22, 0.12, 0.22, 0.12, 0.20];
+  const colWidths = fractions.map((f) => contentWidth * f);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(INFO_FONT);
+  const rowHeights = rows.map((row) => {
+    const lines = row.map((cell, i) => doc.splitTextToSize(cell || ' ', colWidths[i] - INFO_PAD_X * 2).length);
+    return Math.max(...lines, 1) * INFO_LINE_HEIGHT + INFO_PAD_Y * 2;
   });
+  const gridHeight = rowHeights.reduce((sum, h) => sum + h, 0);
+  return { rows, colWidths, rowHeights, contentTop: TITLE_BLOCK_HEIGHT + gridHeight + 10 };
+}
+
+/** Draws the company/report title block and the shipment info grid on the CURRENT page. */
+function drawPageHeader(doc: jsPDF, config: AdvanceRequestReportConfig, layout: HeaderLayout): void {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  doc.setTextColor(0);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('ROYAL HORIZON GENERAL TRADING LLC', PAGE_MARGIN, 24);
+  doc.setFontSize(8);
+  doc.text('IMPORT SHIPPING CLEARING ADVANCE & REIMBURSEMENT', PAGE_MARGIN, 35);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(80);
+  doc.text(`Source: ${safe(config.sourceLabel)}`, pageWidth - PAGE_MARGIN, 24, { align: 'right' });
+  doc.text(`Generated: ${safe(config.reportDate)}`, pageWidth - PAGE_MARGIN, 35, { align: 'right' });
+  doc.setTextColor(0);
+
+  let y = TITLE_BLOCK_HEIGHT;
+  doc.setLineWidth(0.2);
+  doc.setDrawColor(160);
+  layout.rows.forEach((row, r) => {
+    let x = PAGE_MARGIN;
+    const h = layout.rowHeights[r];
+    row.forEach((cell, c) => {
+      const w = layout.colWidths[c];
+      const isLabel = c % 2 === 0;
+      if (isLabel) {
+        doc.setFillColor(247, 248, 250);
+        doc.rect(x, y, w, h, 'FD');
+      } else {
+        doc.rect(x, y, w, h, 'S');
+      }
+      doc.setFont('helvetica', isLabel ? 'bold' : 'normal');
+      doc.setFontSize(INFO_FONT);
+      doc.text(doc.splitTextToSize(cell, w - INFO_PAD_X * 2), x + INFO_PAD_X, y + INFO_PAD_Y + INFO_FONT, { baseline: 'alphabetic' });
+      x += w;
+    });
+    y += h;
+  });
+  doc.setDrawColor(0);
+}
+
+const tableTheme = {
+  theme: 'grid' as const,
+  styles: {
+    fontSize: 6.8,
+    cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
+    lineWidth: 0.2,
+    lineColor: [160, 160, 160] as [number, number, number],
+  },
+  headStyles: {
+    fillColor: [255, 255, 255] as [number, number, number],
+    textColor: 0,
+    fontStyle: 'bold' as const,
+    fontSize: 6.8,
+    lineColor: [0, 0, 0] as [number, number, number],
+    lineWidth: 0.3,
+  },
+  tableLineWidth: 0.4,
+  tableLineColor: [0, 0, 0] as [number, number, number],
+};
+
+/**
+ * Builds the report. Every page carries the full header (title block + shipment info grid) and the
+ * column headings, and a "Page X of N" footer, so any single printed/downloaded page is self-explanatory.
+ */
+export function buildAdvanceRequestReportDoc(config: AdvanceRequestReportConfig): jsPDF {
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = PAGE_MARGIN;
+  const contentWidth = pageWidth - margin * 2;
+  const footerReserve = 24;
+
+  const header = measureHeader(doc, config, contentWidth);
+  const pageMargin = { top: header.contentTop, left: margin, right: margin, bottom: footerReserve };
+  const didDrawPage = () => drawPageHeader(doc, config, header);
 
   const tableRows = config.lines.map((line) => [
     String(line.sn),
@@ -131,6 +218,7 @@ export function downloadAdvanceRequestReportPdf(config: AdvanceRequestReportConf
     safe(line.paymentTo, ''),
     safe(line.paymentTerm, ''),
     safe(line.paymentReference, ''),
+    safe(line.remarks, ''),
   ]);
 
   const totals = config.lines.reduce(
@@ -153,38 +241,27 @@ export function downloadAdvanceRequestReportPdf(config: AdvanceRequestReportConf
     '',
     '',
     '',
+    '',
   ]);
 
   autoTable(doc, {
-    startY: (doc as any).lastAutoTable.finalY + 10,
-    head: [['S. No.', 'Description', 'Qty', 'Rate', 'Amount', 'Actual Paid', 'Different', 'Payment To', 'Payment Term', 'Remarks']],
+    ...tableTheme,
+    startY: header.contentTop,
+    head: [[...ADVANCE_REQUEST_REPORT_COLUMNS]],
+    showHead: 'everyPage',
     body: tableRows,
-    theme: 'grid',
-    styles: {
-      fontSize: 6.8,
-      cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
-      lineWidth: 0.2,
-      lineColor: [160, 160, 160],
-    },
-    headStyles: {
-      fillColor: [255, 255, 255],
-      textColor: 0,
-      fontStyle: 'bold',
-      fontSize: 6.8,
-      lineColor: [0, 0, 0],
-      lineWidth: 0.3,
-    },
     columnStyles: {
-      0: { cellWidth: 34, halign: 'center' },
-      1: { cellWidth: 220 },
-      2: { cellWidth: 52, halign: 'right' },
-      3: { cellWidth: 52, halign: 'right' },
-      4: { cellWidth: 72, halign: 'right' },
-      5: { cellWidth: 72, halign: 'right' },
-      6: { cellWidth: 72, halign: 'right' },
-      7: { cellWidth: 82 },
-      8: { cellWidth: 82 },
-      9: { cellWidth: 'auto' },
+      0: { cellWidth: 30, halign: 'center' },
+      1: { cellWidth: 170 },
+      2: { cellWidth: 40, halign: 'right' },
+      3: { cellWidth: 44, halign: 'right' },
+      4: { cellWidth: 62, halign: 'right' },
+      5: { cellWidth: 62, halign: 'right' },
+      6: { cellWidth: 62, halign: 'right' },
+      7: { cellWidth: 68 },
+      8: { cellWidth: 62 },
+      9: { cellWidth: 100 },
+      10: { cellWidth: 'auto' },
     },
     didParseCell: (data: any) => {
       if (data.row.index === tableRows.length - 1) {
@@ -192,17 +269,21 @@ export function downloadAdvanceRequestReportPdf(config: AdvanceRequestReportConf
         data.cell.styles.fillColor = [244, 244, 244];
       }
     },
-    margin: { left: margin, right: margin },
-    tableLineWidth: 0.4,
-    tableLineColor: [0, 0, 0],
+    didDrawPage,
+    margin: pageMargin,
   });
+
+  const startNewPage = (): number => {
+    doc.addPage();
+    drawPageHeader(doc, config, header);
+    return header.contentTop;
+  };
 
   let y = (doc as any).lastAutoTable.finalY + 14;
 
   if (config.additionalRequests?.length) {
     if (y > pageHeight - 120) {
-      doc.addPage();
-      y = margin;
+      y = startNewPage();
     }
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
@@ -223,24 +304,11 @@ export function downloadAdvanceRequestReportPdf(config: AdvanceRequestReportConf
     additionalRows.push(['', 'TOTAL', '', formatNumber(additionalTotal), '', '', '']);
 
     autoTable(doc, {
+      ...tableTheme,
       startY: y,
       head: [['S. No.', 'Title', 'Comment', 'Amount', 'Status', 'Requested', 'Approved']],
+      showHead: 'everyPage',
       body: additionalRows,
-      theme: 'grid',
-      styles: {
-        fontSize: 6.8,
-        cellPadding: { top: 2.5, bottom: 2.5, left: 3, right: 3 },
-        lineWidth: 0.2,
-        lineColor: [160, 160, 160],
-      },
-      headStyles: {
-        fillColor: [255, 255, 255],
-        textColor: 0,
-        fontStyle: 'bold',
-        fontSize: 6.8,
-        lineColor: [0, 0, 0],
-        lineWidth: 0.3,
-      },
       columnStyles: {
         0: { cellWidth: 34, halign: 'center' },
         1: { cellWidth: 150 },
@@ -256,17 +324,15 @@ export function downloadAdvanceRequestReportPdf(config: AdvanceRequestReportConf
           data.cell.styles.fillColor = [244, 244, 244];
         }
       },
-      margin: { left: margin, right: margin },
-      tableLineWidth: 0.4,
-      tableLineColor: [0, 0, 0],
+      didDrawPage,
+      margin: pageMargin,
     });
 
     y = (doc as any).lastAutoTable.finalY + 14;
   }
 
-  if (y > pageHeight - 78) {
-    doc.addPage();
-    y = margin;
+  if (y > pageHeight - 90) {
+    y = startNewPage();
   }
 
   const summaryBody = [
@@ -293,12 +359,16 @@ export function downloadAdvanceRequestReportPdf(config: AdvanceRequestReportConf
       4: { fontStyle: 'bold', fillColor: [247, 248, 250], cellWidth: 52 },
       5: { cellWidth: 'auto' },
     },
-    margin: { left: margin, right: margin },
+    didDrawPage,
+    margin: pageMargin,
     tableLineWidth: 0.4,
     tableLineColor: [0, 0, 0],
   });
 
   y = (doc as any).lastAutoTable.finalY + 24;
+  if (y > pageHeight - 60) {
+    y = startNewPage() + 10;
+  }
   const signatureLabels = ['PREPARED BY', 'VERIFIED BY', 'A/C APPROVAL'];
   const signatureWidth = contentWidth / signatureLabels.length;
   signatureLabels.forEach((label, index) => {
@@ -306,6 +376,7 @@ export function downloadAdvanceRequestReportPdf(config: AdvanceRequestReportConf
     const value = index === 0 ? config.preparedBy : index === 1 ? config.approvedBy : '';
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7);
+    doc.setTextColor(0);
     doc.text(label, x + 6, y);
     if (value) {
       doc.setFont('helvetica', 'normal');
@@ -317,15 +388,36 @@ export function downloadAdvanceRequestReportPdf(config: AdvanceRequestReportConf
     doc.line(x + 6, y + 24, x + signatureWidth - 10, y + 24);
   });
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6);
-  doc.setTextColor(130);
-  doc.text(
-    `Generated by Royal Shipment Tracker | Downloaded by: ${safe(config.downloadedBy, 'Unknown user')}`,
-    pageWidth / 2,
-    pageHeight - 10,
-    { align: 'center' }
-  );
+  // Footer on every page: who generated it, and "Page X of N".
+  const totalPages = doc.getNumberOfPages();
+  for (let page = 1; page <= totalPages; page += 1) {
+    doc.setPage(page);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6);
+    doc.setTextColor(130);
+    doc.text(
+      `Generated by Royal Shipment Tracker | Downloaded by: ${safe(config.downloadedBy, 'Unknown user')}`,
+      margin,
+      pageHeight - 10
+    );
+    doc.text(formatPageNumberLabel(page, totalPages), pageWidth - margin, pageHeight - 10, { align: 'right' });
+  }
   doc.setTextColor(0);
-  doc.save(`${config.fileStem.replace(/[^a-z0-9_-]/gi, '_')}.pdf`);
+  return doc;
+}
+
+function reportFileName(config: AdvanceRequestReportConfig): string {
+  return `${config.fileStem.replace(/[^a-z0-9_-]/gi, '_')}.pdf`;
+}
+
+export function downloadAdvanceRequestReportPdf(config: AdvanceRequestReportConfig): void {
+  buildAdvanceRequestReportDoc(config).save(reportFileName(config));
+}
+
+/** Opens the same PDF in a new tab and starts the browser print dialog. */
+export function printAdvanceRequestReportPdf(config: AdvanceRequestReportConfig): void {
+  const doc = buildAdvanceRequestReportDoc(config);
+  doc.autoPrint();
+  const url = doc.output('bloburl') as unknown as string;
+  window.open(url, '_blank');
 }
