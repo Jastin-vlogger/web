@@ -757,6 +757,8 @@ export interface ExtractShipmentFromDocumentsResponse {
 
 /** Response from bill-no extraction API (POST /shipment/extract-bill-no). */
 export interface ExtractBillNoResponse {
+  /** Non-blocking extraction notes: duplicate pages ignored, count mismatch, suspect container numbers. */
+  warnings?: string[];
   bill_no: string;
   invoice_number?: string;
   shipped_on_board_date?: string;

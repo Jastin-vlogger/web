@@ -1431,6 +1431,17 @@ export class ShipmentSplitComponent implements AfterViewInit, OnDestroy {
           }
 
           this.setActualExtractionError(rowIndex, null);
+
+          // Non-blocking notes from the extraction (duplicate pages ignored, declared vs extracted
+          // container count, container numbers failing the ISO 6346 check digit).
+          if (res.warnings?.length) {
+            this.messageService.add({
+              severity: 'warn',
+              summary: 'Check the extracted containers',
+              detail: res.warnings.join(' '),
+              life: 20000,
+            });
+          }
           
           if (billNo) row.get('BLNo')?.setValue(billNo);
           if (invoiceNumber) row.get('commercialInvoiceNo')?.setValue(invoiceNumber);
