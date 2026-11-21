@@ -30,19 +30,8 @@
                 class="rounded-xl border border-white/20 bg-slate-900/50 px-4 py-2 text-sm font-semibold text-white focus:outline-none"
                 [value]="activeReport()"
                 (change)="onActiveReportChange($any($event.target).value)">
-                @if (isFasUser()) {
-                  @if (canViewReport('default')) { <option value="default">Shipment Master Data</option> }
-                  @if (canViewReport('fas-document-tracking')) { <option value="fas-document-tracking">Reports</option> }
-                  @if (canViewReport('rh-status-summary')) { <option value="rh-status-summary">Shipment Status Summary RH</option> }
-                  @if (canViewReport('shipment-cost')) { <option value="shipment-cost">Shipment Cost Report</option> }
-                } @else if (isStorekeeper()) {
-                  @if (canViewReport('storage-arrival')) { <option value="storage-arrival">Warehouse Activity Status</option> }
-                } @else {
-                  @if (canViewReport('default')) { <option value="default">Shipment Master Data</option> }
-                  @if (canViewReport('storage-arrival')) { <option value="storage-arrival">Warehouse Activity Status</option> }
-                  @if (canViewReport('fas-document-tracking')) { <option value="fas-document-tracking">FAS Activity Status</option> }
-                  @if (canViewReport('rh-status-summary')) { <option value="rh-status-summary">Shipment Status Summary RH</option> }
-                  @if (canViewReport('shipment-cost')) { <option value="shipment-cost">Shipment Cost Report</option> }
+                @for (report of availableReports(); track report) {
+                  <option [value]="report" [selected]="report === activeReport()">{{ reportLabels[report] }}</option>
                 }
               </select>
             </div>

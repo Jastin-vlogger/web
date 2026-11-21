@@ -70,16 +70,16 @@ export class ReportsLandingComponent implements OnInit {
 
   // Bumped whenever effective permissions change so availableReports recomputes.
   private readonly permissionsVersion = signal(0);
+  private readonly loadedReports = new Set<ActiveReport>();
 
-  isFasUser(): boolean {
-    const role = String(this.authService.getCurrentUser()?.role || '').trim().toLowerCase();
-    return role === 'fas' || role === 'fasmanager' || role === 'fas manager';
-  }
-
-  isStorekeeper(): boolean {
-    const role = String(this.authService.getCurrentUser()?.role || '').trim().toLowerCase();
-    return role === 'storekeeper';
-  }
+  /** Dropdown labels; the option list itself comes from availableReports() (permission-driven only). */
+  readonly reportLabels: Record<ActiveReport, string> = {
+    'default': 'Shipment Master Data',
+    'storage-arrival': 'Warehouse Activity Status',
+    'fas-document-tracking': 'FAS Activity Status',
+    'rh-status-summary': 'Shipment Status Summary RH',
+    'shipment-cost': 'Shipment Cost Report',
+  };
 
   readonly loading = signal(true);
   readonly exporting = signal<ExportType | null>(null);
@@ -265,23 +265,27 @@ export class ReportsLandingComponent implements OnInit {
 
   ngOnInit(): void {
     // Point 23: keep availableReports reactive to permission loads, and ensure the
-    // active report is one the user is actually allowed to view.
+    // active report is one the user is actually allowed to view. Each report's data is only
+    // fetched once the user may view it (a role limited to one report must not pull the others).
     this.rbacService.permissions$.subscribe(() => {
       this.permissionsVersion.update((v) => v + 1);
       const allowed = this.availableReports();
       if (allowed.length && !allowed.includes(this.activeReport())) {
         this.activeReport.set(allowed[0]);
       }
+      this.ensureReportLoaded(this.activeReport());
     });
 
-    if (this.isFasUser()) {
-      this.activeReport.set('default');
-    } else if (this.isStorekeeper()) {
-      this.activeReport.set('storage-arrival');
-    }
-    this.loadReportRows();
-    this.loadStorageArrivalReport();
-    this.loadFasTrackingReport();
+    this.ensureReportLoaded(this.activeReport());
+  }
+
+  /** Fetches a report's data the first time the user is allowed to see it. */
+  private ensureReportLoaded(report: ActiveReport): void {
+    if (this.loadedReports.has(report) || !this.canViewReport(report)) return;
+    this.loadedReports.add(report);
+    if (report === 'default') this.loadReportRows();
+    else if (report === 'storage-arrival') this.loadStorageArrivalReport();
+    else if (report === 'fas-document-tracking') this.loadFasTrackingReport();
   }
 
   /** Point 23: guard the dropdown change against reports the user can't view. */
@@ -289,6 +293,7 @@ export class ReportsLandingComponent implements OnInit {
     const report = value as ActiveReport;
     if (this.canViewReport(report)) {
       this.activeReport.set(report);
+      this.ensureReportLoaded(report);
     }
   }
 
