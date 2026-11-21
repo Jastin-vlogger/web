@@ -788,9 +788,11 @@ export class ShipmentBlDetailsComponent {
     return rawStatus;
   }
 
-  private getEffectivePaymentCostingStatus(index: number): 'draft' | 'pending_fas_manager' | 'approved' {
+  private getEffectivePaymentCostingStatus(index: number): 'draft' | 'pending_fas' | 'approved' {
     const actual = this.getActualShipment(index);
     const rawStatus = actual?.paymentCostingApproval?.status || 'draft';
+    // Legacy 'pending_fas_manager' rows wait for the same FS approval.
+    if (rawStatus === 'pending_fas_manager') return 'pending_fas';
     if (rawStatus !== 'draft') return rawStatus;
     const rows = actual?.paymentCostings || [];
     const hasSavedData = Array.isArray(rows) && rows.some((entry: any) =>
@@ -798,7 +800,7 @@ export class ShipmentBlDetailsComponent {
       String(entry?.refBillVendor || '').trim().length > 0 ||
       !!entry?.refBillDate
     );
-    return hasSavedData ? 'pending_fas_manager' : 'draft';
+    return hasSavedData ? 'pending_fas' : 'draft';
   }
 
   private getEffectiveStorageAllocationStatus(index: number): 'draft' | 'pending_warehouse_manager' | 'approved' {
@@ -1041,8 +1043,8 @@ export class ShipmentBlDetailsComponent {
   getPaymentCostingApprovalLabel(index: number): string {
     const status = this.getEffectivePaymentCostingStatus(index);
     switch (status) {
-      case 'pending_fas_manager':
-        return 'Pending FAS Manager Approval';
+      case 'pending_fas':
+        return 'Pending FS Approval';
       case 'approved':
         return 'Approved';
       default:
@@ -1121,9 +1123,10 @@ export class ShipmentBlDetailsComponent {
 
   canApprovePaymentCosting(index: number): boolean {
     const status = this.getEffectivePaymentCostingStatus(index);
-    return status === 'pending_fas_manager' && (
+    return status === 'pending_fas' && (
       this.authService.isAdminLevelRole() ||
-      this.isFasManagerRole()
+      this.isFasRole() ||
+      this.rbacService.hasPermission('shipment.tab.payment_costing.costing_table.approve_fas')
     );
   }
 
@@ -1142,8 +1145,7 @@ export class ShipmentBlDetailsComponent {
 
   getPaymentAllocationWaitingMessage(index: number): string {
     const status = this.getEffectiveClearingAdvanceStatus(index);
-    if (status === 'pending_fas_manager') return 'Waiting for FAS manager approval';
-    return 'Waiting for FAS approval';
+    return 'Waiting for FS approval';
   }
 
   getCostSheetRows(group: AbstractControl): FormArray {

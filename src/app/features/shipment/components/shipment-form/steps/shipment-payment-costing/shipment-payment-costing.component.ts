@@ -1010,16 +1010,18 @@ export class ShipmentPaymentCostingComponent {
     return rows.some((entry: any) => Number(entry?.requestAmount || 0) > 0 || Number(entry?.paidAmount || 0) > 0);
   }
 
-  private getPaymentApprovalStatus(index: number): 'draft' | 'pending_fas_manager' | 'approved' {
+  private getPaymentApprovalStatus(index: number): 'draft' | 'pending_fas' | 'approved' {
     const shipment = this.shipmentData()?.actual?.[index];
     const rawStatus = shipment?.paymentAllocationApproval?.status || shipment?.paymentCostingApproval?.status || 'draft';
-    if (rawStatus === 'pending_fas_manager' || rawStatus === 'approved') return rawStatus;
-    return this.isAllocationSaved(index) ? 'pending_fas_manager' : 'draft';
+    if (rawStatus === 'approved') return 'approved';
+    // Legacy 'pending_fas_manager' rows are waiting for the same FS approval.
+    if (rawStatus === 'pending_fas' || rawStatus === 'pending_fas_manager') return 'pending_fas';
+    return this.isAllocationSaved(index) ? 'pending_fas' : 'draft';
   }
 
   getPaymentApprovalLabel(index: number): string {
     const status = this.getPaymentApprovalStatus(index);
-    if (status === 'pending_fas_manager') return 'Pending FAS Manager Approval';
+    if (status === 'pending_fas') return 'Pending FS Approval';
     if (status === 'approved') return 'Approved';
     return 'Draft';
   }
@@ -1027,7 +1029,7 @@ export class ShipmentPaymentCostingComponent {
   getPaymentApprovalBadgeClasses(index: number): string {
     const status = this.getPaymentApprovalStatus(index);
     if (status === 'approved') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-    if (status === 'pending_fas_manager') return 'border-amber-200 bg-amber-50 text-amber-700';
+    if (status === 'pending_fas') return 'border-amber-200 bg-amber-50 text-amber-700';
     return 'border-slate-200 bg-slate-50 text-slate-600';
   }
 
@@ -1098,16 +1100,16 @@ export class ShipmentPaymentCostingComponent {
     void this.saveAllocation(ctx.shipmentIndex);
   }
 
-  private isFasManagerRole(): boolean {
-    const role = this.authService.getCurrentUser()?.role || '';
-    return role === 'FasManager' || role === 'Fas manager';
+  private isFasRole(): boolean {
+    const role = String(this.authService.getCurrentUser()?.role || '').trim().toLowerCase();
+    return role === 'fas';
   }
 
   canApproveAllocation(index: number): boolean {
-    return canApprovePendingStep(this.getPaymentApprovalStatus(index), 'pending_fas_manager', {
+    return canApprovePendingStep(this.getPaymentApprovalStatus(index), 'pending_fas', {
       isAdmin: this.authService.isAdminLevelRole(),
-      hasPermission: this.rbacService.hasPermission('shipment.tab.payment_costing.payment_allocation.approve_fas_manager'),
-      isLegacyApproverRole: this.isFasManagerRole(),
+      hasPermission: this.rbacService.hasPermission('shipment.tab.payment_costing.payment_allocation.approve_fas'),
+      isLegacyApproverRole: this.isFasRole(),
     });
   }
 
@@ -1125,8 +1127,8 @@ export class ShipmentPaymentCostingComponent {
     return [
       { label: 'Requested At', value: this.formatDateTimeForDisplay(approval.submittedAt) },
       { label: 'Requested By', value: this.getUserDisplay(approval.submittedBy) },
-      { label: 'Approved At', value: this.formatDateTimeForDisplay(approval.fasManagerApprovedAt) },
-      { label: 'Approved By', value: this.getUserDisplay(approval.fasManagerApprovedBy) },
+      { label: 'Approved At', value: this.formatDateTimeForDisplay(approval.fasApprovedAt || approval.fasManagerApprovedAt) },
+      { label: 'Approved By', value: this.getUserDisplay(approval.fasApprovedBy || approval.fasManagerApprovedBy) },
     ];
   }
 

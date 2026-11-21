@@ -979,9 +979,12 @@ export interface AdditionalClearingAdvanceRequest {
 }
 
 export interface PaymentCostingApprovalState {
-  status?: 'draft' | 'pending_fas_manager' | 'approved';
+  // 'pending_fas_manager' is the legacy value of rows submitted before the FS Manager stage was removed.
+  status?: 'draft' | 'pending_fas' | 'pending_fas_manager' | 'approved';
   submittedAt?: string | null;
   submittedBy?: string | { _id?: string; name?: string; email?: string; role?: string } | null;
+  fasApprovedAt?: string | null;
+  fasApprovedBy?: string | { _id?: string; name?: string; email?: string; role?: string } | null;
   fasManagerApprovedAt?: string | null;
   fasManagerApprovedBy?: string | { _id?: string; name?: string; email?: string; role?: string } | null;
 }
