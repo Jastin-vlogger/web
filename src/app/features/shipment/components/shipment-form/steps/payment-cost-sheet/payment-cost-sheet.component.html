@@ -1,8 +1,8 @@
-<section class="rounded-2xl border border-slate-200 bg-white">
-  <!-- Toolbar -->
-  <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3">
+<section class="bg-white">
+  <!-- Header bar (same look as the other Payment tabs) -->
+  <div class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-slate-50 border-b border-slate-100">
     <div class="flex flex-wrap items-center gap-2">
-      <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">Payment Costing</span>
+      <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Payment Costing</span>
       @if (sheet(); as s) {
         <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wider"
           [class]="s.status === 'locked' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'">
@@ -14,37 +14,48 @@
 
     <div class="flex flex-wrap items-center gap-2">
       @if (permissions().canImport && !isLocked()) {
-        <label class="rbac-allow-interaction inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-blue-700 hover:bg-blue-100"
-          [class.opacity-50]="busy() !== null">
+        <label class="rbac-allow-interaction inline-flex cursor-pointer items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[10px] font-bold uppercase text-blue-600 hover:bg-blue-100"
+          [class.opacity-50]="blocked()">
           <i class="pi" [class.pi-upload]="busy() !== 'import'" [class.pi-spin]="busy() === 'import'" [class.pi-spinner]="busy() === 'import'"></i>
           {{ sheet() ? 'Re-import Excel' : 'Import Excel' }}
-          <input type="file" accept=".xlsx" class="hidden" [disabled]="busy() !== null" (change)="onFileChosen($event)" />
+          <input type="file" accept=".xlsx" class="hidden" [disabled]="blocked()" (change)="onFileChosen($event)" />
         </label>
       }
       @if (sheet()) {
-        <button type="button" (click)="downloadExcel()" [disabled]="busy() !== null"
-          class="rbac-allow-interaction inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-700 hover:bg-slate-50 disabled:opacity-50">
-          <i class="pi pi-file-excel text-[11px]"></i> Excel
+        <button type="button" (click)="openViewer()" title="View the original Excel file" aria-label="View the original Excel file"
+          class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50">
+          <i class="pi pi-eye"></i> View
         </button>
-        <button type="button" (click)="downloadPdf()" [disabled]="busy() !== null"
-          class="rbac-allow-interaction inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-700 hover:bg-slate-50 disabled:opacity-50">
-          <i class="pi pi-file-pdf text-[11px]"></i> PDF
+        <button type="button" (click)="downloadExcel()" [disabled]="blocked()"
+          class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+          <i class="pi pi-file-excel"></i> Excel
         </button>
-        <button type="button" (click)="showHistory.set(!showHistory())"
-          class="rbac-allow-interaction inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-700 hover:bg-slate-50">
-          <i class="pi pi-history text-[11px]"></i> Import Log
+        <button type="button" (click)="downloadPdf()" [disabled]="blocked()"
+          class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+          <i class="pi pi-file-pdf"></i> PDF
+        </button>
+        <button type="button" (click)="openLog()"
+          class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50">
+          <i class="pi pi-history"></i> Import Log
+        </button>
+      }
+      @if (sheet() && canEdit()) {
+        <button type="button" (click)="save()" [disabled]="!dirty() || busy() !== null"
+          class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-bold uppercase text-emerald-600 hover:bg-emerald-100 disabled:opacity-50">
+          <i class="pi" [class.pi-check]="busy() !== 'save'" [class.pi-spin]="busy() === 'save'" [class.pi-spinner]="busy() === 'save'"></i>
+          {{ busy() === 'save' ? 'Saving...' : 'Save' }}
         </button>
       }
       @if (sheet() && permissions().canSubmit && !isLocked()) {
-        <button type="button" (click)="submit()" [disabled]="busy() !== null"
-          class="rbac-allow-interaction inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-white hover:bg-slate-800 disabled:opacity-50">
-          <i class="pi pi-lock text-[11px]"></i> Submit &amp; Lock
+        <button type="button" (click)="submit()" [disabled]="blocked()"
+          class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-[10px] font-bold uppercase text-white hover:bg-slate-800 disabled:opacity-50">
+          <i class="pi pi-lock"></i> Submit &amp; Lock
         </button>
       }
       @if (isLocked() && permissions().canUnlock) {
         <button type="button" (click)="unlockOpen.set(!unlockOpen())" [disabled]="busy() !== null"
-          class="rbac-allow-interaction inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-rose-700 hover:bg-rose-100 disabled:opacity-50">
-          <i class="pi pi-lock-open text-[11px]"></i> Unlock
+          class="rbac-allow-interaction inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[10px] font-bold uppercase text-rose-600 hover:bg-rose-100 disabled:opacity-50">
+          <i class="pi pi-lock-open"></i> Unlock
         </button>
       }
     </div>
@@ -59,7 +70,7 @@
       <div class="text-sm font-semibold text-slate-700">No cost sheet imported yet</div>
       <p class="mt-1 text-xs text-slate-500">
         @if (permissions().canImport) {
-          Use "Import Excel" to upload the Accounts cost sheet (.xlsx). It is shown here exactly as in the file.
+          Use "Import Excel" to upload the Accounts cost sheet (.xlsx). Its numbered cost lines appear here to review and edit.
         } @else {
           An FS user imports the Accounts cost sheet here.
         }
@@ -84,76 +95,194 @@
         <input type="text" [(ngModel)]="unlockReason" placeholder="Reason for unlocking (required)"
           class="h-9 min-w-[18rem] flex-1 rounded-lg border border-rose-200 bg-white px-3 text-sm text-slate-700 focus:outline-none" />
         <button type="button" (click)="unlock()" [disabled]="busy() === 'unlock'"
-          class="h-9 rounded-lg bg-rose-600 px-4 text-[10px] font-black uppercase tracking-wider text-white hover:bg-rose-500 disabled:opacity-50">Unlock</button>
+          class="h-9 rounded-lg bg-rose-600 px-4 text-[10px] font-bold uppercase text-white hover:bg-rose-500 disabled:opacity-50">Unlock</button>
         <button type="button" (click)="unlockOpen.set(false)"
-          class="h-9 rounded-lg border border-slate-200 bg-white px-4 text-[10px] font-black uppercase tracking-wider text-slate-600">Cancel</button>
+          class="h-9 rounded-lg border border-slate-200 bg-white px-4 text-[10px] font-bold uppercase text-slate-600">Cancel</button>
       </div>
     }
 
-    @if (showHistory()) {
-      <div class="border-b border-slate-100 px-4 py-3">
-        <div class="mb-2 text-[10px] font-black uppercase tracking-wider text-slate-500">Import Log</div>
-        <table class="w-full border-collapse text-xs">
+    @if (warnings().length) {
+      <div class="border-b border-amber-100 bg-amber-50 px-4 py-2 text-[11px] text-amber-800">
+        <div class="text-[10px] font-black uppercase tracking-wider">Check after import</div>
+        <ul class="mt-1 list-disc pl-4">
+          @for (w of warnings(); track $index) { <li>{{ w }}</li> }
+        </ul>
+      </div>
+    }
+
+    @if (dirty() && canEdit()) {
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-amber-100 bg-amber-50/70 px-4 py-2">
+        <span class="text-[11px] font-semibold text-amber-800">
+          Unsaved changes on {{ changed().length }} {{ changed().length === 1 ? 'line' : 'lines' }}. Save before you export, re-import or submit.
+        </span>
+        <button type="button" (click)="discard()" [disabled]="busy() === 'save'"
+          class="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-bold uppercase text-slate-600 hover:bg-slate-50">Discard</button>
+      </div>
+    }
+
+    <!-- The numbered cost lines (as many as the imported sheet has) + totals -->
+    @if (!lines().length) {
+      <div class="px-6 py-8 text-center text-xs text-slate-500">
+        No numbered cost lines were found in this file. Use <b>View</b> to see the file as imported, or re-import a corrected one.
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[1700px] text-sm custom-tracker-table">
           <thead>
-            <tr class="bg-slate-50 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">
-              <th class="border border-slate-200 px-3 py-1.5">Date &amp; Time</th>
-              <th class="border border-slate-200 px-3 py-1.5">Action</th>
-              <th class="border border-slate-200 px-3 py-1.5">By</th>
-              <th class="border border-slate-200 px-3 py-1.5">File</th>
-              <th class="border border-slate-200 px-3 py-1.5">Note</th>
+            <tr>
+              <th class="min-w-[64px]">SN</th>
+              <th class="min-w-[300px]">DESCRIPTION</th>
+              <th class="min-w-[160px]">COST DH</th>
+              <th class="min-w-[220px]">BILL REF. (NO / DATE)</th>
+              <th class="min-w-[200px]">BILL REF. (PARTY)</th>
+              <th class="min-w-[200px]">PAYMENT REFERENCE</th>
+              <th class="min-w-[200px]">REMARKS</th>
+              <th class="min-w-[160px]">BORNE BY RHGT</th>
+              <th class="min-w-[160px]">BORNE BY SILAL</th>
             </tr>
           </thead>
           <tbody>
-            @for (h of sheet()!.history; track $index) {
+            @for (line of lines(); track line.sn; let i = $index) {
               <tr>
-                <td class="border border-slate-200 px-3 py-1.5 whitespace-nowrap">{{ formatDate(h.at) }}</td>
-                <td class="border border-slate-200 px-3 py-1.5">{{ actionLabel(h.action) }}</td>
-                <td class="border border-slate-200 px-3 py-1.5">{{ h.by || '–' }}</td>
-                <td class="border border-slate-200 px-3 py-1.5 break-all">{{ h.fileName || '–' }}</td>
-                <td class="border border-slate-200 px-3 py-1.5">{{ h.note || '–' }}</td>
+                <td class="text-slate-700 font-semibold text-xs">{{ line.sn }}</td>
+                <td>
+                  <input pInputText class="table-input-text w-full" [class.bg-slate-50]="!canEdit()" [readonly]="!canEdit()" placeholder="Description"
+                    [value]="line.description" (change)="setText(i, 'description', $any($event.target).value)" />
+                </td>
+                <td>
+                  <p-inputNumber [ngModel]="line.costDh" [readonly]="!canEdit()" mode="decimal" [minFractionDigits]="2" [maxFractionDigits]="2"
+                    styleClass="w-full" [inputStyleClass]="canEdit() ? 'table-input w-full' : 'table-input w-full bg-slate-50'"
+                    placeholder="0.00" (onBlur)="setCost(i, $any($event).target.value)" />
+                </td>
+                <td>
+                  <input pInputText class="table-input-text w-full" [class.bg-slate-50]="!canEdit()" [readonly]="!canEdit()" placeholder="Bill no / date"
+                    [value]="line.billRefNo" (change)="setText(i, 'billRefNo', $any($event.target).value)" />
+                </td>
+                <td>
+                  <input pInputText class="table-input-text w-full" [class.bg-slate-50]="!canEdit()" [readonly]="!canEdit()" placeholder="Vendor"
+                    [value]="line.billRefParty" (change)="setText(i, 'billRefParty', $any($event.target).value)" />
+                </td>
+                <td>
+                  <input pInputText class="table-input-text w-full" [class.bg-slate-50]="!canEdit()" [readonly]="!canEdit()" placeholder="Payment reference"
+                    [value]="line.paymentReference" (change)="setText(i, 'paymentReference', $any($event.target).value)" />
+                </td>
+                <td>
+                  <input pInputText class="table-input-text w-full" [class.bg-slate-50]="!canEdit()" [readonly]="!canEdit()" placeholder="Remarks"
+                    [value]="line.remarks" (change)="setText(i, 'remarks', $any($event.target).value)" />
+                </td>
+                <td [class.bg-rose-50]="isMismatch(line)">
+                  <p-inputNumber [ngModel]="line.borneByRhgt" [readonly]="!canEdit()" mode="decimal" [minFractionDigits]="2" [maxFractionDigits]="2"
+                    styleClass="w-full" [inputStyleClass]="canEdit() ? 'table-input w-full' : 'table-input w-full bg-slate-50'"
+                    placeholder="0.00" (onBlur)="setRhgt(i, $any($event).target.value)" />
+                </td>
+                <td [class.bg-rose-50]="isMismatch(line)">
+                  <p-inputNumber [ngModel]="line.borneBySilal" [readonly]="!canEdit()" mode="decimal" [minFractionDigits]="2" [maxFractionDigits]="2"
+                    styleClass="w-full" [inputStyleClass]="canEdit() ? 'table-input w-full' : 'table-input w-full bg-slate-50'"
+                    placeholder="0.00" (onBlur)="setSilal(i, $any($event).target.value)" />
+                </td>
               </tr>
             }
           </tbody>
         </table>
       </div>
-    }
-
-    <!-- Sheet tabs (only when the workbook has several sheets) -->
-    @if (grids().length > 1) {
-      <div class="flex flex-wrap gap-1 border-b border-slate-100 px-4 pt-3">
-        @for (g of grids(); track $index) {
-          <button type="button" (click)="activeSheet.set($index)"
-            class="rounded-t-lg border border-b-0 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider"
-            [class]="$index === activeSheet() ? 'border-slate-300 bg-white text-slate-900' : 'border-slate-200 bg-slate-50 text-slate-500'">
-            {{ g.name }}
-          </button>
-        }
-      </div>
-    }
-
-    <!-- The sheet, rendered from the imported structure -->
-    @if (currentGrid(); as grid) {
-      <div class="max-h-[70vh] overflow-auto p-4">
-        <table class="border-collapse bg-white" [style.width.px]="tableWidth()" style="table-layout: fixed;">
-          <colgroup>
-            @for (w of grid.colWidths; track $index) {
-              @if (w > 0) { <col [style.width.px]="w" /> }
-            }
-          </colgroup>
-          <tbody>
-            @for (row of grid.rows; track row.r) {
-              <tr [style.height.px]="row.heightPx">
-                @for (cell of row.cells; track cell.c) {
-                  <td [attr.rowspan]="cell.rowspan > 1 ? cell.rowspan : null"
-                      [attr.colspan]="cell.colspan > 1 ? cell.colspan : null"
-                      [ngStyle]="cellStyle(cell, row.heightPx)"
-                      [attr.title]="cell.formula ? '=' + cell.formula : null">{{ cell.text }}</td>
-                }
-              </tr>
-            }
-          </tbody>
-        </table>
+      <div class="border-t border-slate-100 bg-slate-50/70 px-4 py-3">
+        <div class="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_200px_200px_200px] md:items-center">
+          <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">
+            Totals <span class="font-semibold normal-case text-slate-400">({{ totals().count }} {{ totals().count === 1 ? 'line' : 'lines' }})</span>
+          </span>
+          <span class="text-sm font-black text-slate-800">Cost: {{ fmt(totals().costDh) }}</span>
+          <span class="text-sm font-black text-slate-800">RHGT: {{ fmt(totals().borneByRhgt) }}</span>
+          <span class="text-sm font-black text-slate-800">Silal: {{ fmt(totals().borneBySilal) }}</span>
+        </div>
       </div>
     }
   }
+
+  <!-- Original Excel (read-only), as imported -->
+  <p-dialog header="Original Excel file" [visible]="viewOpen()" (visibleChange)="viewOpen.set($event)" [modal]="true"
+    [style]="{ width: '90vw', maxWidth: '1400px' }" [draggable]="false">
+    @if (sheet(); as s) {
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600">
+        <span><b class="text-slate-800">File:</b> {{ s.source.fileName || '–' }} · imported {{ formatDate(s.importedAt) }} by {{ s.importedBy || '–' }}</span>
+        <button type="button" (click)="downloadExcel('original')" [disabled]="busy() !== null"
+          class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+          <i class="pi pi-download text-[11px]"></i> Download original (.xlsx)
+        </button>
+      </div>
+      @if (grids().length > 1) {
+        <div class="flex flex-wrap gap-1 pt-1">
+          @for (g of grids(); track $index) {
+            <button type="button" (click)="activeSheet.set($index)"
+              class="rounded-t-lg border border-b-0 px-3 py-1.5 text-[10px] font-black uppercase tracking-wider"
+              [class]="$index === activeSheet() ? 'border-slate-300 bg-white text-slate-900' : 'border-slate-200 bg-slate-50 text-slate-500'">
+              {{ g.name }}
+            </button>
+          }
+        </div>
+      }
+      @if (currentGrid(); as grid) {
+        <div class="max-h-[65vh] overflow-auto rounded-lg border border-slate-200 p-2">
+          <table class="border-collapse bg-white" [style.width.px]="tableWidth()" style="table-layout: fixed;">
+            <colgroup>
+              @for (w of grid.colWidths; track $index) {
+                @if (w > 0) { <col [style.width.px]="w" /> }
+              }
+            </colgroup>
+            <tbody>
+              @for (row of grid.rows; track row.r) {
+                <tr [style.height.px]="row.heightPx">
+                  @for (cell of row.cells; track cell.c) {
+                    <td [attr.rowspan]="cell.rowspan > 1 ? cell.rowspan : null"
+                        [attr.colspan]="cell.colspan > 1 ? cell.colspan : null"
+                        [ngStyle]="cellStyle(cell, row.heightPx)"
+                        [attr.title]="cell.formula ? '=' + cell.formula : null">{{ cell.text }}</td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+  </p-dialog>
+
+  <!-- Import Log: history, paginated -->
+  <p-dialog header="Import Log" [visible]="logOpen()" (visibleChange)="logOpen.set($event)" [modal]="true"
+    [style]="{ width: '56rem', maxWidth: '95vw' }" [draggable]="false">
+    @if (logError()) {
+      <p class="py-6 text-sm text-rose-500">{{ logError() }}</p>
+    } @else if (logLoading() && !logItems().length) {
+      <p class="py-6 text-sm text-slate-500">Loading import log...</p>
+    } @else if (!logTotal()) {
+      <p class="py-6 text-sm text-slate-500">No history yet.</p>
+    } @else {
+      <div class="overflow-x-auto" [class.opacity-60]="logLoading()">
+        <table class="w-full border-collapse text-xs">
+          <thead>
+            <tr class="bg-slate-50 text-left text-[10px] font-black uppercase tracking-wider text-slate-500">
+              <th class="border border-slate-200 px-3 py-2">Date &amp; Time</th>
+              <th class="border border-slate-200 px-3 py-2">Action</th>
+              <th class="border border-slate-200 px-3 py-2">By</th>
+              <th class="border border-slate-200 px-3 py-2">File</th>
+              <th class="border border-slate-200 px-3 py-2">Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (h of logItems(); track $index) {
+              <tr>
+                <td class="border border-slate-200 px-3 py-2 whitespace-nowrap">{{ formatDate(h.at) }}</td>
+                <td class="border border-slate-200 px-3 py-2">{{ actionLabel(h.action) }}</td>
+                <td class="border border-slate-200 px-3 py-2">{{ h.by || '–' }}</td>
+                <td class="border border-slate-200 px-3 py-2 break-all">{{ h.fileName || '–' }}</td>
+                <td class="border border-slate-200 px-3 py-2">{{ h.note || '–' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p-paginator [first]="logFirst()" [rows]="logPageSize()" [totalRecords]="logTotal()"
+        [rowsPerPageOptions]="[10, 25, 50]" [showCurrentPageReport]="true"
+        currentPageReportTemplate="{first} - {last} of {totalRecords}" (onPageChange)="onLogPage($event)" />
+    }
+  </p-dialog>
 </section>

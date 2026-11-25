@@ -1513,14 +1513,3 @@ export interface GrnSplit {
   grnDate: Date;
   statusRemarks?: string;
 }
-
-export interface ShipmentImportLogItem {
-  _id: string;
-  containerId: string | null;
-  source: string;
-  action: string;
-  fileName: string;
-  importedAt: string;
-  importedBy: string;
-  summary: Record<string, unknown>;
-}

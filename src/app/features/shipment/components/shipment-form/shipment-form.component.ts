@@ -26,7 +26,6 @@ import {
 } from '../../../../store/shipment/shipment.selectors';
 import * as ShipmentActions from '../../../../store/shipment/shipment.actions';
 
-import { ImportHistoryComponent } from './import-history/import-history.component';
 import { ShipmentSummaryComponent } from './steps/shipment-summary/shipment-summary.component';
 import { ShipmentSplitComponent } from './steps/shipment-split/shipment-split.component';
 import { ShipmentBlDetailsComponent } from './steps/shipment-bl-details/shipment-bl-details.component';
@@ -68,7 +67,6 @@ interface TrackerStepConfig extends Step {
     SkeletonModule,
     StepperComponent,
     ShipmentSummaryComponent,
-    ImportHistoryComponent,
     ShipmentSplitComponent,
     ShipmentBlDetailsComponent,
     ShipmentDocumentationComponent,

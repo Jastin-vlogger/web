@@ -44,11 +44,38 @@ export interface CostSheetSnapshot {
 }
 
 export interface PaymentCostSheetHistoryEntry {
-  action: 'import' | 'reimport' | 'submit' | 'unlock';
+  action: 'import' | 'reimport' | 'edit' | 'submit' | 'unlock';
   at: string;
   by: string;
   fileName: string;
   note: string;
+}
+
+/** One numbered cost row. The number of lines comes from the imported sheet (not fixed). */
+export interface PaymentCostLine {
+  sn: number;
+  description: string;
+  costDh: number | null;
+  billRefNo: string;
+  billRefParty: string;
+  paymentReference: string;
+  remarks: string;
+  borneByRhgt: number | null;
+  borneBySilal: number | null;
+}
+
+export interface PaymentCostTotals {
+  count: number;
+  costDh: number;
+  borneByRhgt: number;
+  borneBySilal: number;
+}
+
+export interface PaymentCostHistoryPage {
+  items: PaymentCostSheetHistoryEntry[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface PaymentCostSheet {
@@ -65,7 +92,13 @@ export interface PaymentCostSheet {
   unlockedAt: string | null;
   unlockedBy: string;
   unlockReason: string;
-  history: PaymentCostSheetHistoryEntry[];
+  lines: PaymentCostLine[];
+  totals: PaymentCostTotals;
+  /** Import notes, e.g. a value that could not be read from the file. Present on import responses. */
+  warnings: string[];
+  linesUpdatedAt: string | null;
+  linesUpdatedBy: string;
+  historyTotal: number;
 }
 
 export interface PaymentCostSheetPermissions {
